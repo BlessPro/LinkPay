@@ -12,6 +12,7 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
+
     <body class="min-h-screen font-sans bg-gradient-to-br from-amber-50 via-white to-emerald-50 text-slate-900">
         <header class="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
             <div class="flex items-center gap-3">
@@ -31,4 +32,5 @@
             @yield('content')
         </main>
     </body>
+    
 </html>

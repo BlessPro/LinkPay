@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\PaymentService;
 use App\Services\PaystackService;
 use App\Support\Money;
 use Illuminate\Http\Request;
@@ -79,7 +80,7 @@ class PublicInvoiceController extends Controller
         return redirect()->away($data['authorization_url']);
     }
 
-    public function success(Request $request)
+    public function success(Request $request, PaystackService $paystack, PaymentService $payments)
     {
         $reference = $request->query('reference');
         $payment = null;
@@ -88,6 +89,18 @@ class PublicInvoiceController extends Controller
             $payment = Payment::where('reference', $reference)
                 ->with(['invoice.user.sellerProfile', 'product'])
                 ->first();
+
+            if ($payment && $payment->status !== Payment::STATUS_SUCCESS) {
+                try {
+                    $verification = $paystack->verifyTransaction($reference);
+                    if (data_get($verification, 'data.status') === 'success') {
+                        $payments->markSuccess($payment, data_get($verification, 'data', []));
+                        $payment->refresh();
+                    }
+                } catch (\Throwable $exception) {
+                    // Ignore verification errors on success page.
+                }
+            }
         }
 
         return view('public.success', [

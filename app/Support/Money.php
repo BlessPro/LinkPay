@@ -43,6 +43,15 @@ class Money
         return number_format(((float) $left) + ((float) $right), 2, '.', '');
     }
 
+    public static function multiply(string $amount, int $multiplier): string
+    {
+        if (function_exists('bcmul')) {
+            return bcmul($amount, (string) $multiplier, 2);
+        }
+
+        return number_format(((float) $amount) * $multiplier, 2, '.', '');
+    }
+
     public static function format(string $amount, string $currency): string
     {
         return $currency.' '.number_format((float) $amount, 2, '.', ',');

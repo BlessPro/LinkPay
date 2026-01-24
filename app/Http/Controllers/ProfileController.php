@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\PaystackService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,7 @@ class ProfileController extends Controller
     /**
      * Display the user's profile form.
      */
-    public function edit(Request $request): View
+    public function edit(Request $request, PaystackService $paystack): View
     {
         $profile = $request->user()->sellerProfile;
 
@@ -25,10 +26,18 @@ class ProfileController extends Controller
             ]);
         }
 
+        $banks = [];
+        try {
+            $banks = $paystack->listBanks(config('services.paystack.currency', 'GHS'));
+        } catch (\Throwable $exception) {
+            $banks = [];
+        }
+
         return view('profile.edit', [
             'user' => $request->user(),
             'profile' => $profile,
             'currency' => config('services.paystack.currency', 'GHS'),
+            'banks' => $banks,
         ]);
     }
 

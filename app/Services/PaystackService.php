@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\SellerProfile;
 use App\Support\Money;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class PaystackService
@@ -76,6 +77,32 @@ class PaystackService
             ->get('/transaction/verify/'.$reference)
             ->throw()
             ->json();
+    }
+
+    public function listBanks(string $currency = 'GHS'): array
+    {
+        if (! config('services.paystack.secret_key')) {
+            return [];
+        }
+
+        return Cache::remember('paystack_banks_'.$currency, 6 * 60, function () use ($currency) {
+            $response = $this->client()
+                ->get('/bank', ['currency' => $currency])
+                ->throw()
+                ->json();
+
+            return collect($response['data'] ?? [])
+                ->map(function ($bank) {
+                    return [
+                        'name' => $bank['name'] ?? '',
+                        'code' => $bank['code'] ?? '',
+                    ];
+                })
+                ->filter(fn ($bank) => $bank['name'] && $bank['code'])
+                ->sortBy('name')
+                ->values()
+                ->all();
+        });
     }
 
     private function client()
