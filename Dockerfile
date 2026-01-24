@@ -42,5 +42,6 @@ RUN rm -f /var/www/html/public/hot \
     && chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["apache2-foreground"]
 
 EXPOSE 80
