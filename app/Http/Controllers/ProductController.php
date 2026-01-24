@@ -3,7 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateProductRequest;
+use App\Models\AnalyticsEvent;
 use App\Models\Product;
+use App\Models\Payment;
+use App\Support\Money;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -43,8 +47,12 @@ class ProductController extends Controller
     {
         $this->authorizeProduct($product);
 
+        $stats = $this->buildStats($product);
+
         return view('dashboard.products.edit', [
             'product' => $product,
+            'stats' => $stats,
+            'currency' => config('services.paystack.currency', 'GHS'),
         ]);
     }
 
@@ -83,5 +91,43 @@ class ProductController extends Controller
     private function authorizeProduct(Product $product): void
     {
         abort_unless($product->user_id === auth()->id(), 403);
+    }
+
+    private function buildStats(Product $product): array
+    {
+        $start = Carbon::now()->subDays(29)->startOfDay();
+        $end = Carbon::now()->endOfDay();
+
+        $events = AnalyticsEvent::where('user_id', $product->user_id)
+            ->where('entity_type', 'product')
+            ->where('entity_id', (string) $product->id)
+            ->whereBetween('created_at', [$start, $end]);
+
+        $impressions = (clone $events)->where('event_type', AnalyticsEvent::TYPE_PRODUCT_IMPRESSION)->count();
+        $impressionsUnique = (clone $events)->where('event_type', AnalyticsEvent::TYPE_PRODUCT_IMPRESSION)
+            ->distinct('session_hash')->count('session_hash');
+        $clicks = (clone $events)->where('event_type', AnalyticsEvent::TYPE_PRODUCT_CLICK)->count();
+        $clicksUnique = (clone $events)->where('event_type', AnalyticsEvent::TYPE_PRODUCT_CLICK)
+            ->distinct('session_hash')->count('session_hash');
+
+        $payments = Payment::where('product_id', $product->id)
+            ->where('status', Payment::STATUS_SUCCESS)
+            ->whereBetween('created_at', [$start, $end])
+            ->get();
+
+        $paymentTotal = '0.00';
+        foreach ($payments as $payment) {
+            $paymentTotal = Money::add($paymentTotal, (string) $payment->amount);
+        }
+
+        return [
+            'impressions' => $impressions,
+            'impressionsUnique' => $impressionsUnique,
+            'clicks' => $clicks,
+            'clicksUnique' => $clicksUnique,
+            'payments' => $payments->count(),
+            'paymentTotal' => $paymentTotal,
+            'conversion' => $clicks > 0 ? round(($payments->count() / $clicks) * 100, 1) : 0.0,
+        ];
     }
 }

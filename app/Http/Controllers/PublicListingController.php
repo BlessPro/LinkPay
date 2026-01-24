@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\SellerProfile;
+use App\Services\AnalyticsService;
 use App\Services\PaystackService;
 use App\Support\Money;
 use Illuminate\Http\Request;
@@ -12,13 +13,31 @@ use Illuminate\Support\Str;
 
 class PublicListingController extends Controller
 {
-    public function show(string $public_slug)
+    public function show(string $public_slug, Request $request, AnalyticsService $analytics)
     {
         $profile = SellerProfile::where('public_slug', $public_slug)
             ->with(['user.products' => function ($query) {
                 $query->where('is_active', true);
             }])
             ->firstOrFail();
+
+        $analytics->trackEvent(
+            $request,
+            $profile->user_id,
+            \App\Models\AnalyticsEvent::TYPE_LISTING_VIEW,
+            'listing',
+            (string) $profile->id
+        );
+
+        foreach ($profile->user->products as $product) {
+            $analytics->trackEvent(
+                $request,
+                $profile->user_id,
+                \App\Models\AnalyticsEvent::TYPE_PRODUCT_IMPRESSION,
+                'product',
+                (string) $product->id
+            );
+        }
 
         return view('public.listing', [
             'profile' => $profile,
@@ -27,7 +46,13 @@ class PublicListingController extends Controller
         ]);
     }
 
-    public function pay(Request $request, string $public_slug, Product $product, PaystackService $paystack)
+    public function pay(
+        Request $request,
+        string $public_slug,
+        Product $product,
+        PaystackService $paystack,
+        AnalyticsService $analytics
+    )
     {
         $request->validate([
             'email' => ['required', 'email'],
@@ -43,6 +68,14 @@ class PublicListingController extends Controller
         }
 
         $reference = (string) Str::uuid();
+
+        $analytics->trackEvent(
+            $request,
+            $profile->user_id,
+            \App\Models\AnalyticsEvent::TYPE_PRODUCT_CLICK,
+            'product',
+            (string) $product->id
+        );
 
         $payment = Payment::create([
             'user_id' => $profile->user_id,

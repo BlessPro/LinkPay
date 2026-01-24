@@ -1,52 +1,48 @@
 <x-guest-layout>
-    <form method="POST" action="{{ route('register') }}">
+    <div class="flex items-center justify-between">
+        <a href="/" class="inline-flex items-center gap-2">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold">LP</span>
+            <span class="text-xs uppercase tracking-[0.4em] text-slate-400">LinkPay</span>
+        </a>
+        <a href="{{ route('login') }}" class="text-xs font-semibold text-emerald-600 hover:text-emerald-500">Sign in</a>
+    </div>
+
+    <h1 class="mt-6 text-2xl font-semibold text-slate-900">Create your LinkPay account</h1>
+    <p class="mt-2 text-sm text-slate-500">Set up your seller workspace in minutes.</p>
+
+    <form class="mt-6 space-y-5" method="POST" action="{{ route('register') }}">
         @csrf
 
-        <!-- Name -->
         <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus autocomplete="name" />
+            <label for="name" class="text-xs uppercase tracking-[0.3em] text-slate-400">Full name</label>
+            <input id="name" class="mt-2 w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" type="text" name="name" value="{{ old('name') }}" required autofocus autocomplete="name" placeholder="Your name" />
             <x-input-error :messages="$errors->get('name')" class="mt-2" />
         </div>
 
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autocomplete="username" />
+        <div>
+            <label for="email" class="text-xs uppercase tracking-[0.3em] text-slate-400">Email address</label>
+            <input id="email" class="mt-2 w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" type="email" name="email" value="{{ old('email') }}" required autocomplete="username" placeholder="you@company.com" />
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
-
+        <div>
+            <label for="password" class="text-xs uppercase tracking-[0.3em] text-slate-400">Password</label>
+            <input id="password" class="mt-2 w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" type="password" name="password" required autocomplete="new-password" placeholder="Create a password" />
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
-
+        <div>
+            <label for="password_confirmation" class="text-xs uppercase tracking-[0.3em] text-slate-400">Confirm password</label>
+            <input id="password_confirmation" class="mt-2 w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" type="password" name="password_confirmation" required autocomplete="new-password" placeholder="Repeat your password" />
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
 
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}">
-                {{ __('Already registered?') }}
-            </a>
-
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
-        </div>
+        <button type="submit" class="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500">
+            {{ __('Create account') }}
+        </button>
     </form>
+
+    <p class="mt-6 text-sm text-slate-500">
+        Already have an account? <a class="font-semibold text-emerald-600 hover:text-emerald-500" href="{{ route('login') }}">Sign in</a>.
+    </p>
 </x-guest-layout>

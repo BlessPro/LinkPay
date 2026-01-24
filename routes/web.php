@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicInvoiceController;
 use App\Http\Controllers\PublicListingController;
 use App\Http\Controllers\SellerProfileController;
+use App\Http\Controllers\InsightsController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->name('payments.verify');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/insights', [InsightsController::class, 'index'])->name('insights.index');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

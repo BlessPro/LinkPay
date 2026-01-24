@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateInvoiceRequest;
+use App\Models\AnalyticsEvent;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\SellerNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Support\Money;
+use Illuminate\Support\Carbon;
 
 class InvoiceController extends Controller
 {
@@ -59,9 +63,11 @@ class InvoiceController extends Controller
         $this->authorizeInvoice($invoice);
 
         $invoice->load('payments');
+        $stats = $this->buildStats($invoice);
 
         return view('dashboard.invoices.show', [
             'invoice' => $invoice,
+            'stats' => $stats,
             'currency' => config('services.paystack.currency', 'GHS'),
         ]);
     }
@@ -69,5 +75,43 @@ class InvoiceController extends Controller
     private function authorizeInvoice(Invoice $invoice): void
     {
         abort_unless($invoice->user_id === auth()->id(), 403);
+    }
+
+    private function buildStats(Invoice $invoice): array
+    {
+        $start = Carbon::now()->subDays(29)->startOfDay();
+        $end = Carbon::now()->endOfDay();
+
+        $events = AnalyticsEvent::where('user_id', $invoice->user_id)
+            ->where('entity_type', 'invoice')
+            ->where('entity_id', (string) $invoice->id)
+            ->whereBetween('created_at', [$start, $end]);
+
+        $views = (clone $events)->where('event_type', AnalyticsEvent::TYPE_INVOICE_VIEW)->count();
+        $viewsUnique = (clone $events)->where('event_type', AnalyticsEvent::TYPE_INVOICE_VIEW)
+            ->distinct('session_hash')->count('session_hash');
+        $clicks = (clone $events)->where('event_type', AnalyticsEvent::TYPE_INVOICE_CLICK)->count();
+        $clicksUnique = (clone $events)->where('event_type', AnalyticsEvent::TYPE_INVOICE_CLICK)
+            ->distinct('session_hash')->count('session_hash');
+
+        $payments = Payment::where('invoice_id', $invoice->id)
+            ->where('status', Payment::STATUS_SUCCESS)
+            ->whereBetween('created_at', [$start, $end])
+            ->get();
+
+        $paymentTotal = '0.00';
+        foreach ($payments as $payment) {
+            $paymentTotal = Money::add($paymentTotal, (string) $payment->amount);
+        }
+
+        return [
+            'views' => $views,
+            'viewsUnique' => $viewsUnique,
+            'clicks' => $clicks,
+            'clicksUnique' => $clicksUnique,
+            'payments' => $payments->count(),
+            'paymentTotal' => $paymentTotal,
+            'conversion' => $views > 0 ? round(($payments->count() / $views) * 100, 1) : 0.0,
+        ];
     }
 }

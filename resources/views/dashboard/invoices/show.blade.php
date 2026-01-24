@@ -42,6 +42,28 @@
                     <p class="text-sm text-slate-500">No payments yet.</p>
                 @endforelse
             </div>
+            <div class="mt-6 rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3">
+                <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Invoice insights (30 days)</p>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-lg border border-slate-100 bg-white px-3 py-2">
+                        <p class="text-xs text-slate-400">Views</p>
+                        <p class="text-sm font-semibold text-slate-900">{{ $stats['views'] }} ({{ $stats['viewsUnique'] }} unique)</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-100 bg-white px-3 py-2">
+                        <p class="text-xs text-slate-400">Clicks</p>
+                        <p class="text-sm font-semibold text-slate-900">{{ $stats['clicks'] }} ({{ $stats['clicksUnique'] }} unique)</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-100 bg-white px-3 py-2">
+                        <p class="text-xs text-slate-400">Payments</p>
+                        <p class="text-sm font-semibold text-slate-900">{{ $stats['payments'] }}</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-100 bg-white px-3 py-2">
+                        <p class="text-xs text-slate-400">Conversion</p>
+                        <p class="text-sm font-semibold text-slate-900">{{ number_format($stats['conversion'], 1) }}%</p>
+                    </div>
+                </div>
+                <p class="mt-3 text-sm text-slate-600">Total paid: {{ \App\Support\Money::format($stats['paymentTotal'], $currency) }}</p>
+            </div>
         </div>
     </div>
 @endsection

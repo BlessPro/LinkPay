@@ -72,4 +72,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(SellerNotification::class);
     }
+
+    public function analyticsEvents()
+    {
+        return $this->hasMany(AnalyticsEvent::class);
+    }
 }

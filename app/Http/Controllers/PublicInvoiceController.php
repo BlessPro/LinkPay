@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\AnalyticsService;
 use App\Services\PaymentService;
 use App\Services\PaystackService;
 use App\Support\Money;
@@ -12,11 +13,19 @@ use Illuminate\Support\Str;
 
 class PublicInvoiceController extends Controller
 {
-    public function show(string $token)
+    public function show(string $token, Request $request, AnalyticsService $analytics)
     {
         $invoice = Invoice::where('token', $token)
             ->with(['user.sellerProfile', 'payments'])
             ->firstOrFail();
+
+        $analytics->trackEvent(
+            $request,
+            $invoice->user_id,
+            \App\Models\AnalyticsEvent::TYPE_INVOICE_VIEW,
+            'invoice',
+            (string) $invoice->id
+        );
 
         return view('public.invoice', [
             'invoice' => $invoice,
@@ -27,7 +36,7 @@ class PublicInvoiceController extends Controller
         ]);
     }
 
-    public function pay(Request $request, string $token, PaystackService $paystack)
+    public function pay(Request $request, string $token, PaystackService $paystack, AnalyticsService $analytics)
     {
         $request->validate([
             'email' => ['required', 'email'],
@@ -52,6 +61,14 @@ class PublicInvoiceController extends Controller
         }
 
         $reference = (string) Str::uuid();
+
+        $analytics->trackEvent(
+            $request,
+            $invoice->user_id,
+            \App\Models\AnalyticsEvent::TYPE_INVOICE_CLICK,
+            'invoice',
+            (string) $invoice->id
+        );
 
         $payment = Payment::create([
             'user_id' => $invoice->user_id,
