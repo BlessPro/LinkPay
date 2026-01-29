@@ -12,6 +12,8 @@ use App\Http\Controllers\PublicListingController;
 use App\Http\Controllers\SellerProfileController;
 use App\Http\Controllers\InsightsController;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminInvoiceController;
+use App\Http\Controllers\SellerPublicPreviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -21,6 +23,8 @@ Route::get('/', function () {
 Route::get('/s/{public_slug}', [PublicListingController::class, 'show'])->name('public.listing');
 Route::post('/s/{public_slug}/products/{product}/pay', [PublicListingController::class, 'pay'])
     ->name('public.products.pay');
+Route::post('/s/{public_slug}/products/{product}/interest', [PublicListingController::class, 'interest'])
+    ->name('public.products.interest');
 
 Route::get('/pay/success', [PublicInvoiceController::class, 'success'])->name('pay.success');
 Route::get('/pay/{token}', [PublicInvoiceController::class, 'show'])->name('public.invoice');
@@ -38,15 +42,20 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/seller/test-connection', [SellerProfileController::class, 'testConnection'])->name('profile.seller.test');
 
     Route::resource('products', ProductController::class)->except(['show']);
+    Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
+    Route::post('/products/export-pdf', [ProductController::class, 'exportPdf'])->name('products.exportPdf');
     Route::resource('invoices', InvoiceController::class)->only(['index', 'create', 'store', 'show']);
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->name('payments.verify');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/insights', [InsightsController::class, 'index'])->name('insights.index');
+    Route::get('/public-preview', [SellerPublicPreviewController::class, 'show'])->name('public.preview');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/invoices', [AdminInvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('/invoices/{invoice}', [AdminInvoiceController::class, 'show'])->name('invoices.show');
 });
 
 require __DIR__.'/auth.php';

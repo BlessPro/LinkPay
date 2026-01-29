@@ -44,4 +44,11 @@ return [
         'subaccount_percent_charge' => env('PAYSTACK_SUBACCOUNT_PERCENT_CHARGE', '0'),
     ],
 
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'verify_service_sid' => env('TWILIO_VERIFY_SERVICE_SID'),
+        'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
+    ],
+
 ];

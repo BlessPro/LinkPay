@@ -8,7 +8,7 @@
     </div>
 
     <h1 class="mt-6 text-2xl font-semibold text-slate-900">Create your LinkPay account</h1>
-    <p class="mt-2 text-sm text-slate-500">Set up your seller workspace in minutes.</p>
+    <p class="mt-2 text-sm text-slate-500">Set up your seller workspace in minutes. Add an email or WhatsApp number.</p>
 
     <form class="mt-6 space-y-5" method="POST" action="{{ route('register') }}">
         @csrf
@@ -20,9 +20,21 @@
         </div>
 
         <div>
-            <label for="email" class="text-xs uppercase tracking-[0.3em] text-slate-400">Email address</label>
-            <input id="email" class="mt-2 w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" type="email" name="email" value="{{ old('email') }}" required autocomplete="username" placeholder="you@company.com" />
+            <label for="email" class="text-xs uppercase tracking-[0.3em] text-slate-400">Email address (optional)</label>
+            <input id="email" class="mt-2 w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" type="email" name="email" value="{{ old('email') }}" autocomplete="username" placeholder="you@company.com" />
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
+        </div>
+
+        <div>
+            <label class="text-xs uppercase tracking-[0.3em] text-slate-400">WhatsApp number (optional)</label>
+            <div class="mt-2 flex gap-2">
+                <select name="phone_country" class="rounded-xl border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    <option value="+233" @selected(old('phone_country', '+233') === '+233')>+233</option>
+                </select>
+                <input name="phone_number" value="{{ old('phone_number') }}" class="w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="0541900229" inputmode="numeric" pattern="[0-9]*" autocomplete="tel" />
+            </div>
+            <p class="mt-2 text-xs text-slate-500">Used for WhatsApp OTP sign in.</p>
+            <x-input-error :messages="$errors->get('phone_number')" class="mt-2" />
         </div>
 
         <div>

@@ -31,6 +31,22 @@
                 @endif
                 @error('image') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
             </div>
+            <div>
+                <label class="text-sm font-medium text-slate-700">Stock status</label>
+                <div class="relative mt-2">
+                    <select name="status" class="w-full appearance-none rounded-xl border-slate-200 bg-white pr-10 text-sm text-slate-700 focus:border-emerald-500 focus:ring-emerald-500">
+                    @foreach(\App\Models\Product::statusOptions() as $value => $label)
+                        <option value="{{ $value }}" @selected(old('status', $product->status ?? \App\Models\Product::STATUS_IN_STOCK) === $value)>{{ $label }}</option>
+                    @endforeach
+                    </select>
+                    <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                </div>
+                @error('status') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
+            </div>
             <div class="flex items-center gap-3">
                 <input id="is_active" name="is_active" type="checkbox" value="1" {{ old('is_active', $product->is_active) ? 'checked' : '' }} class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
                 <label for="is_active" class="text-sm text-slate-600">Active</label>

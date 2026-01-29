@@ -4,17 +4,22 @@ LinkPay is a WhatsApp-first payment facilitation platform for sellers. It lets s
 
 ## What the app does
 - Seller authentication with profile and payout setup.
-- Public listing page per seller with product payments.
+- WhatsApp OTP login with Twilio Verify (phone optional at sign up).
+- Public listing page per seller with product payments and “Interested” lead capture.
 - One-time invoice links with full or partial payment support.
 - Paystack checkout, webhook verification, and server-side transaction verification.
 - Seller dashboard with products, invoices, payments, notifications, and insights.
+- Product analytics (views, clicks, payments, revenue, conversion) with Chart.js.
+- Inventory exports (CSV and PDF with embedded chart).
 - Admin dashboard with system KPIs and health stats.
 
 ## Tech stack
-- Laravel 11 (Blade)
+- Laravel 11/12 (Blade)
 - Tailwind CSS
 - PostgreSQL
 - Paystack API (platform account + seller subaccounts)
+- Chart.js
+- Twilio Verify + Twilio WhatsApp Messaging
 
 ## Local setup (quick)
 1) Install dependencies:
@@ -27,8 +32,8 @@ LinkPay is a WhatsApp-first payment facilitation platform for sellers. It lets s
    - `php artisan serve`
 
 ## Future projections
-- Phone login with OTP verification.
+- Multi-country phone login and verification.
 - Enhanced change log tracking for key platform actions.
 - Unified notifications + chat history for end-to-end messaging (WhatsApp + Instagram).
+- Deeper insights: attribution, device mix, and conversion funnels.
 - Expanded analytics and attribution insights.
-

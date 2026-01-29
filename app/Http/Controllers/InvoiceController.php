@@ -6,7 +6,7 @@ use App\Http\Requests\CreateInvoiceRequest;
 use App\Models\AnalyticsEvent;
 use App\Models\Invoice;
 use App\Models\Payment;
-use App\Models\SellerNotification;
+use App\Services\SellerNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Support\Money;
@@ -47,13 +47,13 @@ class InvoiceController extends Controller
 
         $invoice = Invoice::create($data);
 
-        SellerNotification::create([
-            'user_id' => $request->user()->id,
-            'type' => SellerNotification::TYPE_INVOICE_CREATED,
-            'title' => 'Invoice created',
-            'body' => 'Invoice "'.$invoice->title.'" is ready to share.',
-            'data' => ['invoice_id' => $invoice->id],
-        ]);
+        app(SellerNotifier::class)->notify(
+            $request->user(),
+            \App\Models\SellerNotification::TYPE_INVOICE_CREATED,
+            'Invoice created',
+            'Invoice "'.$invoice->title.'" is ready to share.',
+            ['invoice_id' => $invoice->id]
+        );
 
         return redirect()->route('invoices.show', $invoice)->with('status', 'invoice-created');
     }

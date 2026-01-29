@@ -55,7 +55,10 @@
 
             <form method="POST" action="{{ route('public.invoice.pay', $invoice->token) }}" class="mt-5 space-y-3">
                 @csrf
-                <input name="email" placeholder="Customer email" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" required />
+                <input name="name" placeholder="Name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                <input name="phone_number" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" required />
+                <input name="email" placeholder="Email (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                <input type="hidden" name="phone_country" value="+233" />
                 <button type="submit" class="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500" {{ $invoice->status === \App\Models\Invoice::STATUS_PAID || ! $seller?->paystack_subaccount_code ? 'disabled' : '' }}>
                     Pay amount due
                 </button>

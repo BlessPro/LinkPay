@@ -5,44 +5,262 @@
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h2 class="text-lg font-semibold text-slate-900">Products</h2>
-            <p class="text-sm text-slate-600">Manage your mini listing items.</p>
+            <p class="text-sm text-slate-600">Monitor inventory, sales, and engagement.</p>
         </div>
         <a href="{{ route('products.create') }}" class="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
             New product
         </a>
     </div>
 
-    <div class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="divide-y divide-slate-100">
-            @forelse($products as $product)
-                <div class="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex items-center gap-4">
-                        <div class="h-14 w-14 overflow-hidden rounded-xl bg-slate-100">
-                            @if($product->image_path)
-                                <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
+    <div id="export-offcanvas" class="fixed inset-y-0 right-0 z-40 hidden w-full max-w-sm border-l border-slate-200 bg-white p-6 shadow-2xl">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-slate-900">Custom range</h3>
+            <button type="button" id="export-close" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">Close</button>
+        </div>
+        <div class="mt-6 space-y-4">
+            <div>
+                <label class="text-xs uppercase tracking-[0.3em] text-slate-400">From</label>
+                <input type="date" id="export-start-input" class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+            </div>
+            <div>
+                <label class="text-xs uppercase tracking-[0.3em] text-slate-400">To</label>
+                <input type="date" id="export-end-input" class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+            </div>
+            <button type="button" id="export-apply" class="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500">
+                Apply range
+            </button>
+        </div>
+    </div>
+
+    <div class="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-stretch">
+        <div class="flex h-full flex-col gap-6">
+            <div class="grid gap-4 sm:grid-cols-3">
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Revenue</p>
+                    <p class="mt-3 text-2xl font-semibold text-slate-900">{{ \App\Support\Money::format($totalRevenue, $currency) }}</p>
+                    <p class="mt-1 text-xs text-slate-500">All-time product sales</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Orders</p>
+                    <p class="mt-3 text-2xl font-semibold text-slate-900">{{ $totalOrders }}</p>
+                    <p class="mt-1 text-xs text-slate-500">Successful payments</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Customers</p>
+                    <p class="mt-3 text-2xl font-semibold text-slate-900">{{ $totalCustomers }}</p>
+                    <p class="mt-1 text-xs text-slate-500">Unique contacts</p>
+                </div>
+            </div>
+
+            <div class="flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-900">Product performance</h3>
+                        <p class="text-sm text-slate-500">
+                            @if($chartRange === '7days')
+                                Last 7 days
+                            @elseif($chartRange === 'all_time')
+                                All time
+                            @else
+                                Last 30 days
                             @endif
-                        </div>
-                        <div>
-                            <p class="text-sm font-semibold text-slate-900">{{ $product->name }}</p>
-                            <p class="text-xs text-slate-500">{{ \App\Support\Money::format($product->price, $currency) }}</p>
-                        </div>
+                        </p>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $product->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
-                            {{ $product->is_active ? 'Active' : 'Inactive' }}
-                        </span>
-                        <a href="{{ route('products.edit', $product) }}" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
-                            Edit
-                        </a>
-                        <form method="POST" action="{{ route('products.destroy', $product) }}" onsubmit="return confirm('Delete this product?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-600 hover:border-rose-300">
-                                Delete
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
+                        @php($metricOptions = [
+                            'revenue' => 'Revenue',
+                            'payments' => 'Payments',
+                            'views' => 'Views',
+                            'clicks' => 'Clicks',
+                            'conversion' => 'Conversion %',
+                        ])
+                        <form method="GET" action="{{ route('products.index') }}" class="inline-flex items-center gap-2">
+                            <input type="hidden" name="chart_range" value="{{ $chartRange }}">
+                            <div class="inline-flex overflow-hidden rounded-full border border-slate-200 bg-white">
+                                <select name="chart_range" class="rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+                                    <option value="7days" @selected($chartRange === '7days')>7 days</option>
+                                    <option value="30days" @selected($chartRange === '30days')>30 days</option>
+                                    <option value="all_time" @selected($chartRange === 'all_time')>All time</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                                Apply
                             </button>
                         </form>
+                        <div class="flex flex-wrap items-center gap-2">
+                            @foreach($metricOptions as $key => $label)
+                                <label class="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">
+                                    <input type="checkbox" name="metric" value="{{ $key }}" class="h-3 w-3 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" {{ $key === 'revenue' ? 'checked' : '' }}>
+                                    <span>{{ $label }}</span>
+                                </label>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
+                <div class="mt-6 flex-1 min-h-56 max-h-72">
+                    <canvas id="product-chart" class="h-full w-full"></canvas>
+                    <div id="chart-empty" class="hidden h-full w-full items-center justify-center text-sm text-slate-400">
+                        Chart unavailable. Run npm to rebuild assets.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex h-full flex-col gap-6">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-slate-900">Top products</h3>
+                    <a href="#product-list" class="text-xs font-semibold text-emerald-600 hover:text-emerald-500">See more</a>
+                </div>
+                <div class="mt-4 space-y-4">
+                    @forelse($topList as $productId => $stats)
+                        @php($productName = $productLookup[$productId]->name ?? 'Product')
+                        <div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-slate-700">{{ $productName }}</span>
+                                <span class="font-semibold text-slate-900">{{ \App\Support\Money::format($stats['total'], $currency) }}</span>
+                            </div>
+                            <div class="mt-2 h-2 rounded-full bg-slate-100">
+                                @php($width = min(100, ((float) $stats['total'] / $maxTopTotal) * 100))
+                                <div class="h-2 rounded-full bg-emerald-500" style="width: {{ $width }}%"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-sm text-slate-500">No sales yet.</p>
+                    @endforelse
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-slate-900">Stock mix</h3>
+                    <span class="text-xs text-slate-400">All products</span>
+                </div>
+                <div class="mt-4 space-y-3 text-sm">
+                    @foreach(\App\Models\Product::statusOptions() as $key => $label)
+                        @php($count = $statusCounts[$key] ?? 0)
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600">{{ $label }}</span>
+                            <span class="font-semibold text-slate-900">{{ $count }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 class="text-sm font-semibold text-slate-900">Export inventory</h3>
+                <form method="POST" action="{{ route('products.exportPdf') }}" class="mt-4 space-y-3" id="export-form">
+                    @csrf
+                    <select name="type" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700">
+                        <option value="products">Products only</option>
+                        <option value="products_status">Products + stock status</option>
+                        <option value="products_sales">Products + sales summary</option>
+                    </select>
+                    <select name="range" id="export-range" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700">
+                        <option value="today">Today</option>
+                        <option value="7days">7 days</option>
+                        <option value="28days">28 days</option>
+                        <option value="3months">3 months</option>
+                        <option value="all_time" selected>All time</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <input type="hidden" name="start_date" id="export-start">
+                    <input type="hidden" name="end_date" id="export-end">
+                    <input type="hidden" name="chart_image" id="export-chart-image">
+                    <div class="flex items-center justify-between">
+                        <span id="export-label" class="text-xs font-semibold text-slate-500">All time</span>
+                        <div class="flex items-center gap-2">
+                            <button type="submit" formmethod="GET" formaction="{{ route('products.export') }}" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                                Export CSV
+                            </button>
+                            <button type="submit" id="export-pdf" class="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500">
+                                Export PDF
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="product-list" class="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="divide-y divide-slate-100">
+            @forelse($products as $product)
+                <details class="group">
+                    <summary class="list-none">
+                        <div class="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="h-14 w-14 overflow-hidden rounded-xl bg-slate-100">
+                                    @if($product->image_path)
+                                        <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
+                                    @endif
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">{{ $product->name }}</p>
+                                    <p class="text-xs text-slate-500">{{ \App\Support\Money::format($product->price, $currency) }}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $product->statusBadgeClass() }}">
+                                    {{ $product->statusLabel() }}
+                                </span>
+                                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $product->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
+                                    {{ $product->is_active ? 'Active' : 'Inactive' }}
+                                </span>
+                                <span class="cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                                    Quick edit
+                                </span>
+                                <a href="{{ route('products.edit', $product) }}" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                                    Edit
+                                </a>
+                                <form method="POST" action="{{ route('products.destroy', $product) }}" onsubmit="return confirm('Delete this product?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-600 hover:border-rose-300">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </summary>
+                    <div class="px-6 pb-6">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm">
+                            <form method="POST" action="{{ route('products.update', $product) }}" class="grid gap-3 sm:grid-cols-3">
+                                @csrf
+                                @method('PUT')
+                                <div>
+                                    <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Name</label>
+                                    <input name="name" value="{{ $product->name }}" class="mt-2 w-full rounded-xl border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                                </div>
+                                <div>
+                                    <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Price</label>
+                                    <input name="price" value="{{ $product->price }}" type="number" step="0.01" class="mt-2 w-full rounded-xl border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                                </div>
+                                <div>
+                                    <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Status</label>
+                                    <div class="relative mt-2">
+                                        <select name="status" class="w-full appearance-none rounded-xl border-slate-200 bg-white pr-10 text-sm text-slate-700 focus:border-emerald-500 focus:ring-emerald-500">
+                                            @foreach(\App\Models\Product::statusOptions() as $value => $label)
+                                                <option value="{{ $value }}" @selected($product->status === $value)>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                        <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
+                                            </svg>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="sm:col-span-3 flex items-center gap-3">
+                                    <button type="submit" class="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500">
+                                        Save changes
+                                    </button>
+                                    <span class="text-xs text-slate-500">Other fields stay unchanged.</span>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </details>
             @empty
                 <div class="px-6 py-10 text-center text-sm text-slate-500">No products yet.</div>
             @endforelse
@@ -52,4 +270,181 @@
     <div class="mt-6">
         {{ $products->links() }}
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const series = @json($series);
+            const chartCanvas = document.getElementById('product-chart');
+            const metricInputs = document.querySelectorAll('input[name="metric"]');
+
+            const datasetColors = {
+                revenue: '#10b981',
+                payments: '#0ea5e9',
+                views: '#6366f1',
+                clicks: '#f59e0b',
+                conversion: '#f97316',
+            };
+
+            const emptyState = document.getElementById('chart-empty');
+            if (!window.Chart) {
+                if (emptyState) {
+                    emptyState.classList.remove('hidden');
+                    emptyState.classList.add('flex');
+                }
+            } else if (chartCanvas && series.length) {
+                const labels = series.map((row) => row.label);
+                const dataMap = {
+                    revenue: series.map((row) => Number(row.revenue ?? 0)),
+                    payments: series.map((row) => Number(row.payments ?? 0)),
+                    views: series.map((row) => Number(row.views ?? 0)),
+                    clicks: series.map((row) => Number(row.clicks ?? 0)),
+                    conversion: series.map((row) => Number(row.conversion ?? 0)),
+                };
+
+                const makeDataset = (metric) => ({
+                    label: metric,
+                    data: dataMap[metric] ?? [],
+                    borderColor: datasetColors[metric],
+                    backgroundColor: datasetColors[metric] + '33',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
+                });
+
+                const selectedMetrics = () => {
+                    const selected = Array.from(metricInputs)
+                        .filter((input) => input.checked)
+                        .map((input) => input.value);
+                    return selected.length ? selected : ['revenue'];
+                };
+
+                const chart = new Chart(chartCanvas, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: selectedMetrics().map(makeDataset),
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { mode: 'index', intersect: false },
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8', maxTicksLimit: 6 },
+                            },
+                            y: {
+                                grid: { color: '#f1f5f9' },
+                                ticks: { color: '#94a3b8' },
+                            },
+                        },
+                    },
+                });
+
+                metricInputs.forEach((input) => {
+                    input.addEventListener('change', () => {
+                        chart.data.datasets = selectedMetrics().map(makeDataset);
+                        chart.update();
+                    });
+                });
+            } else if (emptyState) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+            }
+
+        const rangeSelect = document.getElementById('export-range');
+        const label = document.getElementById('export-label');
+        const offcanvas = document.getElementById('export-offcanvas');
+        const closeBtn = document.getElementById('export-close');
+        const applyBtn = document.getElementById('export-apply');
+        const startInput = document.getElementById('export-start-input');
+        const endInput = document.getElementById('export-end-input');
+        const startHidden = document.getElementById('export-start');
+        const endHidden = document.getElementById('export-end');
+        const chartImageInput = document.getElementById('export-chart-image');
+        const exportPdfButton = document.getElementById('export-pdf');
+
+            const formatDate = (date) => date.toISOString().slice(0, 10);
+            const setLabel = (text) => { if (label) label.textContent = text; };
+
+            const computeRange = (value) => {
+                const today = new Date();
+                const end = new Date(today);
+                let start = new Date(today);
+
+                if (value === 'today') {
+                    return { start, end, label: formatDate(start) };
+                }
+                if (value === '7days') {
+                    start.setDate(start.getDate() - 6);
+                } else if (value === '28days') {
+                    start.setDate(start.getDate() - 27);
+                } else if (value === '3months') {
+                    start.setMonth(start.getMonth() - 3);
+                } else if (value === 'all_time') {
+                    return { start: null, end: null, label: 'All time' };
+                } else {
+                    return { start: null, end: null, label: 'Custom' };
+                }
+
+                return { start, end, label: `${formatDate(start)} to ${formatDate(end)}` };
+            };
+
+            const openCanvas = () => offcanvas && offcanvas.classList.remove('hidden');
+            const closeCanvas = () => offcanvas && offcanvas.classList.add('hidden');
+
+            if (rangeSelect) {
+                rangeSelect.addEventListener('change', () => {
+                    const { start, end, label: rangeLabel } = computeRange(rangeSelect.value);
+                    if (rangeSelect.value === 'custom') {
+                        openCanvas();
+                        setLabel('Custom');
+                        return;
+                    }
+                    closeCanvas();
+                    startHidden.value = start ? formatDate(start) : '';
+                    endHidden.value = end ? formatDate(end) : '';
+                    setLabel(rangeLabel);
+                });
+            }
+
+            if (applyBtn) {
+                applyBtn.addEventListener('click', () => {
+                    const startVal = startInput?.value;
+                    const endVal = endInput?.value;
+                    startHidden.value = startVal || '';
+                    endHidden.value = endVal || '';
+                    if (startVal && endVal) {
+                        setLabel(`${startVal} to ${endVal}`);
+                    } else {
+                        setLabel('Custom');
+                    }
+                    closeCanvas();
+                });
+            }
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeCanvas);
+            }
+
+        if (rangeSelect) {
+            const { start, end, label: rangeLabel } = computeRange(rangeSelect.value);
+            startHidden.value = start ? formatDate(start) : '';
+            endHidden.value = end ? formatDate(end) : '';
+            setLabel(rangeLabel);
+        }
+
+        if (exportPdfButton) {
+            exportPdfButton.addEventListener('click', () => {
+                if (chartCanvas && chartImageInput) {
+                    chartImageInput.value = chartCanvas.toDataURL('image/png');
+                }
+            });
+        }
+    });
+    </script>
 @endsection

@@ -25,7 +25,8 @@
                     </div>
                 </div>
                 <nav class="flex-1 space-y-1 px-4">
-                    <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.*') ? 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-900 text-white' : 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900 hover:text-white' }}">Overview</a>
+                    <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-900 text-white' : 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900 hover:text-white' }}">Overview</a>
+                    <a href="{{ route('admin.invoices.index') }}" class="{{ request()->routeIs('admin.invoices.*') ? 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-900 text-white' : 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900 hover:text-white' }}">Invoices</a>
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">Seller dashboard</a>
                 </nav>
                 <div class="px-6 py-5">
@@ -52,6 +53,7 @@
                             <div class="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
                                 <nav class="space-y-2 text-sm">
                                     <a href="{{ route('admin.dashboard') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-900 hover:text-white">Overview</a>
+                                    <a href="{{ route('admin.invoices.index') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-900 hover:text-white">Invoices</a>
                                     <a href="{{ route('dashboard') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">Seller dashboard</a>
                                 </nav>
                                 <form method="POST" action="{{ route('logout') }}" class="mt-3 border-t border-slate-100 pt-3">

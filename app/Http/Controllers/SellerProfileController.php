@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateProfileRequest;
-use App\Models\SellerNotification;
+use App\Services\SellerNotifier;
 use App\Services\PaystackService;
 use Illuminate\Http\Request;
 
@@ -30,17 +30,23 @@ class SellerProfileController extends Controller
 
         $phoneNumber = $request->input('phone_number');
         $phoneCountry = $request->input('phone_country', '+233');
-        if ($phoneNumber) {
-            $digits = preg_replace('/\D+/', '', $phoneNumber);
-            if (str_starts_with($digits, '0')) {
-                $digits = substr($digits, 1);
-            }
-            $profile->phone = $phoneCountry.$digits;
-        } else {
-            $profile->phone = null;
-        }
+        $profile->phone = $phoneNumber
+            ? \App\Support\Phone::normalize($phoneNumber, $phoneCountry)
+            : null;
 
         $profile->save();
+
+        if ($profile->phone) {
+            if ($user->phone !== $profile->phone) {
+                $user->phone_verified_at = null;
+            }
+            $user->phone = $profile->phone;
+            $user->save();
+        } else {
+            $user->phone = null;
+            $user->phone_verified_at = null;
+            $user->save();
+        }
 
         $shouldConnectPaystack = $request->filled('settlement_bank_code')
             && $request->filled('account_number')
@@ -53,13 +59,13 @@ class SellerProfileController extends Controller
                 $profile->percent_charge = $response['percentage_charge'] ?? $profile->percent_charge;
                 $profile->save();
 
-                SellerNotification::create([
-                    'user_id' => $user->id,
-                    'type' => SellerNotification::TYPE_PAYSTACK_CONNECTED,
-                    'title' => 'Paystack connected',
-                    'body' => 'Your payout details are connected to Paystack.',
-                    'data' => ['subaccount_code' => $profile->paystack_subaccount_code],
-                ]);
+                app(SellerNotifier::class)->notify(
+                    $user,
+                    \App\Models\SellerNotification::TYPE_PAYSTACK_CONNECTED,
+                    'Paystack connected',
+                    'Your payout details are connected to Paystack.',
+                    ['subaccount_code' => $profile->paystack_subaccount_code]
+                );
             } catch (\Throwable $exception) {
                 return back()
                     ->withErrors(['paystack' => 'Unable to connect Paystack. Please confirm your payout details.'])

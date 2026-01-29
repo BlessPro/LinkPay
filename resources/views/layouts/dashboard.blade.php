@@ -46,7 +46,7 @@
                         <a href="{{ route('admin.dashboard') }}" class="{{ $navClass('admin.*') }}">Admin</a>
                     @endif
                     @if($profile)
-                        <a href="{{ route('public.listing', $profile->public_slug) }}" class="{{ $navClass('public.listing') }}">Public page</a>
+                        <a href="{{ route('public.preview') }}" class="{{ $navClass('public.preview') }}">Public page</a>
                     @endif
                 </nav>
                 
@@ -89,7 +89,7 @@
                                         <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Admin</a>
                                     @endif
                                     @if($profile)
-                                        <a href="{{ route('public.listing', $profile->public_slug) }}" class="{{ request()->routeIs('public.listing') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Public page</a>
+                                        <a href="{{ route('public.preview') }}" class="{{ request()->routeIs('public.preview') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Public page</a>
                                     @endif
                                 </nav>
                                 <form method="POST" action="{{ route('logout') }}" class="mt-3 border-t border-slate-100 pt-3">

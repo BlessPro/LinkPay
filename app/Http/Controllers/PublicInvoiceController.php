@@ -7,7 +7,9 @@ use App\Models\Payment;
 use App\Services\AnalyticsService;
 use App\Services\PaymentService;
 use App\Services\PaystackService;
+use App\Support\Email;
 use App\Support\Money;
+use App\Support\Phone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -39,7 +41,10 @@ class PublicInvoiceController extends Controller
     public function pay(Request $request, string $token, PaystackService $paystack, AnalyticsService $analytics)
     {
         $request->validate([
-            'email' => ['required', 'email'],
+            'name' => ['nullable', 'string', 'max:120'],
+            'email' => ['nullable', 'email'],
+            'phone_number' => ['required', 'string', 'max:25'],
+            'phone_country' => ['nullable', 'string'],
         ]);
 
         $invoice = Invoice::where('token', $token)
@@ -61,6 +66,20 @@ class PublicInvoiceController extends Controller
         }
 
         $reference = (string) Str::uuid();
+        $phoneInput = $request->input('phone_number');
+        $phoneParts = array_filter(array_map('trim', explode(',', (string) $phoneInput)));
+        $primaryPhone = $phoneParts[0] ?? $phoneInput;
+        $phone = Phone::normalize($primaryPhone, $request->input('phone_country', '+233'));
+        if (! $phone || ! Phone::isValidGh($primaryPhone)) {
+            return back()->withErrors(['phone_number' => 'Enter a valid WhatsApp number.'])->withInput();
+        }
+
+        $emailInput = $request->input('email');
+        $emailParts = array_filter(array_map('trim', explode(',', (string) $emailInput)));
+        $email = $emailParts[0] ?? $emailInput;
+        if (! $email) {
+            $email = Email::placeholder($reference);
+        }
 
         $analytics->trackEvent(
             $request,
@@ -76,6 +95,13 @@ class PublicInvoiceController extends Controller
             'reference' => $reference,
             'amount' => $amountDue,
             'status' => Payment::STATUS_PENDING,
+            'raw_payload' => [
+                'customer' => [
+                    'name' => $request->input('name'),
+                    'email' => $email,
+                    'phone' => $phone,
+                ],
+            ],
         ]);
 
         $platformFee = (string) config('services.paystack.platform_fee_flat', '0');
@@ -83,12 +109,17 @@ class PublicInvoiceController extends Controller
 
         $data = $paystack->initializeTransaction(
             $amountDue,
-            $request->input('email'),
+            $email,
             [
                 'reference' => $reference,
                 'payment_id' => $payment->id,
                 'invoice_id' => $invoice->id,
                 'purpose' => 'invoice',
+                'customer' => [
+                    'name' => $request->input('name'),
+                    'email' => $email,
+                    'phone' => $phone,
+                ],
             ],
             $seller->paystack_subaccount_code,
             $platformFee

@@ -14,6 +14,7 @@ class SellerNotification extends Model
     public const TYPE_PAYMENT_RECEIVED = 'PAYMENT_RECEIVED';
     public const TYPE_INVOICE_PARTIAL = 'INVOICE_PARTIALLY_PAID';
     public const TYPE_INVOICE_PAID = 'INVOICE_FULLY_PAID';
+    public const TYPE_LEAD_CAPTURED = 'LEAD_CAPTURED';
 
     protected $table = 'notifications';
 

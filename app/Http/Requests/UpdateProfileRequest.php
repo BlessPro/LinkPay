@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Models\User;
 use Illuminate\Validation\Rule;
 
 class UpdateProfileRequest extends FormRequest
@@ -34,18 +35,20 @@ class UpdateProfileRequest extends FormRequest
                 return;
             }
 
-            $digits = preg_replace('/\D+/', '', $phoneNumber);
-            if (! $digits) {
+            $normalized = \App\Support\Phone::normalize($phoneNumber, $country);
+            if (! $normalized) {
                 $validator->errors()->add('phone_number', 'Phone number must contain digits.');
                 return;
             }
 
-            if (str_starts_with($digits, '0')) {
-                $digits = substr($digits, 1);
+            $digits = preg_replace('/\D+/', '', $normalized);
+            if ($country === '+233' && strlen($digits) !== 12) {
+                $validator->errors()->add('phone_number', 'Phone number must be 9 digits after removing the leading 0.');
             }
 
-            if ($country === '+233' && strlen($digits) !== 9) {
-                $validator->errors()->add('phone_number', 'Phone number must be 9 digits after removing the leading 0.');
+            $userId = $this->user()?->id;
+            if ($normalized && User::where('phone', $normalized)->where('id', '!=', $userId)->exists()) {
+                $validator->errors()->add('phone_number', 'This WhatsApp number is already linked to another account.');
             }
         });
     }
