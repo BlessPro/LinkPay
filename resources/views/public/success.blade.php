@@ -28,4 +28,18 @@
             @endif
         @endif
     </div>
+    @if(! empty($listingUrl))
+        <div class="mt-6 rounded-3xl border border-slate-200 bg-slate-50/70 p-6 text-center shadow-sm">
+            <p class="text-sm text-slate-600">You can return to the listing to pick another product.</p>
+            <a href="{{ $listingUrl }}" class="mt-4 inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500">
+                Back to storefront
+            </a>
+            <p class="mt-2 text-xs text-slate-400">Redirecting automatically in 8 seconds…</p>
+        </div>
+        <script>
+            setTimeout(() => {
+                window.location.href = @json($listingUrl);
+            }, 8000);
+        </script>
+    @endif
 @endsection

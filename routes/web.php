@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicInvoiceController;
 use App\Http\Controllers\PublicListingController;
+use App\Http\Controllers\PublicProductController;
 use App\Http\Controllers\SellerProfileController;
 use App\Http\Controllers\InsightsController;
 use App\Http\Controllers\Admin\AdminDashboardController;
@@ -29,6 +30,7 @@ Route::post('/s/{public_slug}/products/{product}/interest', [PublicListingContro
 Route::get('/pay/success', [PublicInvoiceController::class, 'success'])->name('pay.success');
 Route::get('/pay/{token}', [PublicInvoiceController::class, 'show'])->name('public.invoice');
 Route::post('/pay/{token}', [PublicInvoiceController::class, 'pay'])->name('public.invoice.pay');
+Route::get('/p/{product_slug}', [PublicProductController::class, 'show'])->name('public.product');
 
 Route::post('/webhooks/paystack', [PaystackWebhookController::class, 'handle'])->name('webhooks.paystack');
 
@@ -46,6 +48,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/export-pdf', [ProductController::class, 'exportPdf'])->name('products.exportPdf');
     Route::resource('invoices', InvoiceController::class)->only(['index', 'create', 'store', 'show']);
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+    Route::get('/payments/export', [PaymentController::class, 'export'])->name('payments.export');
     Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->name('payments.verify');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/insights', [InsightsController::class, 'index'])->name('insights.index');

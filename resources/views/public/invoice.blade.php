@@ -1,6 +1,12 @@
 @php($title = $invoice->title)
 @extends('layouts.public')
 
+@section('og_title', $ogTitle ?? $title)
+@section('og_description', $ogDescription ?? "Amount due: GHS {$amountDue}. Tap to view and pay securely.")
+@section('og_image', $ogImage ?? asset('images/og-default.png'))
+@section('og_url', $ogUrl ?? route('public.invoice', $invoice->token))
+@section('og_type', $ogType ?? 'website')
+
 @section('content')
     <div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm">
@@ -56,7 +62,7 @@
             <form method="POST" action="{{ route('public.invoice.pay', $invoice->token) }}" class="mt-5 space-y-3">
                 @csrf
                 <input name="name" placeholder="Name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-                <input name="phone_number" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" required />
+                <input name="phone_number" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" required data-strip-leading-zero="true" />
                 <input name="email" placeholder="Email (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
                 <input type="hidden" name="phone_country" value="+233" />
                 <button type="submit" class="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500" {{ $invoice->status === \App\Models\Invoice::STATUS_PAID || ! $seller?->paystack_subaccount_code ? 'disabled' : '' }}>

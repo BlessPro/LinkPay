@@ -56,4 +56,26 @@ class Money
     {
         return $currency.' '.number_format((float) $amount, 2, '.', ',');
     }
+
+    public static function fromMinor(int|string $amount): string
+    {
+        if (! is_numeric($amount)) {
+            return '0.00';
+        }
+
+        if (function_exists('bcmul') && function_exists('bcdiv')) {
+            return bcdiv((string) $amount, '100', 2);
+        }
+
+        return number_format(((float) $amount) / 100, 2, '.', '');
+    }
+
+    public static function percent(string $amount, string $percent): string
+    {
+        if (function_exists('bcmul')) {
+            return bcmul($amount, $percent, 2);
+        }
+
+        return number_format(((float) $amount) * (float) $percent, 2, '.', '');
+    }
 }

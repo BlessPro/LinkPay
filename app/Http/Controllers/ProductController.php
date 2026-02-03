@@ -11,6 +11,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -256,6 +257,7 @@ class ProductController extends Controller
         $data['user_id'] = $request->user()->id;
         $data['is_active'] = $request->boolean('is_active');
         $data['status'] = $request->input('status', Product::STATUS_IN_STOCK);
+        $data['slug'] = $this->generateProductSlug($data['name']);
 
         if ($request->hasFile('image')) {
             $data['image_path'] = $request->file('image')->store('products', 'public');
@@ -286,6 +288,7 @@ class ProductController extends Controller
         $data = $request->validated();
         $data['is_active'] = $request->boolean('is_active');
         $data['status'] = $request->input('status', Product::STATUS_IN_STOCK);
+        $data['slug'] = $this->generateProductSlug($data['name'], $product);
 
         if ($request->hasFile('image')) {
             if ($product->image_path) {
@@ -466,5 +469,21 @@ class ProductController extends Controller
             'paymentTotal' => $paymentTotal,
             'conversion' => $clicks > 0 ? round(($payments->count() / $clicks) * 100, 1) : 0.0,
         ];
+    }
+
+    private function generateProductSlug(string $name, ?Product $product = null): string
+    {
+        $base = Str::slug($name) ?: 'product';
+        $slug = $base;
+        $counter = 1;
+
+        while (Product::where('slug', $slug)
+            ->when($product, fn ($query) => $query->where('id', '!=', $product->id))
+            ->exists()) {
+            $counter++;
+            $slug = $base.'-'.$counter;
+        }
+
+        return $slug;
     }
 }

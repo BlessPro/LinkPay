@@ -83,7 +83,7 @@
                     <select name="phone_country" class="rounded-xl border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
                         <option value="+233">+233</option>
                     </select>
-                    <input name="phone_number" value="{{ old('phone_number') }}" class="w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="0541900229" inputmode="numeric" pattern="[0-9]*" autocomplete="tel" />
+                    <input name="phone_number" value="{{ old('phone_number') }}" class="w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="0541900229" inputmode="numeric" pattern="[0-9]*" autocomplete="tel" data-strip-leading-zero="true" />
                 </div>
                 <p class="mt-2 text-xs text-slate-500">We will send an OTP to your WhatsApp number.</p>
                 <x-input-error :messages="$errors->get('phone_number')" class="mt-2" />

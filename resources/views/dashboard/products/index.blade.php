@@ -1,4 +1,6 @@
-@php($title = 'Products')
+@php
+    $title = 'Products';
+@endphp
 @extends('layouts.dashboard')
 
 @section('content')
@@ -210,6 +212,19 @@
                                 <span class="cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
                                     Quick edit
                                 </span>
+                                @php
+                                    $publicUrl = route('public.product', ['product_slug' => $product->slug]);
+                                    $imageUrl = $product->image_path ? url('storage/'.$product->image_path) : asset('images/og-default.png');
+                                    $shareText = rawurlencode("Check this product: {$product->name} at {$publicUrl} Price: " . \App\Support\Money::format($product->price, $currency) . " Image: {$imageUrl}");
+                                @endphp
+                                <a
+                                    href="https://api.whatsapp.com/send?text={{ $shareText }}"
+                                    target="_blank"
+                                    rel="noreferrer noopener"
+                                    class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300 hover:text-emerald-600"
+                                >
+                                    Share to WhatsApp
+                                </a>
                                 <a href="{{ route('products.edit', $product) }}" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
                                     Edit
                                 </a>
@@ -356,17 +371,17 @@
                 emptyState.classList.add('flex');
             }
 
-        const rangeSelect = document.getElementById('export-range');
-        const label = document.getElementById('export-label');
-        const offcanvas = document.getElementById('export-offcanvas');
-        const closeBtn = document.getElementById('export-close');
-        const applyBtn = document.getElementById('export-apply');
-        const startInput = document.getElementById('export-start-input');
-        const endInput = document.getElementById('export-end-input');
-        const startHidden = document.getElementById('export-start');
-        const endHidden = document.getElementById('export-end');
-        const chartImageInput = document.getElementById('export-chart-image');
-        const exportPdfButton = document.getElementById('export-pdf');
+            const rangeSelect = document.getElementById('export-range');
+            const label = document.getElementById('export-label');
+            const offcanvas = document.getElementById('export-offcanvas');
+            const closeBtn = document.getElementById('export-close');
+            const applyBtn = document.getElementById('export-apply');
+            const startInput = document.getElementById('export-start-input');
+            const endInput = document.getElementById('export-end-input');
+            const startHidden = document.getElementById('export-start');
+            const endHidden = document.getElementById('export-end');
+            const chartImageInput = document.getElementById('export-chart-image');
+            const exportPdfButton = document.getElementById('export-pdf');
 
             const formatDate = (date) => date.toISOString().slice(0, 10);
             const setLabel = (text) => { if (label) label.textContent = text; };
@@ -387,8 +402,6 @@
                     start.setMonth(start.getMonth() - 3);
                 } else if (value === 'all_time') {
                     return { start: null, end: null, label: 'All time' };
-                } else {
-                    return { start: null, end: null, label: 'Custom' };
                 }
 
                 return { start, end, label: `${formatDate(start)} to ${formatDate(end)}` };
@@ -431,20 +444,20 @@
                 closeBtn.addEventListener('click', closeCanvas);
             }
 
-        if (rangeSelect) {
-            const { start, end, label: rangeLabel } = computeRange(rangeSelect.value);
-            startHidden.value = start ? formatDate(start) : '';
-            endHidden.value = end ? formatDate(end) : '';
-            setLabel(rangeLabel);
-        }
+            if (rangeSelect) {
+                const { start, end, label: rangeLabel } = computeRange(rangeSelect.value);
+                startHidden.value = start ? formatDate(start) : '';
+                endHidden.value = end ? formatDate(end) : '';
+                setLabel(rangeLabel);
+            }
 
-        if (exportPdfButton) {
-            exportPdfButton.addEventListener('click', () => {
-                if (chartCanvas && chartImageInput) {
-                    chartImageInput.value = chartCanvas.toDataURL('image/png');
-                }
-            });
-        }
-    });
+            if (exportPdfButton) {
+                exportPdfButton.addEventListener('click', () => {
+                    if (chartCanvas && chartImageInput) {
+                        chartImageInput.value = chartCanvas.toDataURL('image/png');
+                    }
+                });
+            }
+        });
     </script>
 @endsection

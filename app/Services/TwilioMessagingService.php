@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Phone;
 use Twilio\Rest\Client;
 
 class TwilioMessagingService
@@ -27,7 +28,19 @@ class TwilioMessagingService
 
     private function formatWhatsApp(string $value): string
     {
-        return str_starts_with($value, 'whatsapp:') ? $value : 'whatsapp:'.$value;
+        $value = trim($value);
+        if (str_starts_with($value, 'whatsapp:')) {
+            return $value;
+        }
+
+        if (! str_starts_with($value, '+')) {
+            $normalized = Phone::normalize($value, '+233');
+            if ($normalized) {
+                $value = $normalized;
+            }
+        }
+
+        return 'whatsapp:'.$value;
     }
 
     private function ensureConfigured(): void

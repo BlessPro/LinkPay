@@ -47,7 +47,7 @@
                             <select name="phone_country" class="w-28 rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
                                 <option value="+233" {{ $selectedCountry === '+233' ? 'selected' : '' }}>+233</option>
                             </select>
-                            <input name="phone_number" value="{{ $displayPhone }}" placeholder="0541900229" class="flex-1 rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
+                            <input name="phone_number" value="{{ $displayPhone }}" placeholder="0541900229" class="flex-1 rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" data-strip-leading-zero="true" />
                         </div>
                         <p class="mt-2 text-xs text-slate-500">We remove the leading 0 and save 9 digits.</p>
                         @error('phone_number') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror

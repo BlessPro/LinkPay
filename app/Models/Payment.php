@@ -28,6 +28,12 @@ class Payment extends Model
         'channel',
         'paid_at',
         'raw_payload',
+        'commission_amount',
+        'transaction_fee',
+        'tax_amount',
+        'receiving_account',
+        'transaction_code',
+        'transaction_id',
     ];
 
     protected function casts(): array
@@ -36,6 +42,10 @@ class Payment extends Model
             'amount' => 'decimal:2',
             'paid_at' => 'datetime',
             'raw_payload' => 'array',
+            'commission_amount' => 'decimal:2',
+            'transaction_fee' => 'decimal:2',
+            'tax_amount' => 'decimal:2',
+            'transaction_id' => 'string',
         ];
     }
 

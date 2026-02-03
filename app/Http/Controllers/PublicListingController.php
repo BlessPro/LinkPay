@@ -58,7 +58,35 @@ class PublicListingController extends Controller
             'currency' => config('services.paystack.currency', 'GHS'),
             'template' => $template,
             'isOwner' => $isOwner,
+            'ogTitle' => $profile->business_name,
+            'ogDescription' => 'Browse products & services and contact on WhatsApp',
+            'ogImage' => $this->resolveSellerOgImage($profile),
+            'ogUrl' => route('public.listing', $profile->public_slug),
+            'ogType' => 'website',
         ]);
+    }
+
+    private function resolveSellerOgImage(SellerProfile $profile): string
+    {
+        $firstWithImage = $profile->user->products()
+            ->where('is_active', true)
+            ->where('status', '!=', Product::STATUS_UNAVAILABLE)
+            ->whereNotNull('image_path')
+            ->where('image_path', '!=', '')
+            ->latest()
+            ->first();
+
+        $firstActive = $firstWithImage ?: $profile->user->products()
+            ->where('is_active', true)
+            ->where('status', '!=', Product::STATUS_UNAVAILABLE)
+            ->latest()
+            ->first();
+
+        if ($firstActive?->image_path) {
+            return url('storage/'.$firstActive->image_path);
+        }
+
+        return asset('images/og-default.png');
     }
 
     public function pay(

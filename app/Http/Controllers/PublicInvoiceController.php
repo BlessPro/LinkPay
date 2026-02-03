@@ -29,12 +29,24 @@ class PublicInvoiceController extends Controller
             (string) $invoice->id
         );
 
+        $sellerName = $invoice->user->sellerProfile?->business_name ?? 'Seller';
+        $ogImage = $invoice->image_path
+            ? url('storage/'.$invoice->image_path)
+            : asset('images/og-default.png');
+
+        $currency = config('services.paystack.currency', 'GHS');
+
         return view('public.invoice', [
             'invoice' => $invoice,
             'seller' => $invoice->user->sellerProfile,
             'amountDue' => $invoice->amountDue(),
             'balance' => $invoice->balanceRemaining(),
-            'currency' => config('services.paystack.currency', 'GHS'),
+            'currency' => $currency,
+            'ogTitle' => "{$sellerName} • {$invoice->title}",
+            'ogDescription' => "Amount due: ".\App\Support\Money::format($invoice->amountDue(), $currency).". Tap to view and pay securely.",
+            'ogImage' => $ogImage,
+            'ogUrl' => route('public.invoice', $invoice->token),
+            'ogType' => 'website',
         ]);
     }
 
@@ -151,10 +163,17 @@ class PublicInvoiceController extends Controller
             }
         }
 
+        $listingSlug = $payment
+            ? $payment->invoice?->user?->sellerProfile?->public_slug
+                ?? $payment->product?->user?->sellerProfile?->public_slug
+            : null;
+        $listingUrl = $listingSlug ? route('public.listing', $listingSlug) : null;
+
         return view('public.success', [
             'payment' => $payment,
             'reference' => $reference,
             'currency' => config('services.paystack.currency', 'GHS'),
+            'listingUrl' => $listingUrl,
         ]);
     }
 }

@@ -5,7 +5,25 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ $title ?? config('app.name', 'LinkPay') }}</title>
+        @php
+            $defaultOgImage = asset('images/og-default.png');
+            $ogTitle = trim($__env->yieldContent('og_title')) ?: $title ?? config('app.name', 'LinkPay');
+            $ogDescription = trim($__env->yieldContent('og_description')) ?: 'Pay by WhatsApp with LinkPay';
+            $ogImage = trim($__env->yieldContent('og_image')) ?: $defaultOgImage;
+            $ogUrl = trim($__env->yieldContent('og_url')) ?: url()->current();
+            $ogType = trim($__env->yieldContent('og_type')) ?: 'website';
+        @endphp
+
+        <title>{{ $ogTitle }}</title>
+        <meta property="og:title" content="{{ $ogTitle }}">
+        <meta property="og:description" content="{{ $ogDescription }}">
+        <meta property="og:image" content="{{ $ogImage }}">
+        <meta property="og:url" content="{{ $ogUrl }}">
+        <meta property="og:type" content="{{ $ogType }}">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ $ogTitle }}">
+        <meta name="twitter:description" content="{{ $ogDescription }}">
+        <meta name="twitter:image" content="{{ $ogImage }}">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=space-grotesk:400,500,600,700&display=swap" rel="stylesheet" />

@@ -28,6 +28,12 @@ class PaymentService
 
         $existingPayload = $payment->raw_payload ?? [];
         $payment->raw_payload = array_replace_recursive($existingPayload, $verifiedData);
+        $payment->commission_amount = Money::percent((string) $payment->amount, '0.01');
+        $payment->transaction_fee = $this->amountFromMinor(data_get($verifiedData, 'transaction_charge'));
+        $payment->tax_amount = $this->resolveTaxAmount($verifiedData);
+        $payment->receiving_account = $this->resolveReceivingAccount($payment, $verifiedData);
+        $payment->transaction_code = $this->resolveTransactionCode($payment, $verifiedData);
+        $payment->transaction_id = $this->resolveTransactionId($payment, $verifiedData);
         $payment->save();
 
         $user = $payment->user()->with('sellerProfile')->first();
@@ -98,5 +104,48 @@ class PaymentService
                 'payment_id' => $payment->id,
             ]);
         }
+    }
+
+    private function amountFromMinor($value): string
+    {
+        if ($value === null) {
+            return '0.00';
+        }
+
+        return Money::fromMinor($value);
+    }
+
+    private function resolveTaxAmount(array $verifiedData): string
+    {
+        $tax = data_get($verifiedData, 'metadata.tax')
+            ?? data_get($verifiedData, 'tax')
+            ?? 0;
+
+        if (! is_numeric($tax)) {
+            return '0.00';
+        }
+
+        return (string) number_format((float) $tax, 2, '.', '');
+    }
+
+    private function resolveReceivingAccount(Payment $payment, array $verifiedData): ?string
+    {
+        return data_get($verifiedData, 'subaccount')
+            ?? data_get($verifiedData, 'metadata.subaccount')
+            ?? $payment->receiving_account;
+    }
+
+    private function resolveTransactionCode(Payment $payment, array $verifiedData): ?string
+    {
+        return data_get($verifiedData, 'authorization.authorization_code')
+            ?? data_get($verifiedData, 'metadata.transaction_code')
+            ?? data_get($payment->raw_payload, 'authorization.authorization_code');
+    }
+
+    private function resolveTransactionId(Payment $payment, array $verifiedData): ?string
+    {
+        return data_get($verifiedData, 'id')
+            ?? data_get($verifiedData, 'metadata.transaction_id')
+            ?? $payment->transaction_id;
     }
 }
