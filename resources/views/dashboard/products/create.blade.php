@@ -1,4 +1,6 @@
-@php($title = 'Create Product')
+@php
+    $title = 'Create Product';
+@endphp
 @extends('layouts.dashboard')
 
 @section('content')

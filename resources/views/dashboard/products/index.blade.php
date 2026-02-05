@@ -69,13 +69,15 @@
                         </p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
-                        @php($metricOptions = [
-                            'revenue' => 'Revenue',
-                            'payments' => 'Payments',
-                            'views' => 'Views',
-                            'clicks' => 'Clicks',
-                            'conversion' => 'Conversion %',
-                        ])
+                        @php
+                            $metricOptions = [
+                                'revenue' => 'Revenue',
+                                'payments' => 'Payments',
+                                'views' => 'Views',
+                                'clicks' => 'Clicks',
+                                'conversion' => 'Conversion %',
+                            ];
+                        @endphp
                         <form method="GET" action="{{ route('products.index') }}" class="inline-flex items-center gap-2">
                             <input type="hidden" name="chart_range" value="{{ $chartRange }}">
                             <div class="inline-flex overflow-hidden rounded-full border border-slate-200 bg-white">
@@ -116,14 +118,18 @@
                 </div>
                 <div class="mt-4 space-y-4">
                     @forelse($topList as $productId => $stats)
-                        @php($productName = $productLookup[$productId]->name ?? 'Product')
+                        @php
+                            $productName = $productLookup[$productId]->name ?? 'Product';
+                        @endphp
                         <div>
                             <div class="flex items-center justify-between text-sm">
                                 <span class="text-slate-700">{{ $productName }}</span>
                                 <span class="font-semibold text-slate-900">{{ \App\Support\Money::format($stats['total'], $currency) }}</span>
                             </div>
                             <div class="mt-2 h-2 rounded-full bg-slate-100">
-                                @php($width = min(100, ((float) $stats['total'] / $maxTopTotal) * 100))
+                                @php
+                                    $width = min(100, ((float) $stats['total'] / $maxTopTotal) * 100);
+                                @endphp
                                 <div class="h-2 rounded-full bg-emerald-500" style="width: {{ $width }}%"></div>
                             </div>
                         </div>
@@ -140,7 +146,9 @@
                 </div>
                 <div class="mt-4 space-y-3 text-sm">
                     @foreach(\App\Models\Product::statusOptions() as $key => $label)
-                        @php($count = $statusCounts[$key] ?? 0)
+                        @php
+                            $count = $statusCounts[$key] ?? 0;
+                        @endphp
                         <div class="flex items-center justify-between">
                             <span class="text-slate-600">{{ $label }}</span>
                             <span class="font-semibold text-slate-900">{{ $count }}</span>
@@ -187,98 +195,144 @@
 
     <div id="product-list" class="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="divide-y divide-slate-100">
-            @forelse($products as $product)
-                <details class="group">
-                    <summary class="list-none">
-                        <div class="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="flex items-center gap-4">
-                                <div class="h-14 w-14 overflow-hidden rounded-xl bg-slate-100">
-                                    @if($product->image_path)
-                                        <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
-                                    @endif
+            @if($products->count())
+                @foreach($products as $product)
+                    @php
+                        $publicUrl = route('public.product', ['product_slug' => $product->slug]);
+                        $imageUrl = $product->image_path ? url('storage/'.$product->image_path) : asset('images/og-default.png');
+                        $waText = "Check this product: {$product->name} at {$publicUrl} "
+                            ."Price: ".\App\Support\Money::format($product->price, $currency)
+                            ." Image: {$imageUrl}";
+                    @endphp
+                    <details class="group">
+                        <summary class="list-none">
+                            <div class="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="flex items-center gap-4">
+                                    <div class="h-14 w-14 overflow-hidden rounded-xl bg-slate-100">
+                                        @if($product->image_path)
+                                            <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-900">{{ $product->name }}</p>
+                                        <p class="text-xs text-slate-500">{{ \App\Support\Money::format($product->price, $currency) }}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="text-sm font-semibold text-slate-900">{{ $product->name }}</p>
-                                    <p class="text-xs text-slate-500">{{ \App\Support\Money::format($product->price, $currency) }}</p>
+                                <div class="flex items-center gap-3">
+                                    <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $product->statusBadgeClass() }}">
+                                        {{ $product->statusLabel() }}
+                                    </span>
+                                    <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $product->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
+                                        {{ $product->is_active ? 'Active' : 'Inactive' }}
+                                    </span>
+                                    <span class="cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                                        Quick edit
+                                    </span>
+                                    <a
+                                        href="https://api.whatsapp.com/send?text={{ rawurlencode($waText) }}"
+                                        target="_blank"
+                                        rel="noreferrer noopener"
+                                        class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300 hover:text-emerald-600"
+                                    >
+                                        Share to WhatsApp
+                                    </a>
+                                    <button
+                                        type="button"
+                                        class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700 product-copy-link"
+                                        data-copy-link="{{ $publicUrl }}"
+                                    >
+                                        Copy link
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700 product-action-trigger"
+                                        data-product-name="{{ $product->name }}"
+                                        data-product-id="{{ $product->id }}"
+                                        data-product-slug="{{ $product->slug }}"
+                                        data-product-view-url="{{ $publicUrl }}"
+                                    >
+                                        Manage
+                                    </button>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $product->statusBadgeClass() }}">
-                                    {{ $product->statusLabel() }}
-                                </span>
-                                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $product->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
-                                    {{ $product->is_active ? 'Active' : 'Inactive' }}
-                                </span>
-                                <span class="cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
-                                    Quick edit
-                                </span>
-                                @php
-                                    $publicUrl = route('public.product', ['product_slug' => $product->slug]);
-                                    $imageUrl = $product->image_path ? url('storage/'.$product->image_path) : asset('images/og-default.png');
-                                    $shareText = rawurlencode("Check this product: {$product->name} at {$publicUrl} Price: " . \App\Support\Money::format($product->price, $currency) . " Image: {$imageUrl}");
-                                @endphp
-                                <a
-                                    href="https://api.whatsapp.com/send?text={{ $shareText }}"
-                                    target="_blank"
-                                    rel="noreferrer noopener"
-                                    class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300 hover:text-emerald-600"
-                                >
-                                    Share to WhatsApp
-                                </a>
-                                <a href="{{ route('products.edit', $product) }}" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
-                                    Edit
-                                </a>
-                                <form method="POST" action="{{ route('products.destroy', $product) }}" onsubmit="return confirm('Delete this product?')">
+                        </summary>
+                        <div class="px-6 pb-6">
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm">
+                                <form method="POST" action="{{ route('products.update', $product) }}" class="grid gap-3 sm:grid-cols-3">
                                     @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-600 hover:border-rose-300">
-                                        Delete
-                                    </button>
+                                    @method('PUT')
+                                    <div>
+                                        <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Name</label>
+                                        <input name="name" value="{{ $product->name }}" class="mt-2 w-full rounded-xl border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                                    </div>
+                                    <div>
+                                        <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Price</label>
+                                        <input name="price" value="{{ $product->price }}" type="number" step="0.01" class="mt-2 w-full rounded-xl border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                                    </div>
+                                    <div>
+                                        <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Status</label>
+                                        <div class="relative mt-2">
+                                            <select name="status" class="w-full appearance-none rounded-xl border-slate-200 bg-white pr-10 text-sm text-slate-700 focus:border-emerald-500 focus:ring-emerald-500">
+                                                @foreach(\App\Models\Product::statusOptions() as $value => $label)
+                                                    <option value="{{ $value }}" @selected($product->status === $value)>{{ $label }}</option>
+                                                @endforeach
+                                            </select>
+                                            <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
+                                                </svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="sm:col-span-3 flex items-center gap-3">
+                                        <button type="submit" class="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500">
+                                            Save changes
+                                        </button>
+                                        <span class="text-xs text-slate-500">Other fields stay unchanged.</span>
+                                    </div>
                                 </form>
                             </div>
                         </div>
-                    </summary>
-                    <div class="px-6 pb-6">
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm">
-                            <form method="POST" action="{{ route('products.update', $product) }}" class="grid gap-3 sm:grid-cols-3">
-                                @csrf
-                                @method('PUT')
-                                <div>
-                                    <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Name</label>
-                                    <input name="name" value="{{ $product->name }}" class="mt-2 w-full rounded-xl border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-                                </div>
-                                <div>
-                                    <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Price</label>
-                                    <input name="price" value="{{ $product->price }}" type="number" step="0.01" class="mt-2 w-full rounded-xl border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-                                </div>
-                                <div>
-                                    <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Status</label>
-                                    <div class="relative mt-2">
-                                        <select name="status" class="w-full appearance-none rounded-xl border-slate-200 bg-white pr-10 text-sm text-slate-700 focus:border-emerald-500 focus:ring-emerald-500">
-                                            @foreach(\App\Models\Product::statusOptions() as $value => $label)
-                                                <option value="{{ $value }}" @selected($product->status === $value)>{{ $label }}</option>
-                                            @endforeach
-                                        </select>
-                                        <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
-                                            </svg>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="sm:col-span-3 flex items-center gap-3">
-                                    <button type="submit" class="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500">
-                                        Save changes
-                                    </button>
-                                    <span class="text-xs text-slate-500">Other fields stay unchanged.</span>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </details>
-            @empty
+                    </details>
+                @endforeach
+            @else
                 <div class="px-6 py-10 text-center text-sm text-slate-500">No products yet.</div>
-            @endforelse
+            @endif
+        </div>
+    </div>
+
+    @php
+        $productEditTemplate = route('products.edit', ['product' => '___ID___']);
+        $productDeleteTemplate = route('products.destroy', ['product' => '___ID___']);
+    @endphp
+
+    <div id="product-manage-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4">
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Manage product</p>
+                    <h3 id="product-manage-title" class="mt-2 text-lg font-semibold text-slate-900">Product</h3>
+                </div>
+                <button type="button" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300" data-modal-close>
+                    Close
+                </button>
+            </div>
+
+            <div class="mt-6 grid gap-3">
+                <a id="product-manage-view" href="#" target="_blank" rel="noreferrer noopener" class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800 hover:border-emerald-200 hover:text-emerald-700">
+                    View public page
+                </a>
+                <a id="product-manage-edit" href="#" class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800 hover:border-emerald-200 hover:text-emerald-700">
+                    Edit in dashboard
+                </a>
+                <form id="product-manage-delete-form" method="POST" action="">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="w-full rounded-xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-700 hover:border-rose-300">
+                        Delete product
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -288,6 +342,79 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('product-manage-modal');
+            const modalTitle = document.getElementById('product-manage-title');
+            const viewLink = document.getElementById('product-manage-view');
+            const editLink = document.getElementById('product-manage-edit');
+            const deleteForm = document.getElementById('product-manage-delete-form');
+            const editTemplate = @json($productEditTemplate);
+            const deleteTemplate = @json($productDeleteTemplate);
+
+            const openModal = () => {
+                if (!modal) return;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            };
+
+            const closeModal = () => {
+                if (!modal) return;
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            };
+
+            document.querySelectorAll('[data-modal-close]').forEach((btn) => {
+                btn.addEventListener('click', closeModal);
+            });
+
+            if (modal) {
+                modal.addEventListener('click', (event) => {
+                    if (event.target === modal) closeModal();
+                });
+            }
+
+            document.querySelectorAll('.product-action-trigger').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.productId;
+                    const name = btn.dataset.productName || 'Product';
+                    const viewUrl = btn.dataset.productViewUrl || '#';
+
+                    if (modalTitle) modalTitle.textContent = name;
+                    if (viewLink) viewLink.href = viewUrl;
+                    if (editLink) editLink.href = editTemplate.replace('___ID___', id);
+                    if (deleteForm) deleteForm.action = deleteTemplate.replace('___ID___', id);
+
+                    openModal();
+                });
+            });
+
+            const toast = (message) => {
+                const el = document.createElement('div');
+                el.className = 'fixed bottom-5 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg';
+                el.textContent = message;
+                document.body.appendChild(el);
+                window.setTimeout(() => el.remove(), 1800);
+            };
+
+            document.querySelectorAll('.product-copy-link').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const link = btn.dataset.copyLink;
+                    if (!link) return;
+                    try {
+                        await navigator.clipboard.writeText(link);
+                        toast('Link copied');
+                    } catch (e) {
+                        // Fallback for non-HTTPS / older browsers
+                        const input = document.createElement('input');
+                        input.value = link;
+                        document.body.appendChild(input);
+                        input.select();
+                        document.execCommand('copy');
+                        input.remove();
+                        toast('Link copied');
+                    }
+                });
+            });
+
             const series = @json($series);
             const chartCanvas = document.getElementById('product-chart');
             const metricInputs = document.querySelectorAll('input[name="metric"]');

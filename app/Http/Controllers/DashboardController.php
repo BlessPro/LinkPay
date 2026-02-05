@@ -210,8 +210,8 @@ class DashboardController extends Controller
                 ];
             });
 
-        return $payments
-            ->merge($notifications)
+        return collect($payments->values())
+            ->merge($notifications->values())
             ->sortByDesc('created_at')
             ->take(4)
             ->values();
