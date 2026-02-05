@@ -54,6 +54,11 @@
 
                 @php
                     $canPay = $product->isPayable();
+                    $sellerPhone = $profile->phone ?: ($profile->user?->phone);
+                    $sellerPhone = $sellerPhone ? \App\Support\Phone::normalize($sellerPhone, '+233') : null;
+                    $productUrl = route('public.product', ['product_slug' => $product->slug]);
+                    $chatMessage = "Hi there, I am interested in {$product->name}. Is it available? Please tell me more.\nLink: {$productUrl}";
+                    $chatUrl = $sellerPhone ? \App\Support\WhatsApp::chatUrl($sellerPhone, $chatMessage) : null;
                 @endphp
 
                 <form method="POST" action="{{ route('public.products.pay', [$profile->public_slug, $product]) }}" class="mt-6 grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-[1.2fr_1fr_1fr]">
@@ -71,13 +76,16 @@
                         >
                             {{ $canPay ? 'Pay now' : 'Unavailable' }}
                         </button>
-                        <button
-                            type="submit"
-                            formaction="{{ route('public.products.interest', [$profile->public_slug, $product]) }}"
-                            class="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700"
-                        >
-                            Chat on WhatsApp
-                        </button>
+                        @if($chatUrl)
+                            <a
+                                href="{{ $chatUrl }}"
+                                target="_blank"
+                                rel="noreferrer noopener"
+                                class="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700"
+                            >
+                                Chat on WhatsApp
+                            </a>
+                        @endif
                         <a
                             href="{{ route('public.listing', [$profile->public_slug]) }}"
                             class="ml-auto rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:border-emerald-200 hover:text-emerald-700"

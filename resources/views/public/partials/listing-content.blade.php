@@ -52,14 +52,21 @@
                         <input type="hidden" name="phone_country" value="+233" />
                         @php
                             $canPay = $product->isPayable();
+                            $sellerPhone = $profile->phone ?: ($profile->user?->phone);
+                            $sellerPhone = $sellerPhone ? \App\Support\Phone::normalize($sellerPhone, '+233') : null;
+                            $productUrl = route('public.product', ['product_slug' => $product->slug]);
+                            $chatMessage = "Hi there, I am interested in {$product->name}. Is it available? Please tell me more.\nLink: {$productUrl}";
+                            $chatUrl = $sellerPhone ? \App\Support\WhatsApp::chatUrl($sellerPhone, $chatMessage) : null;
                         @endphp
                         <div class="sm:col-span-3 flex flex-wrap gap-3">
                             <button type="submit" class="rounded-full px-4 py-3 text-sm font-semibold text-white {{ $canPay ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-300 cursor-not-allowed' }}" {{ ($profile->paystack_subaccount_code && $canPay) ? '' : 'disabled' }}>
                                 {{ $canPay ? 'Pay now' : 'Unavailable' }}
                             </button>
-                            <button type="submit" formaction="{{ route('public.products.interest', [$profile->public_slug, $product]) }}" class="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
-                                Chat on WhatsApp
-                            </button>
+                            @if($chatUrl)
+                                <a href="{{ $chatUrl }}" target="_blank" rel="noreferrer noopener" class="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                                    Chat on WhatsApp
+                                </a>
+                            @endif
                         </div>
                     </form>
                 </div>
@@ -93,13 +100,22 @@
                     <input name="email" placeholder="Email (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
                     <textarea name="note" rows="2" placeholder="Note (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500"></textarea>
                     <input type="hidden" name="phone_country" value="+233" />
+                    @php
+                        $sellerPhone = $profile->phone ?: ($profile->user?->phone);
+                        $sellerPhone = $sellerPhone ? \App\Support\Phone::normalize($sellerPhone, '+233') : null;
+                        $productUrl = route('public.product', ['product_slug' => $product->slug]);
+                        $chatMessage = "Hi there, I am interested in {$product->name}. Is it available? Please tell me more.\nLink: {$productUrl}";
+                        $chatUrl = $sellerPhone ? \App\Support\WhatsApp::chatUrl($sellerPhone, $chatMessage) : null;
+                    @endphp
                     <div class="flex flex-wrap gap-3">
                         <button type="submit" class="flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white {{ $canPay ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-300 cursor-not-allowed' }}" {{ ($profile->paystack_subaccount_code && $canPay) ? '' : 'disabled' }}>
                             {{ $canPay ? 'Pay now' : 'Unavailable' }}
                         </button>
-                        <button type="submit" formaction="{{ route('public.products.interest', [$profile->public_slug, $product]) }}" class="flex-1 rounded-full border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
-                            Chat on WhatsApp
-                        </button>
+                        @if($chatUrl)
+                            <a href="{{ $chatUrl }}" target="_blank" rel="noreferrer noopener" class="flex-1 rounded-full border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                                Chat on WhatsApp
+                            </a>
+                        @endif
                     </div>
                 </form>
             </div>
