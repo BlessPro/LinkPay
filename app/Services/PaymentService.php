@@ -86,7 +86,7 @@ class PaymentService
         if ($customerPhone) {
             $amount = Money::format((string) $payment->amount, config('services.paystack.currency', 'GHS'));
             $sellerName = $user?->sellerProfile?->business_name ?? $user?->name ?? 'LinkPay seller';
-            $message = "Payment successful ✅\nAmount: {$amount}\nSeller: {$sellerName}\nRef: {$payment->reference}";
+            $message = "Payment successful\nAmount: {$amount}\nSeller: {$sellerName}\nRef: {$payment->reference}";
             try {
                 app(TwilioMessagingService::class)->sendWhatsApp($customerPhone, $message);
                 Log::info('Customer WhatsApp notify sent', [
@@ -98,6 +98,20 @@ class PaymentService
                     'payment_id' => $payment->id,
                     'message' => $exception->getMessage(),
                 ]);
+
+                try {
+                    // Fall back to SMS when WhatsApp cannot deliver (common in sandbox/outside 24h window).
+                    app(TwilioMessagingService::class)->sendSms($customerPhone, $message);
+                    Log::info('Customer SMS notify sent (fallback)', [
+                        'payment_id' => $payment->id,
+                        'phone' => $customerPhone,
+                    ]);
+                } catch (\Throwable $smsException) {
+                    Log::warning('Customer SMS notify failed (fallback)', [
+                        'payment_id' => $payment->id,
+                        'message' => $smsException->getMessage(),
+                    ]);
+                }
             }
         } else {
             Log::warning('Customer WhatsApp notify skipped (no phone)', [

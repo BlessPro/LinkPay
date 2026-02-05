@@ -48,6 +48,21 @@ class SellerNotifier
                     'user_id' => $user->id,
                     'message' => $exception->getMessage(),
                 ]);
+
+                // WhatsApp freeform often fails outside the 24h window (e.g. 63016). Try SMS as a fallback.
+                try {
+                    app(TwilioMessagingService::class)->sendSms($phone, $title.' - '.$body);
+                    Log::info('Seller SMS notify sent (fallback)', [
+                        'user_id' => $user->id,
+                        'phone' => $phone,
+                        'type' => $type,
+                    ]);
+                } catch (\Throwable $smsException) {
+                    Log::warning('Seller SMS notify failed (fallback)', [
+                        'user_id' => $user->id,
+                        'message' => $smsException->getMessage(),
+                    ]);
+                }
             }
         } elseif ($sendWhatsApp) {
             Log::warning('Seller WhatsApp notify skipped (no phone)', [

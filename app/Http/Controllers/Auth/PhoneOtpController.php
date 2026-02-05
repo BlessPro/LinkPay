@@ -48,7 +48,10 @@ class PhoneOtpController extends Controller
         }
 
         try {
-            $twilio->sendOtp($normalized, 'whatsapp');
+            $ok = $twilio->sendOtp($normalized, 'whatsapp');
+            if (! $ok) {
+                throw new \RuntimeException('OTP delivery failed.');
+            }
         } catch (\Throwable $exception) {
             Log::error('Twilio OTP send failed', [
                 'phone' => $normalized,

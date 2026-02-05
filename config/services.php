@@ -49,6 +49,14 @@ return [
         'auth_token' => env('TWILIO_AUTH_TOKEN'),
         'verify_service_sid' => env('TWILIO_VERIFY_SERVICE_SID'),
         'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
+        // Verify default channel for OTP (whatsapp or sms).
+        'verify_default_channel' => env('TWILIO_VERIFY_DEFAULT_CHANNEL', 'whatsapp'),
+        // Optional (recommended): allow SMS fallback for OTP/notifications.
+        'messaging_service_sid' => env('TWILIO_MESSAGING_SERVICE_SID'),
+        'sms_from' => env('TWILIO_SMS_FROM'),
+        // Fallback channel used when Verify is missing/unavailable (sms or whatsapp).
+        'otp_fallback_channel' => env('TWILIO_OTP_FALLBACK_CHANNEL', 'sms'),
+        'default_country' => env('TWILIO_DEFAULT_COUNTRY', '+233'),
     ],
 
 ];

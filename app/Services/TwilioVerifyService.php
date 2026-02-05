@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Phone;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Twilio\Exceptions\RestException;
@@ -11,20 +12,39 @@ class TwilioVerifyService
 {
     private const FALLBACK_TTL_SECONDS = 600;
 
-    public function sendOtp(string $phone, string $channel = 'whatsapp'): void
+    /**
+     * Send OTP using Twilio Verify when available. Falls back to app-generated OTP delivered
+     * via SMS/WhatsApp based on config when Verify is missing/unavailable.
+     *
+     * Returns true when the request was accepted by the provider (or fallback delivered),
+     * false when delivery failed.
+     */
+    public function sendOtp(string $phone, ?string $channel = null): bool
     {
         $this->ensureClientConfigured();
         $client = $this->client();
+        $phone = $this->normalizePhone($phone);
+
+        $channel = $channel ?: (string) config('services.twilio.verify_default_channel', 'whatsapp');
 
         if ($this->hasVerifyService()) {
             try {
-                $client->verify->v2->services($this->serviceSid())
+                $verification = $client->verify->v2->services($this->serviceSid())
                     ->verifications
                     ->create($phone, $channel);
-                return;
+
+                Log::info('Twilio Verify OTP requested', [
+                    'to' => $phone,
+                    'channel' => $channel,
+                    'sid' => $verification->sid ?? null,
+                    'status' => $verification->status ?? null,
+                ]);
+
+                return true;
             } catch (RestException $exception) {
                 Log::warning('Twilio Verify send failed, falling back', [
                     'phone' => $phone,
+                    'channel' => $channel,
                     'status' => $exception->getStatusCode(),
                     'code' => $exception->getCode(),
                     'message' => $exception->getMessage(),
@@ -36,13 +56,14 @@ class TwilioVerifyService
             ]);
         }
 
-        $this->sendFallbackOtp($phone);
+        return $this->sendFallbackOtp($phone);
     }
 
     public function checkOtp(string $phone, string $code): bool
     {
         $this->ensureClientConfigured();
         $client = $this->client();
+        $phone = $this->normalizePhone($phone);
 
         if ($this->hasVerifyService()) {
             try {
@@ -98,7 +119,7 @@ class TwilioVerifyService
         }
     }
 
-    private function sendFallbackOtp(string $phone): void
+    private function sendFallbackOtp(string $phone): bool
     {
         $code = (string) random_int(100000, 999999);
         $key = $this->fallbackKey($phone);
@@ -106,7 +127,32 @@ class TwilioVerifyService
         Cache::put($key, hash('sha256', $code), self::FALLBACK_TTL_SECONDS);
 
         $message = "Your LinkPay OTP is {$code}. It expires in 10 minutes.";
-        app(TwilioMessagingService::class)->sendWhatsApp($phone, $message);
+
+        $fallbackChannel = (string) config('services.twilio.otp_fallback_channel', 'sms');
+        $messaging = app(TwilioMessagingService::class);
+
+        try {
+            if ($fallbackChannel === 'whatsapp') {
+                $messaging->sendWhatsApp($phone, $message);
+            } else {
+                $messaging->sendSms($phone, $message);
+            }
+
+            Log::info('OTP fallback delivered', [
+                'to' => $phone,
+                'channel' => $fallbackChannel,
+            ]);
+
+            return true;
+        } catch (\Throwable $exception) {
+            Log::error('OTP fallback delivery failed', [
+                'to' => $phone,
+                'channel' => $fallbackChannel,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     private function checkFallbackOtp(string $phone, string $code): bool
@@ -129,5 +175,13 @@ class TwilioVerifyService
     private function fallbackKey(string $phone): string
     {
         return 'otp_fallback:'.sha1($phone);
+    }
+
+    private function normalizePhone(string $raw): string
+    {
+        $defaultCountry = (string) config('services.twilio.default_country', '+233');
+        $normalized = Phone::normalize($raw, $defaultCountry);
+
+        return $normalized ?: $raw;
     }
 }
