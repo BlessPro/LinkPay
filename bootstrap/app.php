@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminOnly::class,
+            'active_access' => \App\Http\Middleware\EnsureActiveAccess::class,
+            'payments_plan' => \App\Http\Middleware\EnsurePaymentsPlan::class,
+            'promotion_access' => \App\Http\Middleware\EnsurePromotionAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

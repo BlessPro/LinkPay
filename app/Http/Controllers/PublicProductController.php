@@ -35,6 +35,7 @@ class PublicProductController extends Controller
             'product' => $product,
             'profile' => $profile,
             'currency' => $currency,
+            'paymentsEnabled' => $product->user?->canUsePaymentsFeature() ?? false,
             'smallDescription' => $shortDescription,
             'ogTitle' => "{$product->name} - {$sellerName}",
             'ogDescription' => "{$shortDescription} Price: {$currency} ".number_format((float) $product->price, 2, '.', ','),
@@ -44,4 +45,3 @@ class PublicProductController extends Controller
         ]);
     }
 }
-

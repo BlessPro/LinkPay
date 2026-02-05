@@ -14,12 +14,18 @@ use App\Http\Controllers\SellerProfileController;
 use App\Http\Controllers\InsightsController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminInvoiceController;
+use App\Http\Controllers\BillingController;
+use App\Http\Controllers\PricingController;
 use App\Http\Controllers\SellerPublicPreviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('welcome', [
+        'plans' => config('plans'),
+    ]);
 });
+
+Route::get('/pricing', [PricingController::class, 'index'])->name('pricing');
 
 Route::get('/s/{public_slug}', [PublicListingController::class, 'show'])->name('public.listing');
 Route::post('/s/{public_slug}/products/{product}/pay', [PublicListingController::class, 'pay'])
@@ -35,6 +41,12 @@ Route::get('/p/{product_slug}', [PublicProductController::class, 'show'])->name(
 Route::post('/webhooks/paystack', [PaystackWebhookController::class, 'handle'])->name('webhooks.paystack');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/billing', [BillingController::class, 'show'])->name('billing.show');
+    Route::get('/billing/upgrade', [BillingController::class, 'upgrade'])->name('billing.upgrade');
+    Route::post('/billing/activate/{plan}', [BillingController::class, 'activate'])->name('billing.activate');
+});
+
+Route::middleware(['auth', 'active_access'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -43,16 +55,22 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile/seller', [SellerProfileController::class, 'update'])->name('profile.seller.update');
     Route::post('/profile/seller/test-connection', [SellerProfileController::class, 'testConnection'])->name('profile.seller.test');
 
-    Route::resource('products', ProductController::class)->except(['show']);
-    Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
-    Route::post('/products/export-pdf', [ProductController::class, 'exportPdf'])->name('products.exportPdf');
-    Route::resource('invoices', InvoiceController::class)->only(['index', 'create', 'store', 'show']);
-    Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
-    Route::get('/payments/export', [PaymentController::class, 'export'])->name('payments.export');
-    Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->name('payments.verify');
+    Route::middleware('promotion_access')->group(function () {
+        Route::resource('products', ProductController::class)->except(['show']);
+        Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
+        Route::post('/products/export-pdf', [ProductController::class, 'exportPdf'])->name('products.exportPdf');
+        Route::get('/public-preview', [SellerPublicPreviewController::class, 'show'])->name('public.preview');
+    });
+
+    Route::middleware('payments_plan')->group(function () {
+        Route::resource('invoices', InvoiceController::class)->only(['index', 'create', 'store', 'show']);
+        Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+        Route::get('/payments/export', [PaymentController::class, 'export'])->name('payments.export');
+        Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->name('payments.verify');
+    });
+
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/insights', [InsightsController::class, 'index'])->name('insights.index');
-    Route::get('/public-preview', [SellerPublicPreviewController::class, 'show'])->name('public.preview');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

@@ -57,6 +57,7 @@ class PublicListingController extends Controller
             'currency' => config('services.paystack.currency', 'GHS'),
             'template' => $template,
             'isOwner' => $isOwner,
+            'paymentsEnabled' => $profile->user?->canUsePaymentsFeature() ?? false,
             'ogTitle' => $profile->business_name,
             'ogDescription' => 'Browse products & services and contact on WhatsApp',
             'ogImage' => $this->resolveSellerOgImage($profile),
@@ -104,6 +105,15 @@ class PublicListingController extends Controller
         ]);
 
         $profile = SellerProfile::where('public_slug', $public_slug)->firstOrFail();
+
+        $sellerUser = $profile->user;
+        if ($sellerUser) {
+            if (! $sellerUser->canUsePaymentsFeature()) {
+                return back()->withErrors([
+                    'paystack' => 'This seller is not on the Payments plan. Please use Chat on WhatsApp.',
+                ])->withInput();
+            }
+        }
 
         abort_unless($product->user_id === $profile->user_id, 404);
         abort_unless($product->is_active, 404);

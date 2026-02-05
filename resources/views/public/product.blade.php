@@ -71,10 +71,14 @@
                     <div class="sm:col-span-3 flex flex-wrap gap-3">
                         <button
                             type="submit"
-                            class="rounded-full px-5 py-3 text-sm font-semibold text-white {{ $canPay ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-300 cursor-not-allowed' }}"
-                            {{ ($profile->paystack_subaccount_code && $canPay) ? '' : 'disabled' }}
+                            class="rounded-full px-5 py-3 text-sm font-semibold text-white {{ ($canPay && ($paymentsEnabled ?? true)) ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-300 cursor-not-allowed' }}"
+                            {{ ($profile->paystack_subaccount_code && $canPay && ($paymentsEnabled ?? true)) ? '' : 'disabled' }}
                         >
-                            {{ $canPay ? 'Pay now' : 'Unavailable' }}
+                            @if(! ($paymentsEnabled ?? true))
+                                Payments disabled
+                            @else
+                                {{ $canPay ? 'Pay now' : 'Unavailable' }}
+                            @endif
                         </button>
                         @if($chatUrl)
                             <a

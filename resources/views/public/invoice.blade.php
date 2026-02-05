@@ -1,4 +1,11 @@
-@php($title = $invoice->title)
+@php
+    $title = $invoice->title;
+    $sellerPhone = $seller?->phone ?: ($invoice->user?->phone);
+    $sellerPhone = $sellerPhone ? \App\Support\Phone::normalize($sellerPhone, '+233') : null;
+    $invoiceUrl = route('public.invoice', $invoice->token);
+    $chatMessage = "Hi there, I am interested in this invoice. Please tell me more.\nInvoice: {$invoice->title}\nLink: {$invoiceUrl}";
+    $chatUrl = $sellerPhone ? \App\Support\WhatsApp::chatUrl($sellerPhone, $chatMessage) : null;
+@endphp
 @extends('layouts.public')
 
 @section('og_title', $ogTitle ?? $title)
@@ -59,13 +66,24 @@
                 </div>
             @endif
 
+            @if(! ($paymentsEnabled ?? true))
+                <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    Payments are disabled for this seller's current plan. Please chat on WhatsApp to continue.
+                </div>
+                @if($chatUrl)
+                    <a href="{{ $chatUrl }}" target="_blank" rel="noreferrer noopener" class="mt-4 inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                        Chat on WhatsApp
+                    </a>
+                @endif
+            @endif
+
             <form method="POST" action="{{ route('public.invoice.pay', $invoice->token) }}" class="mt-5 space-y-3">
                 @csrf
                 <input name="name" placeholder="Name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
                 <input name="phone_number" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" required data-strip-leading-zero="true" />
                 <input name="email" placeholder="Email (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
                 <input type="hidden" name="phone_country" value="+233" />
-                <button type="submit" class="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500" {{ $invoice->status === \App\Models\Invoice::STATUS_PAID || ! $seller?->paystack_subaccount_code ? 'disabled' : '' }}>
+                <button type="submit" class="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500" {{ $invoice->status === \App\Models\Invoice::STATUS_PAID || ! $seller?->paystack_subaccount_code || ! ($paymentsEnabled ?? true) ? 'disabled' : '' }}>
                     Pay amount due
                 </button>
             </form>

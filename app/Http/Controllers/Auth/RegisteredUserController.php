@@ -70,6 +70,13 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        // Start a 7-day trial (configurable) that unlocks all features.
+        $days = (int) config('plans.trial_days', 7);
+        $user->plan_type = User::PLAN_FREE_TRIAL;
+        $user->trial_started_at = now();
+        $user->trial_ends_at = now()->addDays($days);
+        $user->save();
+
         SellerProfile::create([
             'user_id' => $user->id,
             'business_name' => $user->name,

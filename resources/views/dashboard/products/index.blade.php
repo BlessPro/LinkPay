@@ -9,52 +9,52 @@
             <h2 class="text-lg font-semibold text-slate-900">Products</h2>
             <p class="text-sm text-slate-600">Monitor inventory, sales, and engagement.</p>
         </div>
-        <a href="{{ route('products.create') }}" class="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
+        <a href="{{ route('products.create') }}" class="px-5 py-2 text-sm font-semibold text-white rounded-full bg-emerald-600 hover:bg-emerald-500">
             New product
         </a>
     </div>
 
-    <div id="export-offcanvas" class="fixed inset-y-0 right-0 z-40 hidden w-full max-w-sm border-l border-slate-200 bg-white p-6 shadow-2xl">
+    <div id="export-offcanvas" class="fixed inset-y-0 right-0 z-40 hidden w-full max-w-sm p-6 bg-white border-l shadow-2xl border-slate-200">
         <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-slate-900">Custom range</h3>
-            <button type="button" id="export-close" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">Close</button>
+            <button type="button" id="export-close" class="px-3 py-1 text-xs font-semibold border rounded-full border-slate-200 text-slate-600">Close</button>
         </div>
         <div class="mt-6 space-y-4">
             <div>
                 <label class="text-xs uppercase tracking-[0.3em] text-slate-400">From</label>
-                <input type="date" id="export-start-input" class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                <input type="date" id="export-start-input" class="w-full mt-2 text-sm rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
             </div>
             <div>
                 <label class="text-xs uppercase tracking-[0.3em] text-slate-400">To</label>
-                <input type="date" id="export-end-input" class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                <input type="date" id="export-end-input" class="w-full mt-2 text-sm rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
             </div>
-            <button type="button" id="export-apply" class="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500">
+            <button type="button" id="export-apply" class="w-full px-4 py-3 text-sm font-semibold text-white rounded-full bg-emerald-600 hover:bg-emerald-500">
                 Apply range
             </button>
         </div>
     </div>
 
     <div class="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-stretch">
-        <div class="flex h-full flex-col gap-6">
+        <div class="flex flex-col h-full gap-6">
             <div class="grid gap-4 sm:grid-cols-3">
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="p-5 bg-white border shadow-sm rounded-2xl border-slate-200">
                     <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Revenue</p>
                     <p class="mt-3 text-2xl font-semibold text-slate-900">{{ \App\Support\Money::format($totalRevenue, $currency) }}</p>
                     <p class="mt-1 text-xs text-slate-500">All-time product sales</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="p-5 bg-white border shadow-sm rounded-2xl border-slate-200">
                     <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Orders</p>
                     <p class="mt-3 text-2xl font-semibold text-slate-900">{{ $totalOrders }}</p>
                     <p class="mt-1 text-xs text-slate-500">Successful payments</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="p-5 bg-white border shadow-sm rounded-2xl border-slate-200">
                     <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Customers</p>
                     <p class="mt-3 text-2xl font-semibold text-slate-900">{{ $totalCustomers }}</p>
                     <p class="mt-1 text-xs text-slate-500">Unique contacts</p>
                 </div>
             </div>
 
-            <div class="flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="flex flex-col flex-1 p-6 bg-white border shadow-sm rounded-2xl border-slate-200">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-900">Product performance</h3>
@@ -80,38 +80,38 @@
                         @endphp
                         <form method="GET" action="{{ route('products.index') }}" class="inline-flex items-center gap-2">
                             <input type="hidden" name="chart_range" value="{{ $chartRange }}">
-                            <div class="inline-flex overflow-hidden rounded-full border border-slate-200 bg-white">
-                                <select name="chart_range" class="rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+                            <div class="inline-flex overflow-hidden bg-white border rounded-full border-slate-200">
+                                <select name="chart_range" class="px-3 py-2 text-xs font-semibold bg-white rounded-full text-slate-700">
                                     <option value="7days" @selected($chartRange === '7days')>7 days</option>
                                     <option value="30days" @selected($chartRange === '30days')>30 days</option>
                                     <option value="all_time" @selected($chartRange === 'all_time')>All time</option>
                                 </select>
                             </div>
-                            <button type="submit" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                            <button type="submit" class="px-3 py-2 text-xs font-semibold border rounded-full border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
                                 Apply
                             </button>
                         </form>
                         <div class="flex flex-wrap items-center gap-2">
                             @foreach($metricOptions as $key => $label)
-                                <label class="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">
-                                    <input type="checkbox" name="metric" value="{{ $key }}" class="h-3 w-3 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" {{ $key === 'revenue' ? 'checked' : '' }}>
+                                <label class="flex items-center gap-2 px-3 py-2 text-xs font-semibold bg-white border rounded-full border-slate-200 text-slate-600">
+                                    <input type="checkbox" name="metric" value="{{ $key }}" class="w-3 h-3 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" {{ $key === 'revenue' ? 'checked' : '' }}>
                                     <span>{{ $label }}</span>
                                 </label>
                             @endforeach
                         </div>
                     </div>
                 </div>
-                <div class="mt-6 flex-1 min-h-56 max-h-72">
-                    <canvas id="product-chart" class="h-full w-full"></canvas>
-                    <div id="chart-empty" class="hidden h-full w-full items-center justify-center text-sm text-slate-400">
+                <div class="flex-1 mt-6 min-h-56 max-h-72">
+                    <canvas id="product-chart" class="w-full h-full"></canvas>
+                    <div id="chart-empty" class="items-center justify-center hidden w-full h-full text-sm text-slate-400">
                         Chart unavailable. Run npm to rebuild assets.
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="flex h-full flex-col gap-6">
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-col h-full gap-6">
+            <div class="p-6 bg-white border shadow-sm rounded-2xl border-slate-200">
                 <div class="flex items-center justify-between">
                     <h3 class="text-sm font-semibold text-slate-900">Top products</h3>
                     <a href="#product-list" class="text-xs font-semibold text-emerald-600 hover:text-emerald-500">See more</a>
@@ -126,7 +126,7 @@
                                 <span class="text-slate-700">{{ $productName }}</span>
                                 <span class="font-semibold text-slate-900">{{ \App\Support\Money::format($stats['total'], $currency) }}</span>
                             </div>
-                            <div class="mt-2 h-2 rounded-full bg-slate-100">
+                            <div class="h-2 mt-2 rounded-full bg-slate-100">
                                 @php
                                     $width = min(100, ((float) $stats['total'] / $maxTopTotal) * 100);
                                 @endphp
@@ -139,7 +139,7 @@
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="p-6 bg-white border shadow-sm rounded-2xl border-slate-200">
                 <div class="flex items-center justify-between">
                     <h3 class="text-sm font-semibold text-slate-900">Stock mix</h3>
                     <span class="text-xs text-slate-400">All products</span>
@@ -157,16 +157,16 @@
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="p-6 bg-white border shadow-sm rounded-2xl border-slate-200">
                 <h3 class="text-sm font-semibold text-slate-900">Export inventory</h3>
                 <form method="POST" action="{{ route('products.exportPdf') }}" class="mt-4 space-y-3" id="export-form">
                     @csrf
-                    <select name="type" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700">
+                    <select name="type" class="w-full px-4 py-2 text-xs font-semibold bg-white border rounded-xl border-slate-200 text-slate-700">
                         <option value="products">Products only</option>
                         <option value="products_status">Products + stock status</option>
                         <option value="products_sales">Products + sales summary</option>
                     </select>
-                    <select name="range" id="export-range" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700">
+                    <select name="range" id="export-range" class="w-full px-4 py-2 text-xs font-semibold bg-white border rounded-xl border-slate-200 text-slate-700">
                         <option value="today">Today</option>
                         <option value="7days">7 days</option>
                         <option value="28days">28 days</option>
@@ -180,10 +180,10 @@
                     <div class="flex items-center justify-between">
                         <span id="export-label" class="text-xs font-semibold text-slate-500">All time</span>
                         <div class="flex items-center gap-2">
-                            <button type="submit" formmethod="GET" formaction="{{ route('products.export') }}" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                            <button type="submit" formmethod="GET" formaction="{{ route('products.export') }}" class="px-4 py-2 text-xs font-semibold border rounded-full border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
                                 Export CSV
                             </button>
-                            <button type="submit" id="export-pdf" class="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500">
+                            <button type="submit" id="export-pdf" class="px-4 py-2 text-xs font-semibold text-white rounded-full bg-emerald-600 hover:bg-emerald-500">
                                 Export PDF
                             </button>
                         </div>
@@ -193,7 +193,7 @@
         </div>
     </div>
 
-    <div id="product-list" class="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div id="product-list" class="mt-8 overflow-hidden bg-white border shadow-sm rounded-2xl border-slate-200">
         <div class="divide-y divide-slate-100">
             @if($products->count())
                 @foreach($products as $product)
@@ -208,9 +208,9 @@
                         <summary class="list-none">
                             <div class="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                                 <div class="flex items-center gap-4">
-                                    <div class="h-14 w-14 overflow-hidden rounded-xl bg-slate-100">
+                                    <div class="overflow-hidden h-14 w-14 rounded-xl bg-slate-100">
                                         @if($product->image_path)
-                                            <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
+                                            <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->name }}" class="object-cover w-full h-full">
                                         @endif
                                     </div>
                                     <div>
@@ -225,27 +225,27 @@
                                     <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $product->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
                                         {{ $product->is_active ? 'Active' : 'Inactive' }}
                                     </span>
-                                    <span class="cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                                    <span class="px-4 py-2 text-xs font-semibold border rounded-full cursor-pointer border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
                                         Quick edit
                                     </span>
                                     <a
                                         href="https://api.whatsapp.com/send?text={{ rawurlencode($waText) }}"
                                         target="_blank"
                                         rel="noreferrer noopener"
-                                        class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300 hover:text-emerald-600"
+                                        class="px-4 py-2 text-xs font-semibold border rounded-full border-slate-200 text-emerald-700 hover:border-emerald-300 hover:text-emerald-600"
                                     >
                                         Share to WhatsApp
                                     </a>
                                     <button
                                         type="button"
-                                        class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700 product-copy-link"
+                                        class="px-4 py-2 text-xs font-semibold border rounded-full border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700 product-copy-link"
                                         data-copy-link="{{ $publicUrl }}"
                                     >
                                         Copy link
                                     </button>
                                     <button
                                         type="button"
-                                        class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700 product-action-trigger"
+                                        class="px-4 py-2 text-xs font-semibold border rounded-full border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700 product-action-trigger"
                                         data-product-name="{{ $product->name }}"
                                         data-product-id="{{ $product->id }}"
                                         data-product-slug="{{ $product->slug }}"
@@ -257,35 +257,35 @@
                             </div>
                         </summary>
                         <div class="px-6 pb-6">
-                            <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm">
+                            <div class="p-4 border shadow-sm rounded-2xl border-slate-200 bg-slate-50/70">
                                 <form method="POST" action="{{ route('products.update', $product) }}" class="grid gap-3 sm:grid-cols-3">
                                     @csrf
                                     @method('PUT')
                                     <div>
                                         <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Name</label>
-                                        <input name="name" value="{{ $product->name }}" class="mt-2 w-full rounded-xl border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                                        <input name="name" value="{{ $product->name }}" class="w-full px-3 py-2 mt-2 text-sm bg-white rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
                                     </div>
                                     <div>
                                         <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Price</label>
-                                        <input name="price" value="{{ $product->price }}" type="number" step="0.01" class="mt-2 w-full rounded-xl border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                                        <input name="price" value="{{ $product->price }}" type="number" step="0.01" class="w-full px-3 py-2 mt-2 text-sm bg-white rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
                                     </div>
                                     <div>
                                         <label class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Status</label>
                                         <div class="relative mt-2">
-                                            <select name="status" class="w-full appearance-none rounded-xl border-slate-200 bg-white pr-10 text-sm text-slate-700 focus:border-emerald-500 focus:ring-emerald-500">
+                                            <select name="status" class="w-full pr-10 text-sm bg-white appearance-none rounded-xl border-slate-200 text-slate-700 focus:border-emerald-500 focus:ring-emerald-500">
                                                 @foreach(\App\Models\Product::statusOptions() as $value => $label)
                                                     <option value="{{ $value }}" @selected($product->status === $value)>{{ $label }}</option>
                                                 @endforeach
                                             </select>
-                                            <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
                                                     <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
                                                 </svg>
                                             </span>
                                         </div>
                                     </div>
-                                    <div class="sm:col-span-3 flex items-center gap-3">
-                                        <button type="submit" class="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500">
+                                    <div class="flex items-center gap-3 sm:col-span-3">
+                                        <button type="submit" class="px-4 py-2 text-xs font-semibold text-white rounded-full bg-emerald-600 hover:bg-emerald-500">
                                             Save changes
                                         </button>
                                         <span class="text-xs text-slate-500">Other fields stay unchanged.</span>
@@ -296,7 +296,7 @@
                     </details>
                 @endforeach
             @else
-                <div class="px-6 py-10 text-center text-sm text-slate-500">No products yet.</div>
+                <div class="px-6 py-10 text-sm text-center text-slate-500">No products yet.</div>
             @endif
         </div>
     </div>
@@ -306,29 +306,29 @@
         $productDeleteTemplate = route('products.destroy', ['product' => '___ID___']);
     @endphp
 
-    <div id="product-manage-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4">
-        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+    <div id="product-manage-modal" class="fixed inset-0 z-50 items-center justify-center hidden p-4 bg-slate-900/40">
+        <div class="w-full max-w-md p-6 bg-white shadow-xl rounded-2xl">
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Manage product</p>
                     <h3 id="product-manage-title" class="mt-2 text-lg font-semibold text-slate-900">Product</h3>
                 </div>
-                <button type="button" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300" data-modal-close>
+                <button type="button" class="px-3 py-1 text-xs font-semibold border rounded-full border-slate-200 text-slate-600 hover:border-slate-300" data-modal-close>
                     Close
                 </button>
             </div>
 
-            <div class="mt-6 grid gap-3">
-                <a id="product-manage-view" href="#" target="_blank" rel="noreferrer noopener" class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800 hover:border-emerald-200 hover:text-emerald-700">
+            <div class="grid gap-3 mt-6">
+                <a id="product-manage-view" href="#" target="_blank" rel="noreferrer noopener" class="px-4 py-3 text-sm font-semibold border rounded-xl border-slate-200 text-slate-800 hover:border-emerald-200 hover:text-emerald-700">
                     View public page
                 </a>
-                <a id="product-manage-edit" href="#" class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800 hover:border-emerald-200 hover:text-emerald-700">
+                <a id="product-manage-edit" href="#" class="px-4 py-3 text-sm font-semibold border rounded-xl border-slate-200 text-slate-800 hover:border-emerald-200 hover:text-emerald-700">
                     Edit in dashboard
                 </a>
                 <form id="product-manage-delete-form" method="POST" action="">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="w-full rounded-xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-700 hover:border-rose-300">
+                    <button type="submit" class="w-full px-4 py-3 text-sm font-semibold border rounded-xl border-rose-200 text-rose-700 hover:border-rose-300">
                         Delete product
                     </button>
                 </form>

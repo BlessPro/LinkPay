@@ -42,8 +42,9 @@ class PublicInvoiceController extends Controller
             'amountDue' => $invoice->amountDue(),
             'balance' => $invoice->balanceRemaining(),
             'currency' => $currency,
-            'ogTitle' => "{$sellerName} • {$invoice->title}",
-            'ogDescription' => "Amount due: ".\App\Support\Money::format($invoice->amountDue(), $currency).". Tap to view and pay securely.",
+            'paymentsEnabled' => $invoice->user?->canUsePaymentsFeature() ?? false,
+            'ogTitle' => $sellerName.' - '.$invoice->title,
+            'ogDescription' => 'Amount due: '.Money::format($invoice->amountDue(), $currency).'. Tap to view and pay securely.',
             'ogImage' => $ogImage,
             'ogUrl' => route('public.invoice', $invoice->token),
             'ogType' => 'website',
@@ -62,6 +63,15 @@ class PublicInvoiceController extends Controller
         $invoice = Invoice::where('token', $token)
             ->with('user.sellerProfile')
             ->firstOrFail();
+
+        $sellerUser = $invoice->user;
+        if ($sellerUser) {
+            if (! $sellerUser->canUsePaymentsFeature()) {
+                return back()->withErrors([
+                    'paystack' => 'This seller is not on the Payments plan. Please use Chat on WhatsApp.',
+                ])->withInput();
+            }
+        }
 
         if ($invoice->status === Invoice::STATUS_PAID) {
             return back()->withErrors(['invoice' => 'This invoice is already fully paid.']);

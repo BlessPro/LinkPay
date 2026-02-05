@@ -40,7 +40,8 @@
                     <p class="text-base font-semibold text-slate-900">Pay by WhatsApp</p>
                 </div>
             </div>
-            <div class="text-sm font-medium text-slate-600">
+            <div class="flex items-center gap-3 text-sm font-medium text-slate-600">
+                <a href="{{ route('pricing') }}" class="rounded-full border border-transparent px-4 py-2 hover:border-emerald-200 hover:text-emerald-700">Pricing</a>
                 <a href="{{ route('login') }}" class="rounded-full border border-slate-200 px-4 py-2 hover:border-emerald-200 hover:text-emerald-700">Seller login</a>
             </div>
         </header>
