@@ -50,13 +50,15 @@
                         <input name="email" placeholder="Email (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
                         <textarea name="note" rows="2" placeholder="Note (optional)" class="sm:col-span-3 w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500"></textarea>
                         <input type="hidden" name="phone_country" value="+233" />
-                        @php($canPay = $product->isPayable())
+                        @php
+                            $canPay = $product->isPayable();
+                        @endphp
                         <div class="sm:col-span-3 flex flex-wrap gap-3">
                             <button type="submit" class="rounded-full px-4 py-3 text-sm font-semibold text-white {{ $canPay ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-300 cursor-not-allowed' }}" {{ ($profile->paystack_subaccount_code && $canPay) ? '' : 'disabled' }}>
                                 {{ $canPay ? 'Pay now' : 'Unavailable' }}
                             </button>
                             <button type="submit" formaction="{{ route('public.products.interest', [$profile->public_slug, $product]) }}" class="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
-                                Interested
+                                Chat on WhatsApp
                             </button>
                         </div>
                     </form>
@@ -77,7 +79,9 @@
                 @endif
                 <h2 class="mt-4 text-xl font-semibold text-slate-900">{{ $product->name }}</h2>
                 <p class="mt-2 text-sm text-slate-600">{{ $product->description }}</p>
-                @php($canPay = $product->isPayable())
+                @php
+                    $canPay = $product->isPayable();
+                @endphp
                 <span class="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $product->statusBadgeClass() }}">{{ $product->statusLabel() }}</span>
                 <div class="mt-4 flex items-center justify-between">
                     <span class="text-lg font-semibold text-emerald-700">{{ \App\Support\Money::format($product->price, $currency) }}</span>
@@ -94,7 +98,7 @@
                             {{ $canPay ? 'Pay now' : 'Unavailable' }}
                         </button>
                         <button type="submit" formaction="{{ route('public.products.interest', [$profile->public_slug, $product]) }}" class="flex-1 rounded-full border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
-                            Interested
+                            Chat on WhatsApp
                         </button>
                     </div>
                 </form>

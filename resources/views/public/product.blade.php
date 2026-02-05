@@ -76,7 +76,7 @@
                             formaction="{{ route('public.products.interest', [$profile->public_slug, $product]) }}"
                             class="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700"
                         >
-                            Interested
+                            Chat on WhatsApp
                         </button>
                         <a
                             href="{{ route('public.listing', [$profile->public_slug]) }}"
@@ -90,4 +90,3 @@
         </div>
     </div>
 @endsection
-

@@ -13,6 +13,7 @@ use App\Services\PaystackService;
 use App\Support\Email;
 use App\Support\Money;
 use App\Support\Phone;
+use App\Support\WhatsApp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -217,6 +218,12 @@ class PublicListingController extends Controller
             return back()->withErrors(['phone_number' => 'Enter at least one valid email or phone number.'])->withInput();
         }
 
+        $sellerPhone = $profile->phone ?: ($profile->user?->phone);
+        $sellerPhone = $sellerPhone ? Phone::normalize($sellerPhone, '+233') : null;
+        if (! $sellerPhone) {
+            return back()->withErrors(['phone_number' => 'Seller WhatsApp number is not available.'])->withInput();
+        }
+
         $raw = trim(implode(', ', array_filter(array_merge($emails, $phones))));
 
         $lead = Lead::create([
@@ -239,6 +246,7 @@ class PublicListingController extends Controller
                 'product_id' => $product->id,
                 'contact' => $raw,
             ],
+            false,
             false
         );
 
@@ -246,6 +254,24 @@ class PublicListingController extends Controller
             Mail::to($profile->user->email)->send(new LeadCaptured($lead));
         }
 
-        return back()->with('status', 'interest-captured');
+        $productUrl = route('public.product', ['product_slug' => $product->slug]);
+        $sellerName = $profile->business_name ?: ($profile->user?->name ?: 'Seller');
+
+        $name = trim((string) $request->input('name'));
+        $note = trim((string) $request->input('note'));
+
+        $message = "Hi {$sellerName}, I'm interested in {$product->name}.\n";
+        if ($name !== '') {
+            $message .= "Name: {$name}\n";
+        }
+        if ($raw !== '') {
+            $message .= "Contact: {$raw}\n";
+        }
+        if ($note !== '') {
+            $message .= "Note: {$note}\n";
+        }
+        $message .= "Link: {$productUrl}";
+
+        return redirect()->away(WhatsApp::chatUrl($sellerPhone, $message));
     }
 }
