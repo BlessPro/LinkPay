@@ -30,45 +30,56 @@ class SellerNotifier
             'data' => $data,
         ]);
 
-        if ($sendEmail && $user->email) {
-            Mail::to($user->email)->send(new SellerAlert($title, $body));
-        }
-
         $phone = $user->phone ?: $user->sellerProfile?->phone;
+
+        // WhatsApp-first. If WhatsApp fails (common in sandbox/outside 24h window), fall back to SMS,
+        // and finally to email. In-app notification is always stored above.
+        $whatsAppSent = false;
+        $smsSent = false;
+
         if ($sendWhatsApp && $phone) {
             try {
                 app(TwilioMessagingService::class)->sendWhatsApp($phone, $title."\n".$body);
+                $whatsAppSent = true;
+
                 Log::info('Seller WhatsApp notify sent', [
                     'user_id' => $user->id,
                     'phone' => $phone,
                     'type' => $type,
                 ]);
             } catch (\Throwable $exception) {
-                Log::error('Seller WhatsApp notify failed', [
+                Log::warning('Seller WhatsApp notify failed', [
                     'user_id' => $user->id,
                     'message' => $exception->getMessage(),
                 ]);
-
-                // WhatsApp freeform often fails outside the 24h window (e.g. 63016). Try SMS as a fallback.
-                try {
-                    app(TwilioMessagingService::class)->sendSms($phone, $title.' - '.$body);
-                    Log::info('Seller SMS notify sent (fallback)', [
-                        'user_id' => $user->id,
-                        'phone' => $phone,
-                        'type' => $type,
-                    ]);
-                } catch (\Throwable $smsException) {
-                    Log::warning('Seller SMS notify failed (fallback)', [
-                        'user_id' => $user->id,
-                        'message' => $smsException->getMessage(),
-                    ]);
-                }
             }
         } elseif ($sendWhatsApp) {
             Log::warning('Seller WhatsApp notify skipped (no phone)', [
                 'user_id' => $user->id,
                 'type' => $type,
             ]);
+        }
+
+        if (! $whatsAppSent && $phone) {
+            try {
+                app(TwilioMessagingService::class)->sendSms($phone, $title.' - '.$body);
+                $smsSent = true;
+
+                Log::info('Seller SMS notify sent (fallback)', [
+                    'user_id' => $user->id,
+                    'phone' => $phone,
+                    'type' => $type,
+                ]);
+            } catch (\Throwable $smsException) {
+                Log::warning('Seller SMS notify failed (fallback)', [
+                    'user_id' => $user->id,
+                    'message' => $smsException->getMessage(),
+                ]);
+            }
+        }
+
+        if ($sendEmail && $user->email && ! $whatsAppSent && ! $smsSent) {
+            Mail::to($user->email)->send(new SellerAlert($title, $body));
         }
     }
 }

@@ -6,7 +6,6 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\SellerProfile;
 use App\Models\Lead;
-use App\Mail\LeadCaptured;
 use App\Services\SellerNotifier;
 use App\Services\AnalyticsService;
 use App\Services\PaystackService;
@@ -15,7 +14,6 @@ use App\Support\Money;
 use App\Support\Phone;
 use App\Support\WhatsApp;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class PublicListingController extends Controller
@@ -245,14 +243,8 @@ class PublicListingController extends Controller
                 'lead_id' => $lead->id,
                 'product_id' => $product->id,
                 'contact' => $raw,
-            ],
-            false,
-            false
+            ]
         );
-
-        if ($profile->user?->email) {
-            Mail::to($profile->user->email)->send(new LeadCaptured($lead));
-        }
 
         $productUrl = route('public.product', ['product_slug' => $product->slug]);
         $sellerName = $profile->business_name ?: ($profile->user?->name ?: 'Seller');
