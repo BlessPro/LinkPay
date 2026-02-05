@@ -14,9 +14,30 @@ use Illuminate\Support\Collection;
 
 class PaymentController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, PaystackService $paystack, PaymentService $paymentsService)
     {
         $user = $request->user();
+
+        // Auto-verify a small batch of recent pending payments so sellers never have to click "Verify".
+        $pendingToVerify = $user->payments()
+            ->where('status', Payment::STATUS_PENDING)
+            ->whereNotNull('reference')
+            ->where('created_at', '>=', Carbon::now()->subDays(2))
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        foreach ($pendingToVerify as $pending) {
+            try {
+                $verification = $paystack->verifyTransaction($pending->reference);
+                if (data_get($verification, 'data.status') === 'success') {
+                    $paymentsService->markSuccess($pending, data_get($verification, 'data', []));
+                }
+            } catch (\Throwable $exception) {
+                // Ignore verification failures here; webhook/success callback can still resolve later.
+            }
+        }
+
         $successQuery = $user->payments()->where('status', Payment::STATUS_SUCCESS);
         $totalReceived = $this->sumPayments(clone $successQuery);
         $successfulCount = (clone $successQuery)->count();
@@ -63,25 +84,6 @@ class PaymentController extends Controller
             'last30DaysReceived' => $last30DaysReceived,
             'dailySeries' => $dailySeries,
         ]);
-    }
-
-public function verify(Request $request, Payment $payment, PaystackService $paystack, PaymentService $payments)
-{
-        if (! $request->user()->is_admin && $payment->user_id !== $request->user()->id) {
-            abort(403);
-        }
-
-        try {
-            $verification = $paystack->verifyTransaction($payment->reference);
-            if (data_get($verification, 'data.status') === 'success') {
-                $payments->markSuccess($payment, data_get($verification, 'data', []));
-                return back()->with('status', 'payment-verified');
-            }
-
-            return back()->withErrors(['payment' => 'Payment is not marked successful on Paystack yet.']);
-        } catch (\Throwable $exception) {
-            return back()->withErrors(['payment' => 'Unable to verify payment at the moment.']);
-        }
     }
 
     public function export(Request $request)

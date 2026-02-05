@@ -1,4 +1,6 @@
-@php($title = 'Payments')
+@php
+    $title = 'Payments';
+@endphp
 @extends('layouts.dashboard')
 
 @section('content')
@@ -81,14 +83,6 @@
                     <div class="flex items-center gap-3">
                         <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{{ $payment->status }}</span>
                         <span class="text-xs text-slate-500">{{ $payment->created_at->format('M d, Y') }}</span>
-                        @if($payment->status === \App\Models\Payment::STATUS_PENDING)
-                            <form method="POST" action="{{ route('payments.verify', $payment) }}">
-                                @csrf
-                                <button type="submit" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
-                                    Verify
-                                </button>
-                            </form>
-                        @endif
                     </div>
                 </div>
             @empty

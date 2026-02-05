@@ -66,7 +66,6 @@ Route::middleware(['auth', 'active_access'])->group(function () {
         Route::resource('invoices', InvoiceController::class)->only(['index', 'create', 'store', 'show']);
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
         Route::get('/payments/export', [PaymentController::class, 'export'])->name('payments.export');
-        Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->name('payments.verify');
     });
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
