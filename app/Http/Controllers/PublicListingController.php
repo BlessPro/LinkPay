@@ -260,7 +260,8 @@ class PublicListingController extends Controller
         $name = trim((string) $request->input('name'));
         $note = trim((string) $request->input('note'));
 
-        $message = "Hi {$sellerName}, I'm interested in {$product->name}.\n";
+        $message = "Hi there, I am interested in this product, is it available or tell me more about it.\n";
+        $message .= "Product: {$product->name}\n";
         if ($name !== '') {
             $message .= "Name: {$name}\n";
         }
