@@ -76,7 +76,8 @@
                             </div>
                             <div>
                                 <label class="text-sm font-medium text-slate-700">Account number</label>
-                                <input name="account_number" value="{{ old('account_number', $profile->account_number) }}" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
+                                <input id="account-number" name="account_number" value="{{ old('account_number', $profile->account_number) }}" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
+                                <p id="momo-network-hint" class="mt-2 hidden text-xs text-slate-500"></p>
                                 @error('account_number') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
                             </div>
                             <div class="sm:col-span-2">
@@ -127,4 +128,85 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const accountInput = document.getElementById('account-number');
+            const hint = document.getElementById('momo-network-hint');
+            const bankSelect = document.querySelector('select[name="settlement_bank_code"]');
+
+            const detectGhNetwork = (value) => {
+                const digits = (value || '').replace(/\D+/g, '');
+                if (!digits) return null;
+
+                let local = digits;
+                if (local.startsWith('233') && local.length >= 12) {
+                    local = local.slice(3);
+                }
+
+                let prefix = null;
+                if (local.length === 10 && local.startsWith('0')) {
+                    prefix = local.slice(0, 3);
+                } else if (local.length === 9) {
+                    prefix = '0' + local.slice(0, 2);
+                }
+                if (!prefix) return null;
+
+                const mtn = new Set(['024','025','053','054','055','059']);
+                const telecel = new Set(['020','050']);
+                const airteltigo = new Set(['026','027','056','057']);
+
+                if (mtn.has(prefix)) return 'MTN MoMo';
+                if (telecel.has(prefix)) return 'Telecel Cash';
+                if (airteltigo.has(prefix)) return 'AirtelTigo Money';
+                return null;
+            };
+
+            const maybeAutoSelectBank = (networkLabel) => {
+                if (!bankSelect || !networkLabel) return;
+                if (bankSelect.value) return; // do not override explicit selection
+
+                const label = networkLabel.toLowerCase();
+                const options = Array.from(bankSelect.options);
+
+                const score = (optText) => {
+                    const text = (optText || '').toLowerCase();
+                    let s = 0;
+                    if (label.includes('mtn') && (text.includes('mtn') || text.includes('mobile money'))) s += 2;
+                    if (label.includes('telecel') && (text.includes('telecel') || text.includes('vodafone'))) s += 2;
+                    if (label.includes('airteltigo') && (text.includes('airtel') || text.includes('tigo') || text.includes('airteltigo'))) s += 2;
+                    if (text.includes('momo') || text.includes('mobile money') || text.includes('wallet')) s += 1;
+                    return s;
+                };
+
+                const best = options
+                    .filter((o) => o.value)
+                    .map((o) => ({ o, s: score(o.textContent) }))
+                    .sort((a, b) => b.s - a.s)[0];
+
+                if (best && best.s >= 2) {
+                    bankSelect.value = best.o.value;
+                }
+            };
+
+            const refresh = () => {
+                if (!accountInput || !hint) return;
+                const network = detectGhNetwork(accountInput.value);
+                if (!network) {
+                    hint.textContent = '';
+                    hint.classList.add('hidden');
+                    return;
+                }
+
+                hint.textContent = 'Detected MoMo network: ' + network;
+                hint.classList.remove('hidden');
+                maybeAutoSelectBank(network);
+            };
+
+            if (accountInput) {
+                accountInput.addEventListener('input', refresh);
+                refresh();
+            }
+        });
+    </script>
 @endsection
