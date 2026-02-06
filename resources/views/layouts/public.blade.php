@@ -6,18 +6,22 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         @php
-            $defaultOgImage = asset('images/og-default.png');
+            $defaultOgImage = url('/images/og-default.jpg');
             $ogTitle = trim($__env->yieldContent('og_title')) ?: $title ?? config('app.name', 'LinkPay');
             $ogDescription = trim($__env->yieldContent('og_description')) ?: 'Pay by WhatsApp with LinkPay';
             $ogImage = trim($__env->yieldContent('og_image')) ?: $defaultOgImage;
             $ogUrl = trim($__env->yieldContent('og_url')) ?: url()->current();
             $ogType = trim($__env->yieldContent('og_type')) ?: 'website';
+            $ogWidth = trim($__env->yieldContent('og_image_width')) ?: '1200';
+            $ogHeight = trim($__env->yieldContent('og_image_height')) ?: '630';
         @endphp
 
         <title>{{ $ogTitle }}</title>
         <meta property="og:title" content="{{ $ogTitle }}">
         <meta property="og:description" content="{{ $ogDescription }}">
         <meta property="og:image" content="{{ $ogImage }}">
+        <meta property="og:image:width" content="{{ $ogWidth }}">
+        <meta property="og:image:height" content="{{ $ogHeight }}">
         <meta property="og:url" content="{{ $ogUrl }}">
         <meta property="og:type" content="{{ $ogType }}">
         <meta name="twitter:card" content="summary_large_image">

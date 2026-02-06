@@ -199,7 +199,7 @@
                 @foreach($products as $product)
                     @php
                         $publicUrl = route('public.product', ['product_slug' => $product->slug]);
-                        $imageUrl = $product->image_path ? url('storage/'.$product->image_path) : asset('images/og-default.png');
+                        $imageUrl = $product->image_path ? url('storage/'.$product->image_path) : url('/images/og-default.jpg');
                         $waText = "Check this product: {$product->name} at {$publicUrl} "
                             ."Price: ".\App\Support\Money::format($product->price, $currency)
                             ." Image: {$imageUrl}";

@@ -23,16 +23,16 @@ class OgImageService
         $subtitle = 'Browse products and contact on WhatsApp';
 
         $imagePath = $this->bestSellerImagePath($profile);
-        $png = $this->render($title, $subtitle, null, $imagePath);
+        $jpg = $this->renderJpeg($title, $subtitle, null, $imagePath);
 
-        if ($png) {
-            $this->storePublicPng('og/sellers/'.$profile->public_slug.'.png', $png);
+        if ($jpg) {
+            $this->storePublicJpeg('og/sellers/'.$profile->public_slug.'.jpg', $jpg);
         }
     }
 
     public function generateProduct(Product $product): void
     {
-        if (! $product->slug) {
+        if (! $product->id) {
             return;
         }
 
@@ -42,16 +42,16 @@ class OgImageService
         $price = (string) $product->price;
 
         $imagePath = $product->image_path ? $this->publicDiskAbsolutePath($product->image_path) : null;
-        $png = $this->render($title, $subtitle, $price, $imagePath);
+        $jpg = $this->renderJpeg($title, $subtitle, $price, $imagePath);
 
-        if ($png) {
-            $this->storePublicPng('og/products/'.$product->slug.'.png', $png);
+        if ($jpg) {
+            $this->storePublicJpeg('og/products/'.$product->id.'.jpg', $jpg);
         }
     }
 
     public function generateInvoice(Invoice $invoice): void
     {
-        if (! $invoice->token) {
+        if (! $invoice->id) {
             return;
         }
 
@@ -61,29 +61,29 @@ class OgImageService
         $price = (string) $invoice->amountDue();
 
         $imagePath = $invoice->image_path ? $this->publicDiskAbsolutePath($invoice->image_path) : null;
-        $png = $this->render($title, $subtitle, $price, $imagePath);
+        $jpg = $this->renderJpeg($title, $subtitle, $price, $imagePath);
 
-        if ($png) {
-            $this->storePublicPng('og/invoices/'.$invoice->token.'.png', $png);
+        if ($jpg) {
+            $this->storePublicJpeg('og/invoices/'.$invoice->id.'.jpg', $jpg);
         }
     }
 
     public function publicSellerOgPath(string $publicSlug): string
     {
-        return 'og/sellers/'.$publicSlug.'.png';
+        return 'og/sellers/'.$publicSlug.'.jpg';
     }
 
-    public function publicProductOgPath(string $productSlug): string
+    public function publicProductOgPath(int|string $productId): string
     {
-        return 'og/products/'.$productSlug.'.png';
+        return 'og/products/'.$productId.'.jpg';
     }
 
-    public function publicInvoiceOgPath(string $token): string
+    public function publicInvoiceOgPath(string $invoiceId): string
     {
-        return 'og/invoices/'.$token.'.png';
+        return 'og/invoices/'.$invoiceId.'.jpg';
     }
 
-    private function storePublicPng(string $path, string $binary): void
+    private function storePublicJpeg(string $path, string $binary): void
     {
         Storage::disk('public')->put($path, $binary);
     }
@@ -117,7 +117,7 @@ class OgImageService
     /**
      * Render a 1200x630 PNG.
      */
-    private function render(string $title, string $subtitle, ?string $price, ?string $photoPath): ?string
+    private function renderJpeg(string $title, string $subtitle, ?string $price, ?string $photoPath): ?string
     {
         if (! extension_loaded('gd')) {
             return null;
@@ -195,12 +195,12 @@ class OgImageService
         }
 
         ob_start();
-        imagepng($img);
-        $png = ob_get_clean();
+        imagejpeg($img, null, 88);
+        $jpg = ob_get_clean();
 
         imagedestroy($img);
 
-        return is_string($png) ? $png : null;
+        return is_string($jpg) ? $jpg : null;
     }
 
     private function drawText($img, string $text, int $x, int $y, int $size, int $color): void
@@ -316,4 +316,3 @@ class OgImageService
         imagecopyresampled($dst, $src, $x, $y, $srcX, $srcY, $w, $h, $newW, $newH);
     }
 }
-

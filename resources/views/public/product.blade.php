@@ -5,7 +5,9 @@
 
 @section('og_title', $ogTitle ?? ($product->name.' - '.($profile?->business_name ?? 'Seller')))
 @section('og_description', $ogDescription ?? ($smallDescription ?? 'Discover this product on LinkPay.'))
-@section('og_image', $ogImage ?? asset('images/og-default.png'))
+@section('og_image', $ogImage ?? url('/images/og-default.jpg'))
+@section('og_image_width', '1200')
+@section('og_image_height', '630')
 @section('og_url', $ogUrl ?? url()->current())
 @section('og_type', $ogType ?? 'website')
 

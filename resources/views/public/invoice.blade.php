@@ -10,7 +10,9 @@
 
 @section('og_title', $ogTitle ?? $title)
 @section('og_description', $ogDescription ?? "Amount due: GHS {$amountDue}. Tap to view and pay securely.")
-@section('og_image', $ogImage ?? asset('images/og-default.png'))
+@section('og_image', $ogImage ?? url('/images/og-default.jpg'))
+@section('og_image_width', '1200')
+@section('og_image_height', '630')
 @section('og_url', $ogUrl ?? route('public.invoice', $invoice->token))
 @section('og_type', $ogType ?? 'website')
 

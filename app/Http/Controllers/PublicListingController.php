@@ -70,11 +70,7 @@ class PublicListingController extends Controller
 
     private function resolveSellerOgImage(SellerProfile $profile): string
     {
-        $ogPath = app(OgImageService::class)->publicSellerOgPath($profile->public_slug);
-        if (Storage::disk('public')->exists($ogPath)) {
-            return url(Storage::url($ogPath));
-        }
-
+        // WhatsApp preview for seller page: first active product's OG image (largest/consistent).
         $firstWithImage = $profile->user->products()
             ->where('is_active', true)
             ->where('status', '!=', Product::STATUS_UNAVAILABLE)
@@ -83,17 +79,30 @@ class PublicListingController extends Controller
             ->latest()
             ->first();
 
-        $firstActive = $firstWithImage ?: $profile->user->products()
-            ->where('is_active', true)
-            ->where('status', '!=', Product::STATUS_UNAVAILABLE)
-            ->latest()
-            ->first();
-
-        if ($firstActive?->image_path) {
-            return url('storage/'.$firstActive->image_path);
+        if ($firstWithImage) {
+            $ogService = app(OgImageService::class);
+            $ogPath = $ogService->publicProductOgPath($firstWithImage->id);
+            if (! Storage::disk('public')->exists($ogPath)) {
+                try {
+                    $firstWithImage->loadMissing('user.sellerProfile');
+                    $ogService->generateProduct($firstWithImage);
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+            if (Storage::disk('public')->exists($ogPath)) {
+                return url(Storage::url($ogPath));
+            }
         }
 
-        return asset('images/og-default.png');
+        // Fallback: seller OG image (generated from seller info).
+        $sellerOgPath = app(OgImageService::class)->publicSellerOgPath($profile->public_slug);
+        if (Storage::disk('public')->exists($sellerOgPath)) {
+            return url(Storage::url($sellerOgPath));
+        }
+
+        // Last resort.
+        return url('/images/og-default.jpg');
     }
 
     public function pay(

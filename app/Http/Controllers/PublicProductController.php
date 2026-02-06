@@ -29,14 +29,19 @@ class PublicProductController extends Controller
             ? Str::limit($product->description, 120)
             : 'Beautiful product ready for payment.';
 
-        $ogPath = app(OgImageService::class)->publicProductOgPath($product->slug);
-        if (Storage::disk('public')->exists($ogPath)) {
-            $ogImage = url(Storage::url($ogPath));
-        } else {
-            $ogImage = $product->image_path
-                ? url('storage/'.$product->image_path)
-                : asset('images/og-default.png');
+        $ogService = app(OgImageService::class);
+        $ogPath = $ogService->publicProductOgPath($product->id);
+        if (! Storage::disk('public')->exists($ogPath)) {
+            try {
+                $product->loadMissing('user.sellerProfile');
+                $ogService->generateProduct($product);
+            } catch (\Throwable $e) {
+                // ignore
+            }
         }
+        $ogImage = Storage::disk('public')->exists($ogPath)
+            ? url(Storage::url($ogPath))
+            : url('/images/og-default.jpg');
 
         return view('public.product', [
             'product' => $product,

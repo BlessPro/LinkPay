@@ -32,14 +32,19 @@ class PublicInvoiceController extends Controller
         );
 
         $sellerName = $invoice->user->sellerProfile?->business_name ?? 'Seller';
-        $ogPath = app(OgImageService::class)->publicInvoiceOgPath($invoice->token);
-        if (Storage::disk('public')->exists($ogPath)) {
-            $ogImage = url(Storage::url($ogPath));
-        } else {
-            $ogImage = $invoice->image_path
-                ? url('storage/'.$invoice->image_path)
-                : asset('images/og-default.png');
+        $ogService = app(OgImageService::class);
+        $ogPath = $ogService->publicInvoiceOgPath((string) $invoice->id);
+        if (! Storage::disk('public')->exists($ogPath)) {
+            try {
+                $invoice->loadMissing('user.sellerProfile');
+                $ogService->generateInvoice($invoice);
+            } catch (\Throwable $e) {
+                // ignore
+            }
         }
+        $ogImage = Storage::disk('public')->exists($ogPath)
+            ? url(Storage::url($ogPath))
+            : url('/images/og-default.jpg');
 
         $currency = config('services.paystack.currency', 'GHS');
 
