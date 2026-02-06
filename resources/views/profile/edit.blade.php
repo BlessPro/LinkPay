@@ -5,6 +5,7 @@
     if (! $displayPhone && $profile->phone && str_starts_with($profile->phone, '+233')) {
         $displayPhone = '0'.substr($profile->phone, 4);
     }
+    $payoutMethod = old('payout_method', $profile->payout_method ?? 'MOMO');
 @endphp
 @extends('layouts.dashboard')
 
@@ -56,9 +57,19 @@
                     <div class="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
                         <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Paystack payout</p>
                         <p class="mt-2 text-xs text-slate-500">Fill in to connect your Paystack subaccount.</p>
+                        <div class="mt-4 inline-flex overflow-hidden rounded-full border border-slate-200 bg-white text-xs font-semibold">
+                            <label class="cursor-pointer px-4 py-2 {{ $payoutMethod === 'MOMO' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600' }}">
+                                <input type="radio" name="payout_method" value="MOMO" class="hidden" {{ $payoutMethod === 'MOMO' ? 'checked' : '' }}>
+                                Mobile Money
+                            </label>
+                            <label class="cursor-pointer px-4 py-2 {{ $payoutMethod === 'BANK' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600' }}">
+                                <input type="radio" name="payout_method" value="BANK" class="hidden" {{ $payoutMethod === 'BANK' ? 'checked' : '' }}>
+                                Bank
+                            </label>
+                        </div>
                         <div class="mt-4 grid gap-4 sm:grid-cols-2">
                             <div>
-                                <label class="text-sm font-medium text-slate-700">Settlement bank code</label>
+                                <label id="settlement-label" class="text-sm font-medium text-slate-700">MoMo provider</label>
                                 @if(! empty($banks))
                                     <select name="settlement_bank_code" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
                                         <option value="">Select bank</option>
@@ -75,8 +86,8 @@
                                 @error('settlement_bank_code') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="text-sm font-medium text-slate-700">Account number</label>
-                                <input id="account-number" name="account_number" value="{{ old('account_number', $profile->account_number) }}" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
+                                <label id="account-number-label" class="text-sm font-medium text-slate-700">Wallet number</label>
+                                <input id="account-number" name="account_number" value="{{ old('account_number', $profile->account_number) }}" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" placeholder="e.g. 0541900229" />
                                 <p id="momo-network-hint" class="mt-2 hidden text-xs text-slate-500"></p>
                                 @error('account_number') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
                             </div>
@@ -134,6 +145,9 @@
             const accountInput = document.getElementById('account-number');
             const hint = document.getElementById('momo-network-hint');
             const bankSelect = document.querySelector('select[name="settlement_bank_code"]');
+            const payoutRadios = document.querySelectorAll('input[name="payout_method"]');
+            const settlementLabel = document.getElementById('settlement-label');
+            const accountLabel = document.getElementById('account-number-label');
 
             const detectGhNetwork = (value) => {
                 const digits = (value || '').replace(/\D+/g, '');
@@ -160,6 +174,23 @@
                 if (telecel.has(prefix)) return 'Telecel Cash';
                 if (airteltigo.has(prefix)) return 'AirtelTigo Money';
                 return null;
+            };
+
+            const getPayoutMethod = () => {
+                const picked = Array.from(payoutRadios).find((r) => r.checked);
+                return picked ? picked.value : 'MOMO';
+            };
+
+            const setPayoutMethod = (value) => {
+                Array.from(payoutRadios).forEach((r) => { r.checked = (r.value === value); });
+                updateLabels();
+            };
+
+            const updateLabels = () => {
+                const method = getPayoutMethod();
+                if (settlementLabel) settlementLabel.textContent = method === 'BANK' ? 'Bank' : 'MoMo provider';
+                if (accountLabel) accountLabel.textContent = method === 'BANK' ? 'Account number' : 'Wallet number';
+                if (accountInput) accountInput.placeholder = method === 'BANK' ? 'e.g. bank account number' : 'e.g. 0541900229';
             };
 
             const maybeAutoSelectBank = (networkLabel) => {
@@ -192,7 +223,16 @@
             const refresh = () => {
                 if (!accountInput || !hint) return;
                 const network = detectGhNetwork(accountInput.value);
-                if (!network) {
+
+                // MoMo-first: if we cannot detect a MoMo prefix, switch to BANK mode (so bank becomes primary).
+                if (!network && getPayoutMethod() === 'MOMO') {
+                    const digits = (accountInput.value || '').replace(/\\D+/g, '');
+                    if (digits.length >= 9) {
+                        setPayoutMethod('BANK');
+                    }
+                }
+
+                if (!network || getPayoutMethod() === 'BANK') {
                     hint.textContent = '';
                     hint.classList.add('hidden');
                     return;
@@ -205,6 +245,11 @@
 
             if (accountInput) {
                 accountInput.addEventListener('input', refresh);
+                Array.from(payoutRadios).forEach((r) => r.addEventListener('change', () => {
+                    updateLabels();
+                    refresh();
+                }));
+                updateLabels();
                 refresh();
             }
         });

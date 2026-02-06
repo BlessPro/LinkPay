@@ -23,6 +23,7 @@ class SellerProfileController extends Controller
 
         $profile->fill([
             'business_name' => $request->input('business_name'),
+            'payout_method' => $request->input('payout_method', $profile->payout_method ?: 'MOMO'),
             'settlement_bank_code' => $request->input('settlement_bank_code'),
             'account_number' => $request->input('account_number'),
             'account_name' => $request->input('account_name'),

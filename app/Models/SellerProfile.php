@@ -16,6 +16,7 @@ class SellerProfile extends Model
         'phone',
         'public_slug',
         'paystack_subaccount_code',
+        'payout_method',
         'settlement_bank_code',
         'account_number',
         'account_name',
