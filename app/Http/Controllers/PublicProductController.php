@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Services\OgImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class PublicProductController extends Controller
 {
@@ -27,9 +29,14 @@ class PublicProductController extends Controller
             ? Str::limit($product->description, 120)
             : 'Beautiful product ready for payment.';
 
-        $ogImage = $product->image_path
-            ? url('storage/'.$product->image_path)
-            : asset('images/og-default.png');
+        $ogPath = app(OgImageService::class)->publicProductOgPath($product->slug);
+        if (Storage::disk('public')->exists($ogPath)) {
+            $ogImage = url(Storage::url($ogPath));
+        } else {
+            $ogImage = $product->image_path
+                ? url('storage/'.$product->image_path)
+                : asset('images/og-default.png');
+        }
 
         return view('public.product', [
             'product' => $product,

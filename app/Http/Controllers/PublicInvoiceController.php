@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\AnalyticsService;
+use App\Services\OgImageService;
 use App\Services\PaymentService;
 use App\Services\PaystackService;
 use App\Support\Email;
@@ -12,6 +13,7 @@ use App\Support\Money;
 use App\Support\Phone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class PublicInvoiceController extends Controller
 {
@@ -30,9 +32,14 @@ class PublicInvoiceController extends Controller
         );
 
         $sellerName = $invoice->user->sellerProfile?->business_name ?? 'Seller';
-        $ogImage = $invoice->image_path
-            ? url('storage/'.$invoice->image_path)
-            : asset('images/og-default.png');
+        $ogPath = app(OgImageService::class)->publicInvoiceOgPath($invoice->token);
+        if (Storage::disk('public')->exists($ogPath)) {
+            $ogImage = url(Storage::url($ogPath));
+        } else {
+            $ogImage = $invoice->image_path
+                ? url('storage/'.$invoice->image_path)
+                : asset('images/og-default.png');
+        }
 
         $currency = config('services.paystack.currency', 'GHS');
 

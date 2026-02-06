@@ -6,6 +6,7 @@ use App\Http\Requests\CreateProductRequest;
 use App\Models\AnalyticsEvent;
 use App\Models\Product;
 use App\Models\Payment;
+use App\Services\OgImageService;
 use App\Support\Money;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -263,7 +264,18 @@ class ProductController extends Controller
             $data['image_path'] = $request->file('image')->store('products', 'public');
         }
 
-        Product::create($data);
+        $product = Product::create($data);
+
+        // Pre-render a large OG image for WhatsApp previews.
+        try {
+            app(OgImageService::class)->generateProduct($product);
+            $product->loadMissing('user.sellerProfile');
+            if ($product->user?->sellerProfile) {
+                app(OgImageService::class)->generateSeller($product->user->sellerProfile);
+            }
+        } catch (\Throwable $e) {
+            // Ignore OG failures.
+        }
 
         return redirect()->route('products.index')->with('status', 'product-created');
     }
@@ -298,6 +310,17 @@ class ProductController extends Controller
         }
 
         $product->update($data);
+
+        // Regenerate OG image after edits.
+        try {
+            $product->refresh()->loadMissing('user.sellerProfile');
+            app(OgImageService::class)->generateProduct($product);
+            if ($product->user?->sellerProfile) {
+                app(OgImageService::class)->generateSeller($product->user->sellerProfile);
+            }
+        } catch (\Throwable $e) {
+            // Ignore OG failures.
+        }
 
         return redirect()->route('products.index')->with('status', 'product-updated');
     }

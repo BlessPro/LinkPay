@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\UpdateProfileRequest;
 use App\Services\SellerNotifier;
 use App\Services\PaystackService;
+use App\Services\OgImageService;
 use Illuminate\Http\Request;
 
 class SellerProfileController extends Controller
@@ -36,6 +37,13 @@ class SellerProfileController extends Controller
             : null;
 
         $profile->save();
+
+        // Pre-render a large OG image for WhatsApp previews.
+        try {
+            app(OgImageService::class)->generateSeller($profile);
+        } catch (\Throwable $e) {
+            // Ignore OG failures.
+        }
 
         if ($profile->phone) {
             if ($user->phone !== $profile->phone) {

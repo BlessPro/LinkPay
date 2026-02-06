@@ -6,6 +6,7 @@ use App\Http\Requests\CreateInvoiceRequest;
 use App\Models\AnalyticsEvent;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\OgImageService;
 use App\Services\SellerNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -46,6 +47,17 @@ class InvoiceController extends Controller
         }
 
         $invoice = Invoice::create($data);
+
+        // Pre-render a large OG image for WhatsApp previews.
+        try {
+            $invoice->loadMissing('user.sellerProfile');
+            app(OgImageService::class)->generateInvoice($invoice);
+            if ($invoice->user?->sellerProfile) {
+                app(OgImageService::class)->generateSeller($invoice->user->sellerProfile);
+            }
+        } catch (\Throwable $e) {
+            // Ignore OG failures.
+        }
 
         app(SellerNotifier::class)->notify(
             $request->user(),

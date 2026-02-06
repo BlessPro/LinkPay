@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\SellerProfile;
 use App\Models\Lead;
 use App\Services\SellerNotifier;
+use App\Services\OgImageService;
 use App\Services\AnalyticsService;
 use App\Services\PaystackService;
 use App\Support\Email;
@@ -15,6 +16,7 @@ use App\Support\Phone;
 use App\Support\WhatsApp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class PublicListingController extends Controller
 {
@@ -68,6 +70,11 @@ class PublicListingController extends Controller
 
     private function resolveSellerOgImage(SellerProfile $profile): string
     {
+        $ogPath = app(OgImageService::class)->publicSellerOgPath($profile->public_slug);
+        if (Storage::disk('public')->exists($ogPath)) {
+            return url(Storage::url($ogPath));
+        }
+
         $firstWithImage = $profile->user->products()
             ->where('is_active', true)
             ->where('status', '!=', Product::STATUS_UNAVAILABLE)
