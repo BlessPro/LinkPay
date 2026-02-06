@@ -133,7 +133,9 @@ class PublicInvoiceController extends Controller
             ],
         ]);
 
-        $platformFee = (string) config('services.paystack.platform_fee_flat', '0');
+        // Platform commission is a percent of the transaction (e.g. 1%).
+        $commissionPercent = (string) config('plans.payments.commission_percent', '0.01');
+        $platformFee = Money::percent((string) $amountDue, $commissionPercent);
         $platformFee = Money::compare($platformFee, '0.00') === 1 ? $platformFee : null;
 
         $data = $paystack->initializeTransaction(
@@ -144,6 +146,7 @@ class PublicInvoiceController extends Controller
                 'payment_id' => $payment->id,
                 'invoice_id' => $invoice->id,
                 'purpose' => 'invoice',
+                'platform_fee' => $platformFee,
                 'customer' => [
                     'name' => $request->input('name'),
                     'email' => $email,
