@@ -6,6 +6,7 @@ use App\Models\Payment;
 use App\Services\PaymentService;
 use App\Services\PaystackService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class PaystackWebhookController extends Controller
 {
@@ -37,14 +38,24 @@ class PaystackWebhookController extends Controller
             return response()->json(['status' => 'already_processed']);
         }
 
-        $verification = $paystack->verifyTransaction($reference);
-        $verifiedStatus = data_get($verification, 'data.status');
+        try {
+            $verification = $paystack->verifyTransaction($reference);
+            $verifiedStatus = data_get($verification, 'data.status');
 
-        if ($verifiedStatus !== 'success') {
-            return response()->json(['status' => 'verification_failed']);
+            if ($verifiedStatus !== 'success') {
+                return response()->json(['status' => 'verification_failed']);
+            }
+
+            $payments->markSuccess($payment, data_get($verification, 'data', []));
+        } catch (\Throwable $exception) {
+            Log::warning('Webhook verification/markSuccess failed', [
+                'reference' => $reference,
+                'message' => $exception->getMessage(),
+            ]);
+
+            // Return 200 so Paystack doesn't hammer retries when the issue is transient/logical.
+            return response()->json(['status' => 'error']);
         }
-
-        $payments->markSuccess($payment, data_get($verification, 'data', []));
 
         return response()->json(['status' => 'ok']);
     }

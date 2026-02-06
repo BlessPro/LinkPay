@@ -12,6 +12,7 @@ use App\Support\Email;
 use App\Support\Money;
 use App\Support\Phone;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
@@ -183,7 +184,10 @@ class PublicInvoiceController extends Controller
                         $payment->refresh();
                     }
                 } catch (\Throwable $exception) {
-                    // Ignore verification errors on success page.
+                    Log::warning('Paystack verification failed on success page', [
+                        'reference' => $reference,
+                        'message' => $exception->getMessage(),
+                    ]);
                 }
             }
         }

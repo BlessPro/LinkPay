@@ -50,8 +50,15 @@ class PaystackService
             'metadata' => $metadata,
         ];
 
-        if (config('services.paystack.callback_url')) {
-            $payload['callback_url'] = config('services.paystack.callback_url');
+        $callbackUrl = (string) config('services.paystack.callback_url');
+        if ($callbackUrl === '') {
+            $appUrl = rtrim((string) config('app.url'), '/');
+            if ($appUrl !== '') {
+                $callbackUrl = $appUrl.'/pay/success';
+            }
+        }
+        if ($callbackUrl !== '') {
+            $payload['callback_url'] = $callbackUrl;
         }
 
         if ($subaccountCode) {
