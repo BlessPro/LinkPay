@@ -1,6 +1,6 @@
-# LinkPay
+# 8Kommerce
 
-LinkPay is a WhatsApp-first payment facilitation platform for sellers. It lets sellers create public mini listing pages with Pay Now buttons, generate one-time invoice links that accept full or partial payments, and track payments and notifications in a clean dashboard. The platform uses a single Paystack account and creates subaccounts for each seller so payouts are routed automatically with a platform fee deducted.
+8Kommerce is a WhatsApp-first payment facilitation platform for sellers. It lets sellers create public mini listing pages with Pay Now buttons, generate one-time invoice links that accept full or partial payments, and track payments and notifications in a clean dashboard. The platform uses a single Paystack account and creates subaccounts for each seller so payouts are routed automatically with a platform fee deducted.
 
 ## What the app does
 - Seller authentication with profile and payout setup.

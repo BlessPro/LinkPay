@@ -14,15 +14,15 @@ class SampleDataSeeder extends Seeder
     public function run(): void
     {
         $user = User::factory()->create([
-            'name' => 'LinkPay Seller',
+            'name' => '8Kommerce Seller',
             'email' => 'seller@example.com',
         ]);
 
         $profile = SellerProfile::create([
             'user_id' => $user->id,
-            'business_name' => 'LinkPay Studio',
+            'business_name' => '8Kommerce Studio',
             'phone' => '+2330000000',
-            'public_slug' => SellerProfile::generateUniqueSlug('LinkPay Studio'),
+            'public_slug' => SellerProfile::generateUniqueSlug('8Kommerce Studio'),
         ]);
 
         Product::create([
