@@ -161,7 +161,7 @@ class OgImageService
         $chipBg = imagecolorallocatealpha($img, 16, 185, 129, 10);
         imagefilledrectangle($img, 90, 105, 240, 145, $chipBg);
         $chipText = imagecolorallocate($img, 6, 95, 70);
-        $this->drawText($img, 'PayLink', 100, 135, 18, $chipText);
+        $this->drawText($img, '8Kommerce', 100, 135, 18, $chipText);
 
         $titleColor = imagecolorallocate($img, 15, 23, 42);
         $muted = imagecolorallocate($img, 71, 85, 105);

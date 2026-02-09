@@ -1,8 +1,8 @@
 <x-guest-layout>
     <div class="flex items-center justify-between">
         <a href="/" class="inline-flex items-center gap-2">
-            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold">LP</span>
-            <span class="text-xs uppercase tracking-[0.4em] text-slate-400">LinkPay</span>
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold">8K</span>
+            <span class="text-xs uppercase tracking-[0.4em] text-slate-400">8Kommerce</span>
         </a>
         <a href="{{ route('register') }}" class="text-xs font-semibold text-emerald-600 hover:text-emerald-500">Create account</a>
     </div>
@@ -109,7 +109,7 @@
     </div>
 
     <p class="mt-6 text-sm text-slate-500">
-        New to LinkPay? <a class="font-semibold text-emerald-600 hover:text-emerald-500" href="{{ route('register') }}">Create an account</a>.
+        New to 8Kommerce? <a class="font-semibold text-emerald-600 hover:text-emerald-500" href="{{ route('register') }}">Create an account</a>.
     </p>
 
     <script>

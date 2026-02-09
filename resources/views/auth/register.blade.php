@@ -1,13 +1,13 @@
 <x-guest-layout>
     <div class="flex items-center justify-between">
         <a href="/" class="inline-flex items-center gap-2">
-            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold">LP</span>
-            <span class="text-xs uppercase tracking-[0.4em] text-slate-400">LinkPay</span>
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold">8K</span>
+            <span class="text-xs uppercase tracking-[0.4em] text-slate-400">8Kommerce</span>
         </a>
         <a href="{{ route('login') }}" class="text-xs font-semibold text-emerald-600 hover:text-emerald-500">Sign in</a>
     </div>
 
-    <h1 class="mt-6 text-2xl font-semibold text-slate-900">Create your LinkPay account</h1>
+    <h1 class="mt-6 text-2xl font-semibold text-slate-900">Create your 8Kommerce account</h1>
     <p class="mt-2 text-sm text-slate-500">Set up your seller workspace in minutes. Add an email or WhatsApp number.</p>
 
     <form class="mt-6 space-y-5" method="POST" action="{{ route('register') }}">

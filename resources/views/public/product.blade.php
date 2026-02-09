@@ -4,7 +4,7 @@
 @extends('layouts.public')
 
 @section('og_title', $ogTitle ?? ($product->name.' - '.($profile?->business_name ?? 'Seller')))
-@section('og_description', $ogDescription ?? ($smallDescription ?? 'Discover this product on LinkPay.'))
+@section('og_description', $ogDescription ?? ($smallDescription ?? 'Discover this product on 8Kommerce.'))
 @section('og_image', $ogImage ?? url('/images/og-default.jpg'))
 @section('og_image_width', '1200')
 @section('og_image_height', '630')
@@ -18,7 +18,7 @@
                 <div>
                     <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Product</p>
                     <h1 class="mt-2 text-3xl font-semibold text-slate-900">{{ $product->name }}</h1>
-                    <p class="mt-1 text-sm text-slate-600">Seller: {{ $profile?->business_name ?? 'LinkPay seller' }}</p>
+                    <p class="mt-1 text-sm text-slate-600">Seller: {{ $profile?->business_name ?? '8Kommerce seller' }}</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <span class="rounded-full px-4 py-2 text-xs font-semibold {{ $product->statusBadgeClass() }}">

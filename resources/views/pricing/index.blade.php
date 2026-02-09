@@ -11,7 +11,7 @@
         <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Pricing</p>
         <h1 class="mt-3 text-4xl font-semibold text-slate-900">Simple plans for WhatsApp selling</h1>
         <p class="mt-3 max-w-2xl text-base text-slate-600">
-            Trial includes all features for 7 days. After that, pick the plan that matches how you want to use PayLink.
+            Trial includes all features for 7 days. After that, pick the plan that matches how you want to use 8Kommerce.
         </p>
 
         <div class="mt-8 grid gap-6 lg:grid-cols-3">
@@ -59,8 +59,8 @@
         <div class="max-w-3xl">
             <h2 class="text-2xl font-semibold text-slate-900">Why two paid plans?</h2>
             <p class="mt-3 text-sm text-slate-600">
-                If you process payments through PayLink, you pay a lower subscription and a small commission per successful payment.
-                If you only want promotion (no payments), you pay a higher subscription because PayLink earns no commission.
+                If you process payments through 8Kommerce, you pay a lower subscription and a small commission per successful payment.
+                If you only want promotion (no payments), you pay a higher subscription because 8Kommerce earns no commission.
             </p>
         </div>
 
@@ -110,4 +110,3 @@
         </p>
     </section>
 @endsection
-

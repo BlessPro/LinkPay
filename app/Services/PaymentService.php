@@ -86,7 +86,7 @@ class PaymentService
 
         if ($customerPhone) {
             $amount = Money::format((string) $payment->amount, config('services.paystack.currency', 'GHS'));
-            $sellerName = $user?->sellerProfile?->business_name ?? $user?->name ?? 'LinkPay seller';
+            $sellerName = $user?->sellerProfile?->business_name ?? $user?->name ?? '8Kommerce seller';
             $message = "Payment successful\nAmount: {$amount}\nSeller: {$sellerName}\nRef: {$payment->reference}";
             try {
                 app(TwilioMessagingService::class)->sendWhatsApp($customerPhone, $message);

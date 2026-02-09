@@ -7,8 +7,8 @@
 
         @php
             $defaultOgImage = url('/images/og-default.jpg');
-            $ogTitle = trim($__env->yieldContent('og_title')) ?: $title ?? config('app.name', 'LinkPay');
-            $ogDescription = trim($__env->yieldContent('og_description')) ?: 'Pay by WhatsApp with LinkPay';
+            $ogTitle = trim($__env->yieldContent('og_title')) ?: $title ?? config('app.name', '8Kommerce');
+            $ogDescription = trim($__env->yieldContent('og_description')) ?: 'Pay by WhatsApp with 8Kommerce';
             $ogImage = trim($__env->yieldContent('og_image')) ?: $defaultOgImage;
             $ogUrl = trim($__env->yieldContent('og_url')) ?: url()->current();
             $ogType = trim($__env->yieldContent('og_type')) ?: 'website';
@@ -38,9 +38,9 @@
     <body class="min-h-screen font-sans bg-gradient-to-br from-amber-50 via-white to-emerald-50 text-slate-900">
         <header class="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
             <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold">LP</div>
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold">8K</div>
                 <div>
-                    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">LinkPay</p>
+                    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">8Kommerce</p>
                     <p class="text-base font-semibold text-slate-900">Pay by WhatsApp</p>
                 </div>
             </div>

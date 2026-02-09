@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'LinkPay') }}</title>
+        <title>{{ config('app.name', '8Kommerce') }}</title>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=space-grotesk:400,500,600,700&display=swap" rel="stylesheet" />
@@ -28,10 +28,10 @@
             <aside class="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
                 <div class="flex items-center gap-2 px-6 py-6">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold">
-                        LP
+                        8K
                     </div>
                     <div>
-                        <p class="text-sm uppercase tracking-widest text-slate-400">LinkPay</p>
+                        <p class="text-sm uppercase tracking-widest text-slate-400">8Kommerce</p>
                         <p class="text-base font-semibold text-slate-900">{{ $profile?->business_name ?? 'Seller' }}</p>
                     </div>
                 </div>

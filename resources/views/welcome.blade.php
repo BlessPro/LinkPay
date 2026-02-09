@@ -5,7 +5,7 @@
         <div class="rounded-3xl border border-emerald-100 bg-white/80 p-8 shadow-sm">
             <p class="text-xs uppercase tracking-[0.35em] text-emerald-500">WhatsApp-first payments</p>
             <h1 class="mt-4 text-4xl font-semibold leading-tight text-slate-900 sm:text-5xl">
-                PayLink helps you sell and collect payments from WhatsApp.
+                8Kommerce helps you sell and collect payments from WhatsApp.
             </h1>
             <p class="mt-4 text-base text-slate-600">
                 Create a mini product page and share pay links in seconds. Collect full or partial payments with Paystack,
@@ -41,7 +41,7 @@
             <div class="rounded-3xl border border-emerald-100 bg-emerald-50/70 p-6">
                 <p class="text-xs uppercase tracking-[0.25em] text-emerald-500">No Paystack account needed</p>
                 <p class="mt-3 text-sm text-emerald-700">
-                    LinkPay creates and manages subaccounts for every seller, with platform fees automatically applied.
+                    8Kommerce creates and manages subaccounts for every seller, with platform fees automatically applied.
                 </p>
             </div>
         </div>
@@ -51,7 +51,7 @@
         <div class="flex items-end justify-between gap-4">
             <div>
                 <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Pricing</p>
-                <h2 class="mt-2 text-2xl font-semibold text-slate-900">Choose what you want PayLink to do</h2>
+                <h2 class="mt-2 text-2xl font-semibold text-slate-900">Choose what you want 8Kommerce to do</h2>
                 <p class="mt-2 text-sm text-slate-600">Start with a 7-day free trial. Upgrade anytime.</p>
             </div>
             <a href="{{ route('pricing') }}" class="hidden rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700 sm:inline-flex">
@@ -79,7 +79,7 @@
                 <h3 class="text-lg font-semibold text-slate-900">Promotion</h3>
                 <p class="mt-2 text-sm text-slate-600">Public pages + products + analytics-lite.</p>
                 <p class="mt-5 text-2xl font-semibold text-slate-900">{{ $plans['promotion']['price_range'] ?? 'GHS 60-100 / month' }}</p>
-                <p class="mt-1 text-sm text-slate-500">No payments through PayLink</p>
+                <p class="mt-1 text-sm text-slate-500">No payments through 8Kommerce</p>
                 <ul class="mt-5 space-y-2 text-sm text-slate-700">
                     <li>Unlimited products/services</li>
                     <li>WhatsApp chat CTA</li>

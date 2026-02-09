@@ -126,7 +126,7 @@ class TwilioVerifyService
 
         Cache::put($key, hash('sha256', $code), self::FALLBACK_TTL_SECONDS);
 
-        $message = "Your LinkPay OTP is {$code}. It expires in 10 minutes.";
+        $message = "Your 8Kommerce OTP is {$code}. It expires in 10 minutes.";
 
         $fallbackChannel = (string) config('services.twilio.otp_fallback_channel', 'sms');
         $messaging = app(TwilioMessagingService::class);

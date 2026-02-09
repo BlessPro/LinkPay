@@ -26,8 +26,8 @@
                         <div class="hidden flex-col justify-between bg-emerald-600 px-10 py-12 text-white lg:flex lg:col-span-2">
                             <div>
                                 <a href="/" class="inline-flex items-center gap-3 text-white">
-                                    <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-base font-semibold">LP</span>
-                                    <span class="text-xs uppercase tracking-[0.4em]">LinkPay</span>
+                                    <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-base font-semibold">8K</span>
+                                    <span class="text-xs uppercase tracking-[0.4em]">8Kommerce</span>
                                 </a>
                                 <h2 class="mt-10 text-2xl font-semibold leading-tight">Sell and get paid directly from WhatsApp.</h2>
                                 <p class="mt-4 text-sm text-emerald-50/90">

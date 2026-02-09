@@ -139,7 +139,7 @@
                     @php
                         $productMessage = $listingUrl
                             ? "Hi, you can pay for {$product->name} here: {$listingUrl}"
-                            : "Hi, you can pay for {$product->name} on our LinkPay page.";
+                            : "Hi, you can pay for {$product->name} on our 8Kommerce page.";
                     @endphp
                     <div class="flex flex-col gap-3 rounded-xl border border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
