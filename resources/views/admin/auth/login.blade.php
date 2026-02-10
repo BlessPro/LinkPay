@@ -18,6 +18,11 @@
                         OTP sent to your email.
                     </div>
                 @endif
+                @if(session('status') === 'otp-debug')
+                    <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                        Email send failed. Debug OTP: <span class="font-semibold">{{ session('otp_preview') }}</span>
+                    </div>
+                @endif
 
                 <form method="POST" action="{{ route('admin.login.send') }}" class="mt-5 space-y-3">
                     @csrf
@@ -50,4 +55,3 @@
         </div>
     </body>
 </html>
-

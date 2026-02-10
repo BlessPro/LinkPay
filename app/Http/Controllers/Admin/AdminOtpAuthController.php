@@ -53,6 +53,14 @@ class AdminOtpAuthController extends Controller
                 'message' => $exception->getMessage(),
             ]);
 
+            // Local/dev fallback so admins can continue testing when SMTP is not ready.
+            if (config('app.debug')) {
+                return back()
+                    ->with('status', 'otp-debug')
+                    ->with('otp_preview', $otp)
+                    ->withInput();
+            }
+
             return back()->withErrors([
                 'email' => 'Unable to send OTP email. Check SMTP sender domain/mailbox settings.',
             ])->withInput();

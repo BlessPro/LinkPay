@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Client\RequestException;
 
 class PublicInvoiceController extends Controller
 {
@@ -144,26 +145,38 @@ class PublicInvoiceController extends Controller
         $platformFee = Money::percent((string) $amountDue, $commissionPercent);
         $platformFee = Money::compare($platformFee, '0.00') === 1 ? $platformFee : null;
 
-        $data = $paystack->initializeTransaction(
-            $amountDue,
-            $email,
-            [
-                'reference' => $reference,
-                'payment_id' => $payment->id,
-                'invoice_id' => $invoice->id,
-                'purpose' => 'invoice',
-                'platform_fee' => $platformFee,
-                'customer' => [
-                    'name' => $request->input('name'),
-                    'email' => $email,
-                    'phone' => $phone,
+        try {
+            $data = $paystack->initializeTransaction(
+                $amountDue,
+                $email,
+                [
+                    'reference' => $reference,
+                    'payment_id' => $payment->id,
+                    'invoice_id' => $invoice->id,
+                    'purpose' => 'invoice',
+                    'platform_fee' => $platformFee,
+                    'customer' => [
+                        'name' => $request->input('name'),
+                        'email' => $email,
+                        'phone' => $phone,
+                    ],
                 ],
-            ],
-            $seller->paystack_subaccount_code,
-            $platformFee
-        );
+                $seller->paystack_subaccount_code,
+                $platformFee
+            );
+        } catch (RequestException $exception) {
+            $payment->status = Payment::STATUS_FAILED;
+            $payment->raw_payload = array_merge($payment->raw_payload ?? [], [
+                'initialize_error' => $exception->getMessage(),
+            ]);
+            $payment->save();
 
-        return redirect()->away($data['authorization_url']);
+            return back()->withErrors([
+                'paystack' => 'Could not initialize payment. Please confirm seller Paystack connection and try again.',
+            ])->withInput();
+        }
+
+        return redirect()->away($data['authorization_url'] ?? route('public.invoice', $token));
     }
 
     public function success(Request $request, PaystackService $paystack, PaymentService $payments)
@@ -175,6 +188,23 @@ class PublicInvoiceController extends Controller
             $payment = Payment::where('reference', $reference)
                 ->with(['invoice.user.sellerProfile', 'product'])
                 ->first();
+
+            if (! $payment) {
+                try {
+                    $verification = $paystack->verifyTransaction($reference);
+                    $paymentId = data_get($verification, 'data.metadata.payment_id');
+                    if ($paymentId) {
+                        $payment = Payment::where('id', $paymentId)
+                            ->with(['invoice.user.sellerProfile', 'product'])
+                            ->first();
+                    }
+                } catch (\Throwable $exception) {
+                    Log::warning('Paystack verification failed on success page (payment lookup)', [
+                        'reference' => $reference,
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
+            }
 
             if ($payment && $payment->status !== Payment::STATUS_SUCCESS) {
                 try {

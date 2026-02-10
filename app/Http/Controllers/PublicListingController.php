@@ -17,6 +17,7 @@ use App\Support\WhatsApp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Client\RequestException;
 
 class PublicListingController extends Controller
 {
@@ -187,26 +188,38 @@ class PublicListingController extends Controller
         $platformFee = Money::percent((string) $product->price, $commissionPercent);
         $platformFee = Money::compare($platformFee, '0.00') === 1 ? $platformFee : null;
 
-        $data = $paystack->initializeTransaction(
-            (string) $product->price,
-            $email,
-            [
-                'reference' => $reference,
-                'payment_id' => $payment->id,
-                'product_id' => $product->id,
-                'purpose' => 'product',
-                'platform_fee' => $platformFee,
-                'customer' => [
-                    'name' => $request->input('name'),
-                    'email' => $email,
-                    'phone' => $phone,
+        try {
+            $data = $paystack->initializeTransaction(
+                (string) $product->price,
+                $email,
+                [
+                    'reference' => $reference,
+                    'payment_id' => $payment->id,
+                    'product_id' => $product->id,
+                    'purpose' => 'product',
+                    'platform_fee' => $platformFee,
+                    'customer' => [
+                        'name' => $request->input('name'),
+                        'email' => $email,
+                        'phone' => $phone,
+                    ],
                 ],
-            ],
-            $profile->paystack_subaccount_code,
-            $platformFee
-        );
+                $profile->paystack_subaccount_code,
+                $platformFee
+            );
+        } catch (RequestException $exception) {
+            $payment->status = Payment::STATUS_FAILED;
+            $payment->raw_payload = array_merge($payment->raw_payload ?? [], [
+                'initialize_error' => $exception->getMessage(),
+            ]);
+            $payment->save();
 
-        return redirect()->away($data['authorization_url']);
+            return back()->withErrors([
+                'paystack' => 'Could not initialize payment. Please confirm seller Paystack connection and try again.',
+            ])->withInput();
+        }
+
+        return redirect()->away($data['authorization_url'] ?? route('public.listing', $public_slug));
     }
 
     public function interest(Request $request, string $public_slug, Product $product)

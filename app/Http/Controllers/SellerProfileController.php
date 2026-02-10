@@ -77,7 +77,7 @@ class SellerProfileController extends Controller
                 );
             } catch (\Throwable $exception) {
                 return back()
-                    ->withErrors(['paystack' => 'Unable to connect Paystack. Please confirm your payout details.'])
+                    ->withErrors(['paystack' => 'Unable to connect Paystack: '.$exception->getMessage()])
                     ->withInput();
             }
         }
@@ -106,7 +106,7 @@ class SellerProfileController extends Controller
 
             return back()->with('paystack_status', 'Paystack connection successful.');
         } catch (\Throwable $exception) {
-            return back()->withErrors(['paystack' => 'Paystack connection failed. Please verify payout details.']);
+            return back()->withErrors(['paystack' => 'Paystack connection failed: '.$exception->getMessage()]);
         }
     }
 }

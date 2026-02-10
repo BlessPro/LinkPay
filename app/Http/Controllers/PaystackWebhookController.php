@@ -14,20 +14,28 @@ class PaystackWebhookController extends Controller
     public function handle(Request $request, PaystackService $paystack, PaymentService $payments)
     {
         $payload = $request->getContent();
-        $event = WebhookEvent::create([
-            'provider' => 'paystack',
-            'event' => $request->input('event'),
-            'reference' => data_get($request->input('data'), 'reference'),
-            'status' => WebhookEvent::STATUS_RECEIVED,
-            'payload' => $request->all(),
-            'received_at' => now(),
-        ]);
+        $event = null;
+        try {
+            $event = WebhookEvent::create([
+                'provider' => 'paystack',
+                'event' => $request->input('event'),
+                'reference' => data_get($request->input('data'), 'reference'),
+                'status' => WebhookEvent::STATUS_RECEIVED,
+                'payload' => $request->all(),
+                'received_at' => now(),
+            ]);
+        } catch (\Throwable $exception) {
+            // Webhook handling must continue even if observability tables are missing.
+            Log::warning('Webhook event logging failed', [
+                'message' => $exception->getMessage(),
+            ]);
+        }
 
         $signature = $request->header('x-paystack-signature');
         $expected = hash_hmac('sha512', $payload, config('services.paystack.secret_key'));
 
         if (! $signature || ! hash_equals($expected, $signature)) {
-            $event->update([
+            $this->updateEvent($event, [
                 'status' => WebhookEvent::STATUS_FAILED,
                 'verification_status' => 'invalid_signature',
                 'error_message' => 'Signature mismatch',
@@ -36,7 +44,7 @@ class PaystackWebhookController extends Controller
         }
 
         if ($request->input('event') !== 'charge.success') {
-            $event->update([
+            $this->updateEvent($event, [
                 'status' => WebhookEvent::STATUS_IGNORED,
                 'verification_status' => 'ignored_event',
             ]);
@@ -45,7 +53,7 @@ class PaystackWebhookController extends Controller
 
         $reference = data_get($request->input('data'), 'reference');
         if (! $reference) {
-            $event->update([
+            $this->updateEvent($event, [
                 'status' => WebhookEvent::STATUS_FAILED,
                 'verification_status' => 'missing_reference',
                 'error_message' => 'Missing reference',
@@ -55,7 +63,7 @@ class PaystackWebhookController extends Controller
 
         $payment = Payment::where('reference', $reference)->first();
         if (! $payment) {
-            $event->update([
+            $this->updateEvent($event, [
                 'status' => WebhookEvent::STATUS_FAILED,
                 'verification_status' => 'payment_not_found',
                 'reference' => $reference,
@@ -64,11 +72,13 @@ class PaystackWebhookController extends Controller
             return response()->json(['status' => 'payment_not_found']);
         }
 
-        $event->payment_id = $payment->id;
-        $event->reference = $reference;
+        if ($event) {
+            $event->payment_id = $payment->id;
+            $event->reference = $reference;
+        }
 
         if ($payment->status === Payment::STATUS_SUCCESS) {
-            $event->update([
+            $this->updateEvent($event, [
                 'status' => WebhookEvent::STATUS_PROCESSED,
                 'verification_status' => 'already_processed',
             ]);
@@ -80,7 +90,7 @@ class PaystackWebhookController extends Controller
             $verifiedStatus = data_get($verification, 'data.status');
 
             if ($verifiedStatus !== 'success') {
-                $event->update([
+                $this->updateEvent($event, [
                     'status' => WebhookEvent::STATUS_FAILED,
                     'verification_status' => 'verification_failed',
                     'error_message' => 'Verify API did not return success',
@@ -89,7 +99,7 @@ class PaystackWebhookController extends Controller
             }
 
             $payments->markSuccess($payment, data_get($verification, 'data', []));
-            $event->update([
+            $this->updateEvent($event, [
                 'status' => WebhookEvent::STATUS_PROCESSED,
                 'verification_status' => 'success',
             ]);
@@ -99,7 +109,7 @@ class PaystackWebhookController extends Controller
                 'message' => $exception->getMessage(),
             ]);
 
-            $event->update([
+            $this->updateEvent($event, [
                 'status' => WebhookEvent::STATUS_FAILED,
                 'verification_status' => 'exception',
                 'error_message' => $exception->getMessage(),
@@ -110,5 +120,20 @@ class PaystackWebhookController extends Controller
         }
 
         return response()->json(['status' => 'ok']);
+    }
+
+    private function updateEvent(?WebhookEvent $event, array $data): void
+    {
+        if (! $event) {
+            return;
+        }
+
+        try {
+            $event->update($data);
+        } catch (\Throwable $exception) {
+            Log::warning('Webhook event update failed', [
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 }
