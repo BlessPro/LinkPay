@@ -25,6 +25,7 @@ class PaymentService
         if ($paidAt) {
             $payment->paid_at = Carbon::parse($paidAt);
         }
+        $payment->verified_at = now();
 
         $existingPayload = $payment->raw_payload ?? [];
         $payment->raw_payload = array_replace_recursive($existingPayload, $verifiedData);
@@ -89,7 +90,12 @@ class PaymentService
             $sellerName = $user?->sellerProfile?->business_name ?? $user?->name ?? '8Kommerce seller';
             $message = "Payment successful\nAmount: {$amount}\nSeller: {$sellerName}\nRef: {$payment->reference}";
             try {
-                app(TwilioMessagingService::class)->sendWhatsApp($customerPhone, $message);
+                app(TwilioMessagingService::class)->sendWhatsApp($customerPhone, $message, [
+                    'user_id' => $payment->user_id,
+                    'payment_id' => $payment->id,
+                    'context_type' => 'payment_customer_success',
+                    'context_id' => $payment->id,
+                ]);
                 Log::info('Customer WhatsApp notify sent', [
                     'payment_id' => $payment->id,
                     'phone' => $customerPhone,
@@ -102,7 +108,12 @@ class PaymentService
 
                 try {
                     // Fall back to SMS when WhatsApp cannot deliver (common in sandbox/outside 24h window).
-                    app(TwilioMessagingService::class)->sendSms($customerPhone, $message);
+                    app(TwilioMessagingService::class)->sendSms($customerPhone, $message, [
+                        'user_id' => $payment->user_id,
+                        'payment_id' => $payment->id,
+                        'context_type' => 'payment_customer_success_fallback',
+                        'context_id' => $payment->id,
+                    ]);
                     Log::info('Customer SMS notify sent (fallback)', [
                         'payment_id' => $payment->id,
                         'phone' => $customerPhone,

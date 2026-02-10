@@ -39,7 +39,11 @@ class SellerNotifier
 
         if ($sendWhatsApp && $phone) {
             try {
-                app(TwilioMessagingService::class)->sendWhatsApp($phone, $title."\n".$body);
+                app(TwilioMessagingService::class)->sendWhatsApp($phone, $title."\n".$body, [
+                    'user_id' => $user->id,
+                    'context_type' => 'seller_notification',
+                    'context_id' => $type,
+                ]);
                 $whatsAppSent = true;
 
                 Log::info('Seller WhatsApp notify sent', [
@@ -62,7 +66,11 @@ class SellerNotifier
 
         if (! $whatsAppSent && $phone) {
             try {
-                app(TwilioMessagingService::class)->sendSms($phone, $title.' - '.$body);
+                app(TwilioMessagingService::class)->sendSms($phone, $title.' - '.$body, [
+                    'user_id' => $user->id,
+                    'context_type' => 'seller_notification_fallback',
+                    'context_id' => $type,
+                ]);
                 $smsSent = true;
 
                 Log::info('Seller SMS notify sent (fallback)', [

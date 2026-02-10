@@ -27,6 +27,7 @@ class Payment extends Model
         'status',
         'channel',
         'paid_at',
+        'verified_at',
         'raw_payload',
         'commission_amount',
         'transaction_fee',
@@ -41,6 +42,7 @@ class Payment extends Model
         return [
             'amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'verified_at' => 'datetime',
             'raw_payload' => 'array',
             'commission_amount' => 'decimal:2',
             'transaction_fee' => 'decimal:2',
@@ -62,5 +64,15 @@ class Payment extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function webhookEvents()
+    {
+        return $this->hasMany(WebhookEvent::class);
+    }
+
+    public function twilioLogs()
+    {
+        return $this->hasMany(TwilioMessageLog::class);
     }
 }

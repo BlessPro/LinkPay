@@ -56,7 +56,13 @@ class User extends Authenticatable
             'trial_ends_at' => 'datetime',
             'plan_started_at' => 'datetime',
             'plan_ends_at' => 'datetime',
+            'suspended_at' => 'datetime',
         ];
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
     }
 
     public function startTrialIfMissing(): void
@@ -142,5 +148,15 @@ class User extends Authenticatable
     public function analyticsEvents()
     {
         return $this->hasMany(AnalyticsEvent::class);
+    }
+
+    public function twilioMessageLogs()
+    {
+        return $this->hasMany(TwilioMessageLog::class);
+    }
+
+    public function adminAuditLogs()
+    {
+        return $this->hasMany(AdminAuditLog::class, 'admin_user_id');
     }
 }

@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\AdminInvoiceController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\PricingController;
 use App\Http\Controllers\SellerPublicPreviewController;
+use App\Http\Controllers\Admin\AdminOtpAuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -72,8 +73,24 @@ Route::middleware(['auth', 'active_access'])->group(function () {
     Route::get('/insights', [InsightsController::class, 'index'])->name('insights.index');
 });
 
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::get('/login', [AdminOtpAuthController::class, 'show'])->name('login');
+    Route::post('/login/send', [AdminOtpAuthController::class, 'send'])
+        ->middleware('throttle:5,1')
+        ->name('login.send');
+    Route::post('/login/verify', [AdminOtpAuthController::class, 'verify'])
+        ->middleware('throttle:10,1')
+        ->name('login.verify');
+});
+
+Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/sellers/{seller}', [AdminDashboardController::class, 'seller'])->name('sellers.show');
+    Route::post('/sellers/{seller}/sync-paystack', [AdminDashboardController::class, 'syncSellerPaystack'])->name('sellers.sync-paystack');
+    Route::post('/sellers/{seller}/suspend', [AdminDashboardController::class, 'suspendSeller'])->name('sellers.suspend');
+    Route::post('/sellers/{seller}/unsuspend', [AdminDashboardController::class, 'unsuspendSeller'])->name('sellers.unsuspend');
+    Route::post('/sellers/{seller}/notify', [AdminDashboardController::class, 'notifySeller'])->name('sellers.notify');
+    Route::post('/payments/{payment}/retry', [AdminDashboardController::class, 'retryPayment'])->name('payments.retry');
     Route::get('/invoices', [AdminInvoiceController::class, 'index'])->name('invoices.index');
     Route::get('/invoices/{invoice}', [AdminInvoiceController::class, 'show'])->name('invoices.show');
 });

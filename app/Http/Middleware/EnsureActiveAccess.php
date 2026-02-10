@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureActiveAccess
@@ -13,6 +14,16 @@ class EnsureActiveAccess
         $user = $request->user();
         if (! $user) {
             return redirect()->route('login');
+        }
+
+        if ($user->isSuspended()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'email' => 'Your account is suspended. Contact support.',
+            ]);
         }
 
         // Safety: older users may not have trial fields populated.
@@ -27,4 +38,3 @@ class EnsureActiveAccess
             ->with('billing_required', 'Upgrade required to continue.');
     }
 }
-
