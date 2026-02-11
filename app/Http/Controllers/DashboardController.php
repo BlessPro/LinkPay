@@ -17,13 +17,13 @@ class DashboardController extends Controller
         $user = $request->user();
         $currency = config('services.paystack.currency', 'GHS');
 
-        // Auto-verify a small batch of recent pending payments so dashboard numbers stay fresh.
+        // Auto-verify recent pending payments so dashboard totals reflect paid transactions quickly.
         $pendingToVerify = $user->payments()
             ->where('status', Payment::STATUS_PENDING)
             ->whereNotNull('reference')
-            ->where('created_at', '>=', Carbon::now()->subDays(2))
+            ->where('created_at', '>=', Carbon::now()->subDays(30))
             ->latest()
-            ->limit(5)
+            ->limit(50)
             ->get();
 
         foreach ($pendingToVerify as $pending) {

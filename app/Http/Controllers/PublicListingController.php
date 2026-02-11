@@ -11,7 +11,6 @@ use App\Services\OgImageService;
 use App\Services\AnalyticsService;
 use App\Services\PaystackService;
 use App\Support\Email;
-use App\Support\Money;
 use App\Support\Phone;
 use App\Support\WhatsApp;
 use Illuminate\Http\Request;
@@ -183,10 +182,7 @@ class PublicListingController extends Controller
             ],
         ]);
 
-        // Platform commission is a percent of the transaction (e.g. 1%).
-        $commissionPercent = (string) config('plans.payments.commission_percent', '0.01');
-        $platformFee = Money::percent((string) $product->price, $commissionPercent);
-        $platformFee = Money::compare($platformFee, '0.00') === 1 ? $platformFee : null;
+        $platformFee = $paystack->platformChargeFor((string) $product->price);
 
         try {
             $data = $paystack->initializeTransaction(

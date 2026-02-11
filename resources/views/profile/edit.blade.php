@@ -6,6 +6,9 @@
         $displayPhone = '0'.substr($profile->phone, 4);
     }
     $payoutMethod = old('payout_method', $profile->payout_method ?? 'MOMO');
+    $momoBanks = $momoBanks ?? [];
+    $bankOptions = $banks ?? [];
+    $momoBankOptions = ! empty($momoBanks) ? $momoBanks : $bankOptions;
 @endphp
 @extends('layouts.dashboard')
 
@@ -70,15 +73,44 @@
                         <div class="mt-4 grid gap-4 sm:grid-cols-2">
                             <div>
                                 <label id="settlement-label" class="text-sm font-medium text-slate-700">MoMo provider</label>
-                                @if(! empty($banks))
-                                    <select name="settlement_bank_code" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
-                                        <option value="">Select bank</option>
-                                        @foreach($banks as $bank)
-                                            <option value="{{ $bank['code'] }}" {{ old('settlement_bank_code', $profile->settlement_bank_code) === $bank['code'] ? 'selected' : '' }}>
+                                @if(! empty($bankOptions))
+                                    <select name="settlement_bank_code" id="settlement-bank-code" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
+                                        <option value="">Select provider</option>
+                                        @foreach($momoBankOptions as $bank)
+                                            @php
+                                                $bankNameLower = strtolower($bank['name']);
+                                                $network = 'UNKNOWN';
+                                                if (str_contains($bankNameLower, 'mtn')) {
+                                                    $network = 'MTN';
+                                                } elseif (str_contains($bankNameLower, 'airtel') || str_contains($bankNameLower, 'tigo')) {
+                                                    $network = 'AIRTELTIGO';
+                                                } elseif (str_contains($bankNameLower, 'telecel') || str_contains($bankNameLower, 'vodafone')) {
+                                                    $network = 'TELECEL';
+                                                }
+                                            @endphp
+                                            <option
+                                                value="{{ $bank['code'] }}"
+                                                data-network="{{ $network }}"
+                                                data-type="momo"
+                                                {{ old('settlement_bank_code', $profile->settlement_bank_code) === $bank['code'] ? 'selected' : '' }}
+                                            >
                                                 {{ $bank['name'] }} ({{ $bank['code'] }})
                                             </option>
                                         @endforeach
-                                    </select>
+                                        @if(! empty($bankOptions))
+                                            @foreach($bankOptions as $bank)
+                                                <option
+                                                    value="{{ $bank['code'] }}"
+                                                    data-network="UNKNOWN"
+                                                    data-type="bank"
+                                                    @if($payoutMethod === 'BANK') style="display:block" @else style="display:none" @endif
+                                                    {{ old('settlement_bank_code', $profile->settlement_bank_code) === $bank['code'] && ! collect($momoBankOptions)->contains(fn($b) => $b['code'] === $bank['code']) ? 'selected' : '' }}
+                                                >
+                                                    {{ $bank['name'] }} ({{ $bank['code'] }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        @endif
                                 @else
                                     <input name="settlement_bank_code" value="{{ old('settlement_bank_code', $profile->settlement_bank_code) }}" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
                                     <p class="mt-2 text-xs text-slate-500">Bank list unavailable. Enter the bank code manually.</p>
@@ -191,32 +223,30 @@
                 if (settlementLabel) settlementLabel.textContent = method === 'BANK' ? 'Bank' : 'MoMo provider';
                 if (accountLabel) accountLabel.textContent = method === 'BANK' ? 'Account number' : 'Wallet number';
                 if (accountInput) accountInput.placeholder = method === 'BANK' ? 'e.g. bank account number' : 'e.g. 0541900229';
+                if (bankSelect) {
+                    const options = Array.from(bankSelect.options);
+                    options.forEach((option, index) => {
+                        if (index === 0) return;
+                        const type = option.dataset.type || 'bank';
+                        const visible = method === 'BANK' ? true : type === 'momo';
+                        option.style.display = visible ? 'block' : 'none';
+                    });
+                }
             };
 
             const maybeAutoSelectBank = (networkLabel) => {
                 if (!bankSelect || !networkLabel) return;
-                if (bankSelect.value) return; // do not override explicit selection
 
-                const label = networkLabel.toLowerCase();
                 const options = Array.from(bankSelect.options);
+                const normalizedNetwork = networkLabel.toUpperCase().includes('MTN')
+                    ? 'MTN'
+                    : (networkLabel.toUpperCase().includes('AIRTEL') || networkLabel.toUpperCase().includes('TIGO')
+                        ? 'AIRTELTIGO'
+                        : (networkLabel.toUpperCase().includes('TELECEL') || networkLabel.toUpperCase().includes('VODAFONE') ? 'TELECEL' : 'UNKNOWN'));
 
-                const score = (optText) => {
-                    const text = (optText || '').toLowerCase();
-                    let s = 0;
-                    if (label.includes('mtn') && (text.includes('mtn') || text.includes('mobile money'))) s += 2;
-                    if (label.includes('telecel') && (text.includes('telecel') || text.includes('vodafone'))) s += 2;
-                    if (label.includes('airteltigo') && (text.includes('airtel') || text.includes('tigo') || text.includes('airteltigo'))) s += 2;
-                    if (text.includes('momo') || text.includes('mobile money') || text.includes('wallet')) s += 1;
-                    return s;
-                };
-
-                const best = options
-                    .filter((o) => o.value)
-                    .map((o) => ({ o, s: score(o.textContent) }))
-                    .sort((a, b) => b.s - a.s)[0];
-
-                if (best && best.s >= 2) {
-                    bankSelect.value = best.o.value;
+                const best = options.find((o) => o.dataset.network === normalizedNetwork && o.style.display !== 'none');
+                if (best) {
+                    bankSelect.value = best.value;
                 }
             };
 
@@ -226,7 +256,7 @@
 
                 // MoMo-first: if we cannot detect a MoMo prefix, switch to BANK mode (so bank becomes primary).
                 if (!network && getPayoutMethod() === 'MOMO') {
-                    const digits = (accountInput.value || '').replace(/\\D+/g, '');
+                    const digits = (accountInput.value || '').replace(/\D+/g, '');
                     if (digits.length >= 9) {
                         setPayoutMethod('BANK');
                     }

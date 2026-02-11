@@ -24,6 +24,8 @@ class PaymentService
         $paidAt = $verifiedData['paid_at'] ?? null;
         if ($paidAt) {
             $payment->paid_at = Carbon::parse($paidAt);
+        } elseif (! $payment->paid_at) {
+            $payment->paid_at = now();
         }
         $payment->verified_at = now();
 

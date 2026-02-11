@@ -9,6 +9,14 @@ use Illuminate\Support\Facades\Http;
 
 class PaystackService
 {
+    public function platformChargeFor(string $amount): ?string
+    {
+        $percent = (string) config('plans.payments.commission_percent', '0.01');
+        $charge = Money::percent($amount, $percent);
+
+        return Money::compare($charge, '0.00') === 1 ? $charge : null;
+    }
+
     public function createOrUpdateSubaccount(SellerProfile $profile): array
     {
         $payload = [

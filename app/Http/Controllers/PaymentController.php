@@ -18,13 +18,13 @@ class PaymentController extends Controller
     {
         $user = $request->user();
 
-        // Auto-verify a small batch of recent pending payments so sellers never have to click "Verify".
+        // Auto-verify pending payments so sellers never have to click "Verify".
         $pendingToVerify = $user->payments()
             ->where('status', Payment::STATUS_PENDING)
             ->whereNotNull('reference')
-            ->where('created_at', '>=', Carbon::now()->subDays(2))
+            ->where('created_at', '>=', Carbon::now()->subDays(30))
             ->latest()
-            ->limit(5)
+            ->limit(50)
             ->get();
 
         foreach ($pendingToVerify as $pending) {

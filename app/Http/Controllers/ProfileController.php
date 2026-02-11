@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -33,11 +34,21 @@ class ProfileController extends Controller
             $banks = [];
         }
 
+        $momoBanks = collect($banks)
+            ->filter(function (array $bank) {
+                $name = Str::lower((string) ($bank['name'] ?? ''));
+
+                return Str::contains($name, ['mtn', 'airtel', 'tigo', 'telecel', 'vodafone', 'momo', 'mobile money']);
+            })
+            ->values()
+            ->all();
+
         return view('profile.edit', [
             'user' => $request->user(),
             'profile' => $profile,
             'currency' => config('services.paystack.currency', 'GHS'),
             'banks' => $banks,
+            'momoBanks' => $momoBanks,
         ]);
     }
 

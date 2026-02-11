@@ -63,6 +63,12 @@ class PaystackWebhookController extends Controller
 
         $payment = Payment::where('reference', $reference)->first();
         if (! $payment) {
+            $paymentId = data_get($request->input('data'), 'metadata.payment_id');
+            if ($paymentId) {
+                $payment = Payment::where('id', $paymentId)->first();
+            }
+        }
+        if (! $payment) {
             $this->updateEvent($event, [
                 'status' => WebhookEvent::STATUS_FAILED,
                 'verification_status' => 'payment_not_found',

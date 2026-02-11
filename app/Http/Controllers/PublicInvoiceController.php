@@ -140,10 +140,7 @@ class PublicInvoiceController extends Controller
             ],
         ]);
 
-        // Platform commission is a percent of the transaction (e.g. 1%).
-        $commissionPercent = (string) config('plans.payments.commission_percent', '0.01');
-        $platformFee = Money::percent((string) $amountDue, $commissionPercent);
-        $platformFee = Money::compare($platformFee, '0.00') === 1 ? $platformFee : null;
+        $platformFee = $paystack->platformChargeFor((string) $amountDue);
 
         try {
             $data = $paystack->initializeTransaction(
