@@ -115,7 +115,7 @@ class PublicListingController extends Controller
     {
         $request->validate([
             'name' => ['nullable', 'string', 'max:120'],
-            'email' => ['nullable', 'email'],
+            'location' => ['nullable', 'string', 'max:160'],
             'phone_number' => ['required', 'string', 'max:25'],
             'phone_country' => ['nullable', 'string'],
         ]);
@@ -152,12 +152,8 @@ class PublicListingController extends Controller
             return back()->withErrors(['phone_number' => 'Enter a valid WhatsApp number.'])->withInput();
         }
 
-        $emailInput = $request->input('email');
-        $emailParts = array_filter(array_map('trim', explode(',', (string) $emailInput)));
-        $email = $emailParts[0] ?? $emailInput;
-        if (! $email) {
-            $email = Email::placeholder($reference);
-        }
+        $email = Email::placeholder($reference);
+        $location = trim((string) $request->input('location'));
 
         $analytics->trackEvent(
             $request,
@@ -178,6 +174,7 @@ class PublicListingController extends Controller
                     'name' => $request->input('name'),
                     'email' => $email,
                     'phone' => $phone,
+                    'location' => $location,
                 ],
             ],
         ]);
@@ -195,11 +192,12 @@ class PublicListingController extends Controller
                     'purpose' => 'product',
                     'platform_fee' => $platformFee,
                     'customer' => [
-                        'name' => $request->input('name'),
-                        'email' => $email,
-                        'phone' => $phone,
-                    ],
+                    'name' => $request->input('name'),
+                    'email' => $email,
+                    'phone' => $phone,
+                    'location' => $location,
                 ],
+            ],
                 $profile->paystack_subaccount_code,
                 $platformFee
             );
@@ -222,7 +220,7 @@ class PublicListingController extends Controller
     {
         $request->validate([
             'name' => ['nullable', 'string', 'max:120'],
-            'email' => ['nullable', 'string', 'max:500'],
+            'location' => ['nullable', 'string', 'max:160'],
             'phone_number' => ['nullable', 'string', 'max:50'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
@@ -230,16 +228,8 @@ class PublicListingController extends Controller
         $profile = SellerProfile::where('public_slug', $public_slug)->firstOrFail();
         abort_unless($product->user_id === $profile->user_id, 404);
 
-        $emailsInput = $request->input('email');
         $phonesInput = $request->input('phone_number');
-
-        $parts = array_filter(array_map('trim', explode(',', (string) $emailsInput)));
-        $emails = [];
-        foreach ($parts as $part) {
-            if (str_contains($part, '@')) {
-                $emails[] = $part;
-            }
-        }
+        $location = trim((string) $request->input('location'));
 
         $phoneParts = array_filter(array_map('trim', explode(',', (string) $phonesInput)));
         $phones = [];
@@ -250,8 +240,8 @@ class PublicListingController extends Controller
             }
         }
 
-        if (empty($emails) && empty($phones)) {
-            return back()->withErrors(['phone_number' => 'Enter at least one valid email or phone number.'])->withInput();
+        if (empty($phones)) {
+            return back()->withErrors(['phone_number' => 'Enter a valid WhatsApp number.'])->withInput();
         }
 
         $sellerPhone = $profile->phone ?: ($profile->user?->phone);
@@ -260,16 +250,20 @@ class PublicListingController extends Controller
             return back()->withErrors(['phone_number' => 'Seller WhatsApp number is not available.'])->withInput();
         }
 
-        $raw = trim(implode(', ', array_filter(array_merge($emails, $phones))));
+        $raw = trim(implode(', ', array_filter($phones)));
+        $composedNote = trim(implode(' | ', array_filter([
+            $location !== '' ? 'Location: '.$location : null,
+            $request->input('note'),
+        ])));
 
         $lead = Lead::create([
             'user_id' => $profile->user_id,
             'product_id' => $product->id,
             'name' => $request->input('name'),
             'contact_raw' => $raw,
-            'emails' => $emails,
+            'emails' => [],
             'phones' => $phones,
-            'note' => $request->input('note'),
+            'note' => $composedNote,
         ]);
 
         app(SellerNotifier::class)->notify(
@@ -281,6 +275,7 @@ class PublicListingController extends Controller
                 'lead_id' => $lead->id,
                 'product_id' => $product->id,
                 'contact' => $raw,
+                'location' => $location,
             ]
         );
 
@@ -297,6 +292,9 @@ class PublicListingController extends Controller
         }
         if ($raw !== '') {
             $message .= "Contact: {$raw}\n";
+        }
+        if ($location !== '') {
+            $message .= "Location: {$location}\n";
         }
         if ($note !== '') {
             $message .= "Note: {$note}\n";

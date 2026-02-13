@@ -17,6 +17,7 @@
             $user = auth()->user();
             $profile = $user->sellerProfile;
             $canUsePayments = $user->canUsePaymentsFeature();
+            $publicUrl = $profile?->public_slug ? route('public.listing', $profile->public_slug) : null;
             $navClass = function (string $route) {
                 return request()->routeIs($route)
                     ? 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold bg-emerald-50 text-emerald-700'
@@ -25,7 +26,7 @@
         @endphp
 
         <div class="min-h-screen lg:flex">
-            <aside class="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
+            <aside class="hidden lg:sticky lg:top-0 lg:z-30 lg:flex lg:h-screen lg:max-h-screen lg:w-64 lg:flex-col lg:overflow-hidden lg:border-r lg:border-slate-200 lg:bg-white">
                 <div class="flex items-center gap-2 px-6 py-6">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold">
                         8K
@@ -36,7 +37,7 @@
                     </div>
                 </div>
 
-                <nav class="flex-1 space-y-1 px-4">
+                <nav class="space-y-1 px-4">
                     <a href="{{ route('dashboard') }}" class="{{ $navClass('dashboard') }}">Dashboard</a>
                     <a href="{{ route('profile.edit') }}" class="{{ $navClass('profile.*') }}">Profile</a>
                     <a href="{{ route('products.index') }}" class="{{ $navClass('products.*') }}">Products</a>
@@ -64,7 +65,7 @@
                     @endif
                 </nav>
                 
-                <div class="px-6 py-5">
+                <div class="mt-auto px-6 py-5">
                     <p class="text-xs uppercase tracking-widest text-slate-400">Payout status</p>
                     @if($profile?->paystack_subaccount_code)
                         <p class="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">Paystack Connected</p>
@@ -74,8 +75,8 @@
                 </div>
             </aside>
 
-            <div class="flex-1">
-                <header class="border-b border-slate-200 bg-white/70 backdrop-blur">
+            <div class="flex-1 overflow-x-hidden">
+                <header class="fixed top-0 right-0 left-0 z-40 border-b border-slate-200 bg-white/70 backdrop-blur lg:left-64">
                     <div class="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
                         <div>
                             <p class="text-xs uppercase tracking-widest text-slate-400">Dashboard</p>
@@ -121,7 +122,24 @@
                     </div>
                 </header>
 
-                <main class="px-4 py-6 sm:px-6 lg:px-8">
+                <main class="px-4 py-6 pt-24 sm:px-6 lg:px-8">
+                    @if($publicUrl)
+                        <div class="mb-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Public link</p>
+                                <a href="{{ $publicUrl }}" target="_blank" rel="noreferrer noopener" class="text-sm font-semibold text-emerald-700 hover:text-emerald-600">
+                                    {{ $publicUrl }}
+                                </a>
+                                <button
+                                    type="button"
+                                    class="ml-auto rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700 js-copy-public-link"
+                                    data-copy-value="{{ $publicUrl }}"
+                                >
+                                    Copy link
+                                </button>
+                            </div>
+                        </div>
+                    @endif
                     @if($user->isOnTrial() && $user->trial_ends_at)
                         @php
                             $daysLeft = max(0, now()->diffInDays($user->trial_ends_at, false));
@@ -140,5 +158,48 @@
                 </main>
             </div>
         </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const copyButton = document.querySelector('.js-copy-public-link');
+                if (!copyButton) {
+                    return;
+                }
+
+                const copyValue = copyButton.dataset.copyValue || '';
+                const setLabel = (text) => {
+                    copyButton.textContent = text;
+                    setTimeout(() => {
+                        copyButton.textContent = 'Copy link';
+                    }, 1200);
+                };
+
+                copyButton.addEventListener('click', async () => {
+                    if (!copyValue) {
+                        return;
+                    }
+
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        try {
+                            await navigator.clipboard.writeText(copyValue);
+                            setLabel('Copied');
+                            return;
+                        } catch (_) {
+                            // Fallback below.
+                        }
+                    }
+
+                    const helper = document.createElement('textarea');
+                    helper.value = copyValue;
+                    helper.setAttribute('readonly', '');
+                    helper.style.position = 'absolute';
+                    helper.style.left = '-9999px';
+                    document.body.appendChild(helper);
+                    helper.select();
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(helper);
+                    setLabel(ok ? 'Copied' : 'Copy failed');
+                });
+            });
+        </script>
     </body>
 </html>

@@ -83,7 +83,7 @@
                 @csrf
                 <input name="name" placeholder="Name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
                 <input name="phone_number" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" required data-strip-leading-zero="true" />
-                <input name="email" placeholder="Email (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                <input name="location" placeholder="Location (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
                 <input type="hidden" name="phone_country" value="+233" />
                 <button type="submit" class="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500" {{ $invoice->status === \App\Models\Invoice::STATUS_PAID || ! $seller?->paystack_subaccount_code || ! ($paymentsEnabled ?? true) ? 'disabled' : '' }}>
                     Pay amount due

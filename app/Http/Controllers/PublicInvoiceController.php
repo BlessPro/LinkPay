@@ -69,7 +69,7 @@ class PublicInvoiceController extends Controller
     {
         $request->validate([
             'name' => ['nullable', 'string', 'max:120'],
-            'email' => ['nullable', 'email'],
+            'location' => ['nullable', 'string', 'max:160'],
             'phone_number' => ['required', 'string', 'max:25'],
             'phone_country' => ['nullable', 'string'],
         ]);
@@ -110,12 +110,8 @@ class PublicInvoiceController extends Controller
             return back()->withErrors(['phone_number' => 'Enter a valid WhatsApp number.'])->withInput();
         }
 
-        $emailInput = $request->input('email');
-        $emailParts = array_filter(array_map('trim', explode(',', (string) $emailInput)));
-        $email = $emailParts[0] ?? $emailInput;
-        if (! $email) {
-            $email = Email::placeholder($reference);
-        }
+        $email = Email::placeholder($reference);
+        $location = trim((string) $request->input('location'));
 
         $analytics->trackEvent(
             $request,
@@ -136,6 +132,7 @@ class PublicInvoiceController extends Controller
                     'name' => $request->input('name'),
                     'email' => $email,
                     'phone' => $phone,
+                    'location' => $location,
                 ],
             ],
         ]);
@@ -156,6 +153,7 @@ class PublicInvoiceController extends Controller
                         'name' => $request->input('name'),
                         'email' => $email,
                         'phone' => $phone,
+                        'location' => $location,
                     ],
                 ],
                 $seller->paystack_subaccount_code,
@@ -178,7 +176,7 @@ class PublicInvoiceController extends Controller
 
     public function success(Request $request, PaystackService $paystack, PaymentService $payments)
     {
-        $reference = $request->query('reference');
+        $reference = $request->query('reference') ?: $request->query('trxref');
         $payment = null;
 
         if ($reference) {
@@ -219,10 +217,11 @@ class PublicInvoiceController extends Controller
             }
         }
 
-        $listingSlug = $payment
-            ? $payment->invoice?->user?->sellerProfile?->public_slug
-                ?? $payment->product?->user?->sellerProfile?->public_slug
-            : null;
+        $listingSlug = null;
+        if ($payment) {
+            $listingSlug = $payment->invoice?->user?->sellerProfile?->public_slug
+                ?? $payment->product?->user?->sellerProfile?->public_slug;
+        }
         $listingUrl = $listingSlug ? route('public.listing', $listingSlug) : null;
 
         return view('public.success', [

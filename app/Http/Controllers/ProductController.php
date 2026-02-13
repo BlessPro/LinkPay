@@ -298,7 +298,10 @@ class ProductController extends Controller
         $this->authorizeProduct($product);
 
         $data = $request->validated();
-        $data['is_active'] = $request->boolean('is_active');
+        // Quick-edit forms may not send is_active; preserve current value in that case.
+        $data['is_active'] = $request->has('is_active')
+            ? $request->boolean('is_active')
+            : $product->is_active;
         $data['status'] = $request->input('status', Product::STATUS_IN_STOCK);
         $data['slug'] = $this->generateProductSlug($data['name'], $product);
 

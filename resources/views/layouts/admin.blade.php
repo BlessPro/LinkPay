@@ -14,7 +14,7 @@
     </head>
     <body class="min-h-screen font-sans bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900">
         <div class="min-h-screen lg:flex">
-            <aside class="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
+            <aside class="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:max-h-screen lg:w-64 lg:flex-col lg:overflow-hidden lg:border-r lg:border-slate-200 lg:bg-white">
                 <div class="flex items-center gap-2 px-6 py-6">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white font-semibold">
                         AD
@@ -24,7 +24,7 @@
                         <p class="text-base font-semibold text-slate-900">System view</p>
                     </div>
                 </div>
-                <nav class="flex-1 space-y-1 px-4">
+                <nav class="space-y-1 px-4">
                     <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-900 text-white' : 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900 hover:text-white' }}">Overview</a>
                     <a href="{{ route('admin.dashboard') }}#exceptions" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900 hover:text-white">Ops queue</a>
                     <a href="{{ route('admin.dashboard') }}#sellers" class="{{ request()->routeIs('admin.sellers.*') ? 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-900 text-white' : 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900 hover:text-white' }}">Sellers</a>
@@ -38,7 +38,7 @@
             </aside>
 
             <div class="flex-1">
-                <header class="border-b border-slate-200 bg-white/70 backdrop-blur">
+                <header class="fixed top-0 right-0 left-0 z-40 border-b border-slate-200 bg-white/70 backdrop-blur lg:left-64">
                     <div class="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
                         <div>
                             <p class="text-xs uppercase tracking-widest text-slate-400">Admin</p>
@@ -69,7 +69,7 @@
                     </div>
                 </header>
 
-                <main class="px-4 py-6 sm:px-6 lg:px-8">
+                <main class="px-4 py-6 pt-24 sm:px-6 lg:px-8">
                     {{ $slot ?? '' }}
                     @yield('content')
                 </main>

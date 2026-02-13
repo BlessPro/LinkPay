@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Invoice;
+use App\Models\Lead;
 use App\Models\Payment;
 use Carbon\Carbon;
 use App\Services\SellerNotifier;
@@ -42,13 +43,50 @@ class PaymentService
 
         $user = $payment->user()->with('sellerProfile')->first();
         if ($user) {
+            $customerName = (string) (data_get($payment->raw_payload, 'customer.name') ?? data_get($verifiedData, 'metadata.customer.name') ?? 'Customer');
+            $customerPhone = (string) (data_get($payment->raw_payload, 'customer.phone') ?? data_get($verifiedData, 'metadata.customer.phone') ?? '');
+            $customerLocation = (string) (data_get($payment->raw_payload, 'customer.location') ?? data_get($verifiedData, 'metadata.customer.location') ?? '');
+            $itemLabel = $payment->invoice?->title ?? $payment->product?->name ?? 'payment';
+            $amountLabel = Money::format((string) $payment->amount, config('services.paystack.currency', 'GHS'));
+
+            $leadMatch = $this->findMatchingLead($payment, $customerPhone);
+            $leadPaidBody = $leadMatch
+                ? "Lead paid: {$customerName} completed payment for {$itemLabel} ({$amountLabel})."
+                : null;
+
             app(SellerNotifier::class)->notify(
                 $user,
                 \App\Models\SellerNotification::TYPE_PAYMENT_RECEIVED,
                 'Payment received',
-                'Payment '.$payment->reference.' was completed.',
-                ['payment_id' => $payment->id]
+                'Payment '.$payment->reference.' was completed by '.$customerName.'.',
+                [
+                    'payment_id' => $payment->id,
+                    'reference' => $payment->reference,
+                    'item' => $itemLabel,
+                    'amount' => (string) $payment->amount,
+                    'customer_name' => $customerName,
+                    'customer_phone' => $customerPhone,
+                    'customer_location' => $customerLocation,
+                    'matched_lead_id' => $leadMatch?->id,
+                ]
             );
+
+            if ($leadMatch && $leadPaidBody) {
+                app(SellerNotifier::class)->notify(
+                    $user,
+                    \App\Models\SellerNotification::TYPE_LEAD_CAPTURED,
+                    'Lead converted to payment',
+                    $leadPaidBody,
+                    [
+                        'lead_id' => $leadMatch->id,
+                        'payment_id' => $payment->id,
+                        'reference' => $payment->reference,
+                        'customer_phone' => $customerPhone,
+                    ],
+                    sendEmail: false,
+                    sendWhatsApp: false
+                );
+            }
         }
 
         if ($payment->invoice_id) {
@@ -158,9 +196,28 @@ class PaymentService
 
     private function resolveReceivingAccount(Payment $payment, array $verifiedData): ?string
     {
-        return data_get($verifiedData, 'subaccount')
+        $candidate = data_get($verifiedData, 'subaccount')
             ?? data_get($verifiedData, 'metadata.subaccount')
             ?? $payment->receiving_account;
+
+        if (is_string($candidate) || $candidate === null) {
+            return $candidate;
+        }
+
+        if (is_array($candidate)) {
+            $code = $candidate['subaccount_code'] ?? $candidate['code'] ?? null;
+            if (is_string($code)) {
+                return $code;
+            }
+
+            return isset($candidate['id']) ? (string) $candidate['id'] : null;
+        }
+
+        if (is_object($candidate)) {
+            return method_exists($candidate, '__toString') ? (string) $candidate : null;
+        }
+
+        return (string) $candidate;
     }
 
     private function resolveTransactionCode(Payment $payment, array $verifiedData): ?string
@@ -175,5 +232,22 @@ class PaymentService
         return data_get($verifiedData, 'id')
             ?? data_get($verifiedData, 'metadata.transaction_id')
             ?? $payment->transaction_id;
+    }
+
+    private function findMatchingLead(Payment $payment, ?string $customerPhone): ?Lead
+    {
+        if (! $customerPhone || ! $payment->user_id) {
+            return null;
+        }
+
+        $query = Lead::query()
+            ->where('user_id', $payment->user_id)
+            ->whereJsonContains('phones', $customerPhone);
+
+        if ($payment->product_id) {
+            $query->where('product_id', $payment->product_id);
+        }
+
+        return $query->latest()->first();
     }
 }
