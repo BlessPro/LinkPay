@@ -16,6 +16,8 @@ class SellerNotification extends Model
     public const TYPE_INVOICE_PAID = 'INVOICE_FULLY_PAID';
     public const TYPE_LEAD_CAPTURED = 'LEAD_CAPTURED';
     public const TYPE_ADMIN_MESSAGE = 'ADMIN_MESSAGE';
+    public const TYPE_ORDER_ACCEPTED = 'ORDER_ACCEPTED';
+    public const TYPE_ORDER_REJECTED = 'ORDER_REJECTED';
 
     protected $table = 'notifications';
 

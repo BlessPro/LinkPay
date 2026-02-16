@@ -62,7 +62,15 @@ class PhoneOtpController extends Controller
             ]);
         }
 
-        return back()->with('otp_status', 'sent')->withInput();
+        session([
+            'phone_login_pending_phone' => $normalized,
+            'phone_login_pending_country' => $country,
+        ]);
+
+        return back()
+            ->with('otp_status', 'sent')
+            ->with('otp_phone_masked', $this->maskPhone($normalized))
+            ->withInput();
     }
 
     public function verify(Request $request, TwilioVerifyService $twilio): RedirectResponse
@@ -73,9 +81,20 @@ class PhoneOtpController extends Controller
             'otp' => ['required', 'string', 'min:4', 'max:8'],
         ]);
 
-        $country = $data['phone_country'] ?? '+233';
-        $normalized = Phone::normalize($data['phone_number'], $country);
+        $country = $data['phone_country'] ?? (session('phone_login_pending_country', '+233'));
+        $pendingPhone = session('phone_login_pending_phone');
+        $normalized = Phone::normalize($data['phone_number'], $country) ?: $pendingPhone;
         if (! $normalized || ! Phone::isValidGh($data['phone_number'])) {
+            if ($pendingPhone && Phone::isValidGh($pendingPhone)) {
+                $normalized = $pendingPhone;
+            } else {
+                throw ValidationException::withMessages([
+                    'phone_number' => 'Enter a valid WhatsApp number.',
+                ]);
+            }
+        }
+
+        if (! $normalized) {
             throw ValidationException::withMessages([
                 'phone_number' => 'Enter a valid WhatsApp number.',
             ]);
@@ -109,7 +128,20 @@ class PhoneOtpController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+        $request->session()->forget(['phone_login_pending_phone', 'phone_login_pending_country']);
 
         return redirect()->intended(route('dashboard', absolute: false));
+    }
+
+    private function maskPhone(string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', $phone);
+        if (! $digits || strlen($digits) < 4) {
+            return $phone;
+        }
+
+        $visible = substr($digits, -4);
+
+        return '+***'.$visible;
     }
 }

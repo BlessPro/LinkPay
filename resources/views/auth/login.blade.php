@@ -71,7 +71,7 @@
     <div id="login-whatsapp" class="mt-6 hidden">
         @if (session('otp_status') === 'sent')
             <div class="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                OTP sent to your WhatsApp number.
+                OTP sent to {{ session('otp_phone_masked', 'your WhatsApp number') }}.
             </div>
         @endif
 
@@ -83,7 +83,7 @@
                     <select name="phone_country" class="rounded-xl border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
                         <option value="+233">+233</option>
                     </select>
-                    <input name="phone_number" value="{{ old('phone_number') }}" class="w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="0541900229" inputmode="numeric" pattern="[0-9]*" autocomplete="tel" data-strip-leading-zero="true" />
+                    <input name="phone_number" value="{{ old('phone_number', session('phone_login_pending_phone')) }}" class="w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="0541900229" inputmode="numeric" pattern="[0-9]*" autocomplete="tel" data-strip-leading-zero="true" />
                 </div>
                 <p class="mt-2 text-xs text-slate-500">We will send an OTP to your WhatsApp number.</p>
                 <x-input-error :messages="$errors->get('phone_number')" class="mt-2" />
@@ -95,8 +95,8 @@
 
         <form class="mt-4 space-y-4" method="POST" action="{{ route('login.phone.verify') }}">
             @csrf
-            <input type="hidden" name="phone_country" value="{{ old('phone_country', '+233') }}" />
-            <input type="hidden" name="phone_number" value="{{ old('phone_number') }}" />
+            <input type="hidden" name="phone_country" value="{{ old('phone_country', session('phone_login_pending_country', '+233')) }}" />
+            <input type="hidden" name="phone_number" value="{{ old('phone_number', session('phone_login_pending_phone')) }}" />
             <div>
                 <label for="otp" class="text-xs uppercase tracking-[0.3em] text-slate-400">OTP</label>
                 <input id="otp" name="otp" value="{{ old('otp') }}" class="mt-2 w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="123456" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" />

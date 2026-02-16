@@ -21,6 +21,7 @@ class Payment extends Model
     protected $fillable = [
         'user_id',
         'invoice_id',
+        'order_id',
         'product_id',
         'reference',
         'amount',
@@ -59,6 +60,11 @@ class Payment extends Model
     public function invoice()
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
     }
 
     public function product()

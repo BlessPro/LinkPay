@@ -19,7 +19,7 @@ class InsightsController extends Controller
         $user = $request->user();
         $currency = config('services.paystack.currency', 'GHS');
 
-        $range = $request->query('range', '30');
+        $range = $request->query('range', '7');
         if ($range !== 'custom' && ctype_digit((string) $range)) {
             $days = max(1, (int) $range);
             $start = Carbon::now()->subDays($days - 1)->startOfDay();
@@ -27,7 +27,7 @@ class InsightsController extends Controller
         } else {
             $start = $request->query('start_date')
                 ? Carbon::parse($request->query('start_date'))->startOfDay()
-                : Carbon::now()->subDays(29)->startOfDay();
+                : Carbon::now()->subDays(6)->startOfDay();
             $end = $request->query('end_date')
                 ? Carbon::parse($request->query('end_date'))->endOfDay()
                 : Carbon::now()->endOfDay();

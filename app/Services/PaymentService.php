@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Models\Invoice;
 use App\Models\Lead;
+use App\Models\Order;
 use App\Models\Payment;
 use Carbon\Carbon;
 use App\Services\SellerNotifier;
+use App\Services\HubtelSmsService;
 use App\Services\TwilioMessagingService;
 use App\Support\Money;
 use Illuminate\Support\Facades\Log;
@@ -83,8 +85,7 @@ class PaymentService
                         'reference' => $payment->reference,
                         'customer_phone' => $customerPhone,
                     ],
-                    sendEmail: false,
-                    sendWhatsApp: false
+                    sendEmail: false
                 );
             }
         }
@@ -121,6 +122,41 @@ class PaymentService
             }
         }
 
+        if ($payment->order_id) {
+            $order = Order::with('items')->find($payment->order_id);
+            if ($order) {
+                $order->status = Order::STATUS_PAID;
+                $order->payment_status = Payment::STATUS_SUCCESS;
+                if (! $order->paid_at) {
+                    $order->paid_at = $payment->paid_at ?: now();
+                }
+                $order->save();
+
+                if ($user) {
+                    $itemsSummary = $order->items->map(function ($item) {
+                        return $item->product_name.' x'.$item->quantity;
+                    })->implode(', ');
+
+                    app(SellerNotifier::class)->notify(
+                        $user,
+                        \App\Models\SellerNotification::TYPE_PAYMENT_RECEIVED,
+                        'New paid order',
+                        'Order '.$order->reference.' paid. '.$itemsSummary,
+                        [
+                            'order_id' => $order->id,
+                            'reference' => $order->reference,
+                            'amount' => (string) $order->total,
+                            'customer_name' => $order->customer_name,
+                            'customer_phone' => $order->customer_phone,
+                            'customer_location' => $order->customer_location,
+                            'delivery_required' => $order->delivery_required ? 'yes' : 'no',
+                            'delivery_note' => $order->delivery_note,
+                        ]
+                    );
+                }
+            }
+        }
+
         $customerPhone = data_get($payment->raw_payload, 'customer.phone')
             ?? data_get($verifiedData, 'metadata.customer.phone')
             ?? data_get($verifiedData, 'customer.phone');
@@ -130,40 +166,40 @@ class PaymentService
             $sellerName = $user?->sellerProfile?->business_name ?? $user?->name ?? '8Kommerce seller';
             $message = "Payment successful\nAmount: {$amount}\nSeller: {$sellerName}\nRef: {$payment->reference}";
             try {
-                app(TwilioMessagingService::class)->sendWhatsApp($customerPhone, $message, [
+                app(HubtelSmsService::class)->send($customerPhone, $message, [
                     'user_id' => $payment->user_id,
                     'payment_id' => $payment->id,
-                    'context_type' => 'payment_customer_success',
+                    'context_type' => 'payment_customer_success_sms',
                     'context_id' => $payment->id,
                 ]);
-                Log::info('Customer WhatsApp notify sent', [
+                Log::info('Customer SMS notify sent', [
                     'payment_id' => $payment->id,
                     'phone' => $customerPhone,
                 ]);
+                return;
             } catch (\Throwable $exception) {
-                Log::error('Customer WhatsApp notify failed', [
+                Log::error('Customer SMS notify failed, trying WhatsApp', [
                     'payment_id' => $payment->id,
                     'message' => $exception->getMessage(),
                 ]);
+            }
 
-                try {
-                    // Fall back to SMS when WhatsApp cannot deliver (common in sandbox/outside 24h window).
-                    app(TwilioMessagingService::class)->sendSms($customerPhone, $message, [
-                        'user_id' => $payment->user_id,
-                        'payment_id' => $payment->id,
-                        'context_type' => 'payment_customer_success_fallback',
-                        'context_id' => $payment->id,
-                    ]);
-                    Log::info('Customer SMS notify sent (fallback)', [
-                        'payment_id' => $payment->id,
-                        'phone' => $customerPhone,
-                    ]);
-                } catch (\Throwable $smsException) {
-                    Log::warning('Customer SMS notify failed (fallback)', [
-                        'payment_id' => $payment->id,
-                        'message' => $smsException->getMessage(),
-                    ]);
-                }
+            try {
+                app(TwilioMessagingService::class)->sendWhatsApp($customerPhone, $message, [
+                    'user_id' => $payment->user_id,
+                    'payment_id' => $payment->id,
+                    'context_type' => 'payment_customer_success_whatsapp',
+                    'context_id' => $payment->id,
+                ]);
+                Log::info('Customer WhatsApp notify sent (fallback)', [
+                    'payment_id' => $payment->id,
+                    'phone' => $customerPhone,
+                ]);
+            } catch (\Throwable $waException) {
+                Log::warning('Customer WhatsApp notify failed (fallback)', [
+                    'payment_id' => $payment->id,
+                    'message' => $waException->getMessage(),
+                ]);
             }
         } else {
             Log::warning('Customer WhatsApp notify skipped (no phone)', [

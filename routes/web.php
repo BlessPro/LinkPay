@@ -12,6 +12,7 @@ use App\Http\Controllers\PublicListingController;
 use App\Http\Controllers\PublicProductController;
 use App\Http\Controllers\SellerProfileController;
 use App\Http\Controllers\InsightsController;
+use App\Http\Controllers\TwilioWebhookController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminInvoiceController;
 use App\Http\Controllers\BillingController;
@@ -33,6 +34,14 @@ Route::post('/s/{public_slug}/products/{product}/pay', [PublicListingController:
     ->name('public.products.pay');
 Route::post('/s/{public_slug}/products/{product}/interest', [PublicListingController::class, 'interest'])
     ->name('public.products.interest');
+Route::post('/s/{public_slug}/products/{product}/cart', [PublicListingController::class, 'addToCart'])
+    ->name('public.products.cart.add');
+Route::patch('/s/{public_slug}/cart', [PublicListingController::class, 'updateCart'])
+    ->name('public.cart.update');
+Route::delete('/s/{public_slug}/products/{product}/cart', [PublicListingController::class, 'removeFromCart'])
+    ->name('public.products.cart.remove');
+Route::post('/s/{public_slug}/cart/checkout', [PublicListingController::class, 'checkoutCart'])
+    ->name('public.cart.checkout');
 
 Route::get('/pay/success', [PublicInvoiceController::class, 'success'])->name('pay.success');
 Route::get('/pay/{token}', [PublicInvoiceController::class, 'show'])->name('public.invoice');
@@ -40,6 +49,7 @@ Route::post('/pay/{token}', [PublicInvoiceController::class, 'pay'])->name('publ
 Route::get('/p/{product_slug}', [PublicProductController::class, 'show'])->name('public.product');
 
 Route::post('/webhooks/paystack', [PaystackWebhookController::class, 'handle'])->name('webhooks.paystack');
+Route::post('/webhooks/twilio/status', [TwilioWebhookController::class, 'status'])->name('webhooks.twilio.status');
 
 Route::middleware('auth')->group(function () {
     Route::get('/billing', [BillingController::class, 'show'])->name('billing.show');
@@ -57,6 +67,7 @@ Route::middleware(['auth', 'active_access'])->group(function () {
     Route::post('/profile/seller/test-connection', [SellerProfileController::class, 'testConnection'])->name('profile.seller.test');
 
     Route::middleware('promotion_access')->group(function () {
+        Route::get('/products/orders', [ProductController::class, 'orders'])->name('products.orders');
         Route::resource('products', ProductController::class)->except(['show']);
         Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
         Route::post('/products/export-pdf', [ProductController::class, 'exportPdf'])->name('products.exportPdf');
@@ -70,6 +81,8 @@ Route::middleware(['auth', 'active_access'])->group(function () {
     });
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/orders/{order}/accept', [NotificationController::class, 'acceptOrder'])->name('notifications.orders.accept');
+    Route::post('/notifications/orders/{order}/reject', [NotificationController::class, 'rejectOrder'])->name('notifications.orders.reject');
     Route::get('/insights', [InsightsController::class, 'index'])->name('insights.index');
 });
 

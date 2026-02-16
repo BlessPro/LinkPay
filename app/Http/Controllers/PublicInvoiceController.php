@@ -181,7 +181,7 @@ class PublicInvoiceController extends Controller
 
         if ($reference) {
             $payment = Payment::where('reference', $reference)
-                ->with(['invoice.user.sellerProfile', 'product'])
+                ->with(['invoice.user.sellerProfile', 'product', 'order.user.sellerProfile'])
                 ->first();
 
             if (! $payment) {
@@ -190,7 +190,7 @@ class PublicInvoiceController extends Controller
                     $paymentId = data_get($verification, 'data.metadata.payment_id');
                     if ($paymentId) {
                         $payment = Payment::where('id', $paymentId)
-                            ->with(['invoice.user.sellerProfile', 'product'])
+                            ->with(['invoice.user.sellerProfile', 'product', 'order.user.sellerProfile'])
                             ->first();
                     }
                 } catch (\Throwable $exception) {
@@ -220,7 +220,8 @@ class PublicInvoiceController extends Controller
         $listingSlug = null;
         if ($payment) {
             $listingSlug = $payment->invoice?->user?->sellerProfile?->public_slug
-                ?? $payment->product?->user?->sellerProfile?->public_slug;
+                ?? $payment->product?->user?->sellerProfile?->public_slug
+                ?? $payment->order?->user?->sellerProfile?->public_slug;
         }
         $listingUrl = $listingSlug ? route('public.listing', $listingSlug) : null;
 

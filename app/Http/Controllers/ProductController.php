@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateProductRequest;
 use App\Models\AnalyticsEvent;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Payment;
 use App\Services\OgImageService;
 use App\Support\Money;
+use App\Support\Phone;
+use App\Support\WhatsApp;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -16,27 +20,52 @@ use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
+    public function orders(Request $request)
+    {
+        $user = $request->user();
+
+        return view('dashboard.products.orders', [
+            'ordersByCustomer' => $this->buildOrdersByCustomer($user->id),
+            'currency' => config('services.paystack.currency', 'GHS'),
+        ]);
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
         $products = $user->products()->latest()->paginate(10);
         $chartRange = $request->query('chart_range', '30days');
+        [$chartStart, $chartEnd] = $this->resolveChartDateRange($chartRange);
         $series = $this->buildProductSeries($user->id, $chartRange);
 
-        $payments = Payment::where('user_id', $user->id)
+        $directPayments = Payment::where('user_id', $user->id)
             ->whereNotNull('product_id')
             ->where('status', Payment::STATUS_SUCCESS)
             ->get();
 
+        $orderProductSales = $this->paidOrderItemsQuery($user->id)
+            ->selectRaw('order_items.product_id, sum(order_items.quantity) as units, sum(order_items.line_total) as total')
+            ->groupBy('order_items.product_id')
+            ->get();
+
         $totalRevenue = '0.00';
-        foreach ($payments as $payment) {
+        foreach ($directPayments as $payment) {
             $totalRevenue = Money::add($totalRevenue, (string) $payment->amount);
         }
+        foreach ($orderProductSales as $sale) {
+            $totalRevenue = Money::add($totalRevenue, (string) ($sale->total ?? '0.00'));
+        }
 
-        $customerKeys = $payments->map(function (Payment $payment) {
+        $customerKeys = $directPayments->map(function (Payment $payment) {
             return data_get($payment->raw_payload, 'customer.email')
                 ?? data_get($payment->raw_payload, 'customer.phone');
-        })->filter()->unique();
+        })->filter();
+        $orderCustomerKeys = $user->orders()
+            ->where('payment_status', Payment::STATUS_SUCCESS)
+            ->get()
+            ->map(fn (Order $order) => $order->customer_phone ?: $order->customer_name)
+            ->filter();
+        $customerKeys = $customerKeys->merge($orderCustomerKeys)->unique();
 
         $statusCounts = $user->products()
             ->selectRaw('status, count(*) as total')
@@ -44,7 +73,7 @@ class ProductController extends Controller
             ->pluck('total', 'status')
             ->all();
 
-        $topProducts = $payments->groupBy('product_id')
+        $topProducts = $directPayments->groupBy('product_id')
             ->map(function ($group) {
                 $sum = '0.00';
                 foreach ($group as $payment) {
@@ -55,9 +84,46 @@ class ProductController extends Controller
                     'total' => $sum,
                 ];
             });
+        foreach ($orderProductSales as $sale) {
+            $productId = (int) $sale->product_id;
+            $current = $topProducts->get($productId, ['count' => 0, 'total' => '0.00']);
+            $topProducts->put($productId, [
+                'count' => (int) $current['count'] + (int) ($sale->units ?? 0),
+                'total' => Money::add((string) $current['total'], (string) ($sale->total ?? '0.00')),
+            ]);
+        }
         $productLookup = $user->products()->get(['id', 'name'])->keyBy('id');
         $topList = collect($topProducts)->sortByDesc('total')->take(4);
         $maxTopTotal = max(1, (float) ($topList->map(fn ($row) => (float) $row['total'])->max() ?? 0));
+
+        $ordersByCustomer = $this->buildOrdersByCustomer($user->id);
+
+        $directOrderCounts = Payment::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('product_id')
+            ->where('status', Payment::STATUS_SUCCESS)
+            ->when($chartStart && $chartEnd, fn ($q) => $q->whereBetween('created_at', [$chartStart, $chartEnd]))
+            ->selectRaw('product_id, count(*) as total')
+            ->groupBy('product_id')
+            ->pluck('total', 'product_id')
+            ->map(fn ($value) => (int) $value)
+            ->all();
+
+        $cartOrderCounts = $this->paidOrderItemsQuery($user->id, $chartStart, $chartEnd)
+            ->selectRaw('order_items.product_id, sum(order_items.quantity) as total')
+            ->groupBy('order_items.product_id')
+            ->pluck('total', 'order_items.product_id')
+            ->map(fn ($value) => (int) $value)
+            ->all();
+
+        $productOrderCounts = [];
+        foreach ($directOrderCounts as $productId => $total) {
+            $productOrderCounts[(int) $productId] = (int) $total;
+        }
+        foreach ($cartOrderCounts as $productId => $total) {
+            $productId = (int) $productId;
+            $productOrderCounts[$productId] = (int) ($productOrderCounts[$productId] ?? 0) + (int) $total;
+        }
 
         return view('dashboard.products.index', [
             'products' => $products,
@@ -65,14 +131,54 @@ class ProductController extends Controller
             'series' => $series,
             'chartRange' => $chartRange,
             'totalRevenue' => $totalRevenue,
-            'totalOrders' => $payments->count(),
+            'totalOrders' => $directPayments->count() + (int) $user->orders()->where('payment_status', Payment::STATUS_SUCCESS)->count(),
             'totalCustomers' => $customerKeys->count(),
             'statusCounts' => $statusCounts,
             'topProducts' => $topProducts,
             'productLookup' => $productLookup,
             'topList' => $topList,
             'maxTopTotal' => $maxTopTotal,
+            'ordersByCustomer' => $ordersByCustomer,
+            'productOrderCounts' => $productOrderCounts,
         ]);
+    }
+
+    private function buildOrdersByCustomer(int $userId)
+    {
+        $orders = Order::query()
+            ->where('user_id', $userId)
+            ->with(['items.product'])
+            ->latest()
+            ->take(80)
+            ->get();
+
+        return $orders
+            ->groupBy(function (Order $order) {
+                return $order->customer_phone ?: 'unknown-'.$order->id;
+            })
+            ->map(function ($group) {
+                /** @var \Illuminate\Support\Collection<int, Order> $group */
+                $first = $group->first();
+                $groupTotal = '0.00';
+                foreach ($group as $order) {
+                    $groupTotal = Money::add($groupTotal, (string) $order->total);
+                }
+
+                $phone = Phone::normalize((string) ($first?->customer_phone ?? ''), '+233');
+                $customerName = $first?->customer_name ?: 'Customer';
+                $message = 'Hello '.$customerName.', regarding your order(s) on 8Kommerce.';
+
+                return [
+                    'customer_name' => $customerName,
+                    'customer_phone' => $phone,
+                    'orders_count' => $group->count(),
+                    'group_total' => $groupTotal,
+                    'whatsapp_url' => $phone ? WhatsApp::chatUrl($phone, $message) : null,
+                    'call_url' => $phone ? 'tel:'.$phone : null,
+                    'orders' => $group,
+                ];
+            })
+            ->values();
     }
 
     public function export(Request $request)
@@ -101,24 +207,32 @@ class ProductController extends Controller
             }
             $filename = 'products_status.csv';
         } elseif ($type === 'products_sales') {
-            $payments = Payment::where('user_id', $user->id)
+            $directPayments = Payment::where('user_id', $user->id)
                 ->whereNotNull('product_id')
                 ->where('status', Payment::STATUS_SUCCESS)
                 ->when($start && $end, fn ($q) => $q->whereBetween('created_at', [$start, $end]))
                 ->get()
                 ->groupBy('product_id');
+            $orderSales = $this->paidOrderItemsQuery($user->id, $start, $end)
+                ->selectRaw('order_items.product_id, sum(order_items.quantity) as units, sum(order_items.line_total) as total')
+                ->groupBy('order_items.product_id')
+                ->get()
+                ->keyBy('product_id');
 
             $rows[] = ['Product', 'Price', 'Payments', 'Revenue', 'Range'];
             foreach ($products as $product) {
-                $group = $payments->get($product->id, collect());
-                $total = '0.00';
+                $group = $directPayments->get($product->id, collect());
+                $directTotal = '0.00';
                 foreach ($group as $payment) {
-                    $total = Money::add($total, (string) $payment->amount);
+                    $directTotal = Money::add($directTotal, (string) $payment->amount);
                 }
+                $orderTotal = (string) ($orderSales->get($product->id)->total ?? '0.00');
+                $total = Money::add($directTotal, $orderTotal);
+                $paymentsCount = $group->count() + (int) ($orderSales->get($product->id)->units ?? 0);
                 $rows[] = [
                     $product->name,
                     (string) $product->price,
-                    (string) $group->count(),
+                    (string) $paymentsCount,
                     $total,
                     $this->rangeLabel($start, $end, $range),
                 ];
@@ -170,10 +284,18 @@ class ProductController extends Controller
             ->where('status', Payment::STATUS_SUCCESS)
             ->when($start && $end, fn ($q) => $q->whereBetween('created_at', [$start, $end]));
         $payments = $paymentsQuery->get();
+        $orderSales = $this->paidOrderItemsQuery($user->id, $start, $end)
+            ->selectRaw('order_items.product_id, sum(order_items.quantity) as units, sum(order_items.line_total) as total')
+            ->groupBy('order_items.product_id')
+            ->get()
+            ->keyBy('product_id');
 
         $totalRevenue = '0.00';
         foreach ($payments as $payment) {
             $totalRevenue = Money::add($totalRevenue, (string) $payment->amount);
+        }
+        foreach ($orderSales as $sale) {
+            $totalRevenue = Money::add($totalRevenue, (string) ($sale->total ?? '0.00'));
         }
 
         $eventsQuery = AnalyticsEvent::where('user_id', $user->id)
@@ -201,14 +323,17 @@ class ProductController extends Controller
             $rows[] = ['Product', 'Price', 'Payments', 'Revenue', 'Range'];
             foreach ($products as $product) {
                 $group = $grouped->get($product->id, collect());
-                $total = '0.00';
+                $directTotal = '0.00';
                 foreach ($group as $payment) {
-                    $total = Money::add($total, (string) $payment->amount);
+                    $directTotal = Money::add($directTotal, (string) $payment->amount);
                 }
+                $orderTotal = (string) ($orderSales->get($product->id)->total ?? '0.00');
+                $total = Money::add($directTotal, $orderTotal);
+                $paymentsCount = $group->count() + (int) ($orderSales->get($product->id)->units ?? 0);
                 $rows[] = [
                     $product->name,
                     (string) $product->price,
-                    (string) $group->count(),
+                    (string) $paymentsCount,
                     $total,
                     $rangeLabel,
                 ];
@@ -237,7 +362,7 @@ class ProductController extends Controller
             'type' => $type,
             'rows' => $rows,
             'totalRevenue' => $totalRevenue,
-            'totalOrders' => $payments->count(),
+            'totalOrders' => $payments->count() + (int) $orderSales->sum('units'),
             'totalViews' => $views,
             'totalClicks' => $clicks,
             'conversion' => $conversion,
@@ -374,12 +499,7 @@ class ProductController extends Controller
 
     private function buildProductSeries(int $userId, string $range = '30days'): array
     {
-        $end = Carbon::now()->endOfDay();
-        $start = match ($range) {
-            '7days' => Carbon::now()->subDays(6)->startOfDay(),
-            'all_time' => null,
-            default => Carbon::now()->subDays(29)->startOfDay(),
-        };
+        [$start, $end] = $this->resolveChartDateRange($range);
 
         $eventQuery = AnalyticsEvent::where('user_id', $userId)
             ->where('entity_type', 'product')
@@ -399,6 +519,11 @@ class ProductController extends Controller
             ->groupBy('day')
             ->orderBy('day')
             ->get();
+        $orderRows = $this->paidOrderItemsQuery($userId, $start, $end)
+            ->selectRaw("date(coalesce(orders.paid_at, orders.created_at)) as day, sum(order_items.quantity) as count, sum(order_items.line_total) as total")
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get();
 
         $eventMap = [];
         foreach ($eventRows as $row) {
@@ -410,6 +535,13 @@ class ProductController extends Controller
             $paymentMap[$row->day] = [
                 'count' => (int) $row->count,
                 'total' => $row->total ? (string) $row->total : '0.00',
+            ];
+        }
+        foreach ($orderRows as $row) {
+            $existing = $paymentMap[$row->day] ?? ['count' => 0, 'total' => '0.00'];
+            $paymentMap[$row->day] = [
+                'count' => (int) $existing['count'] + (int) $row->count,
+                'total' => Money::add((string) $existing['total'], (string) ($row->total ?: '0.00')),
             ];
         }
 
@@ -436,7 +568,11 @@ class ProductController extends Controller
                 ];
             }
         } else {
-            $allDays = collect($eventRows)->pluck('day')->merge(collect($paymentRows)->pluck('day'))->unique()->sort();
+            $allDays = collect($eventRows)->pluck('day')
+                ->merge(collect($paymentRows)->pluck('day'))
+                ->merge(collect($orderRows)->pluck('day'))
+                ->unique()
+                ->sort();
             foreach ($allDays as $key) {
                 $views = $eventMap[$key][\App\Models\AnalyticsEvent::TYPE_PRODUCT_IMPRESSION] ?? 0;
                 $clicks = $eventMap[$key][\App\Models\AnalyticsEvent::TYPE_PRODUCT_CLICK] ?? 0;
@@ -457,6 +593,18 @@ class ProductController extends Controller
         }
 
         return $series;
+    }
+
+    private function resolveChartDateRange(string $range): array
+    {
+        $end = Carbon::now()->endOfDay();
+        $start = match ($range) {
+            '7days' => Carbon::now()->subDays(6)->startOfDay(),
+            'all_time' => null,
+            default => Carbon::now()->subDays(29)->startOfDay(),
+        };
+
+        return [$start, $end];
     }
 
     private function buildStats(Product $product): array
@@ -480,20 +628,26 @@ class ProductController extends Controller
             ->where('status', Payment::STATUS_SUCCESS)
             ->whereBetween('created_at', [$start, $end])
             ->get();
+        $orderSales = $this->paidOrderItemsQuery($product->user_id, $start, $end)
+            ->where('order_items.product_id', $product->id)
+            ->selectRaw('sum(order_items.quantity) as units, sum(order_items.line_total) as total')
+            ->first();
 
         $paymentTotal = '0.00';
         foreach ($payments as $payment) {
             $paymentTotal = Money::add($paymentTotal, (string) $payment->amount);
         }
+        $paymentTotal = Money::add($paymentTotal, (string) ($orderSales->total ?? '0.00'));
+        $paymentsCount = $payments->count() + (int) ($orderSales->units ?? 0);
 
         return [
             'impressions' => $impressions,
             'impressionsUnique' => $impressionsUnique,
             'clicks' => $clicks,
             'clicksUnique' => $clicksUnique,
-            'payments' => $payments->count(),
+            'payments' => $paymentsCount,
             'paymentTotal' => $paymentTotal,
-            'conversion' => $clicks > 0 ? round(($payments->count() / $clicks) * 100, 1) : 0.0,
+            'conversion' => $clicks > 0 ? round(($paymentsCount / $clicks) * 100, 1) : 0.0,
         ];
     }
 
@@ -511,5 +665,16 @@ class ProductController extends Controller
         }
 
         return $slug;
+    }
+
+    private function paidOrderItemsQuery(int $userId, ?Carbon $start = null, ?Carbon $end = null)
+    {
+        return OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.user_id', $userId)
+            ->where('orders.payment_status', Payment::STATUS_SUCCESS)
+            ->when($start && $end, function ($query) use ($start, $end) {
+                $query->whereBetween('orders.paid_at', [$start, $end]);
+            });
     }
 }

@@ -23,11 +23,13 @@ class TwilioMessagingService
         $from = (string) config('services.twilio.whatsapp_from');
         $to = $this->formatWhatsApp($to);
         $from = $this->formatWhatsApp($from);
+        $statusCallback = $this->statusCallbackUrl();
 
         try {
             $message = $client->messages->create($to, [
                 'from' => $from,
                 'body' => $body,
+                'statusCallback' => $statusCallback,
             ]);
 
             $this->logMessage(array_merge($context, [
@@ -77,12 +79,14 @@ class TwilioMessagingService
 
         $messagingServiceSid = (string) config('services.twilio.messaging_service_sid');
         $smsFrom = (string) config('services.twilio.sms_from');
+        $statusCallback = $this->statusCallbackUrl();
 
         if (str_starts_with($messagingServiceSid, 'MG')) {
             $payload['messagingServiceSid'] = $messagingServiceSid;
         } elseif ($smsFrom) {
             $payload['from'] = $smsFrom;
         }
+        $payload['statusCallback'] = $statusCallback;
 
         try {
             $message = $client->messages->create($to, $payload);
@@ -174,5 +178,15 @@ class TwilioMessagingService
             'payload' => $data['payload'] ?? null,
             'sent_at' => $data['sent_at'] ?? Carbon::now(),
         ]);
+    }
+
+    private function statusCallbackUrl(): string
+    {
+        $configured = trim((string) config('services.twilio.status_callback_url'));
+        if ($configured !== '') {
+            return $configured;
+        }
+
+        return route('webhooks.twilio.status');
     }
 }

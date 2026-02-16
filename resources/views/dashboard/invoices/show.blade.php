@@ -1,4 +1,6 @@
-@php($title = 'Invoice')
+@php
+    $title = 'Invoice';
+@endphp
 @extends('layouts.dashboard')
 
 @section('content')

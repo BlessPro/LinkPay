@@ -1,4 +1,6 @@
-@php($title = 'Public Page Preview')
+@php
+    $title = 'Public Page Preview';
+@endphp
 @extends('layouts.dashboard')
 
 @section('content')

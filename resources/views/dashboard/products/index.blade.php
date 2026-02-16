@@ -9,9 +9,14 @@
             <h2 class="text-lg font-semibold text-slate-900">Products</h2>
             <p class="text-sm text-slate-600">Monitor inventory, sales, and engagement.</p>
         </div>
-        <a href="{{ route('products.create') }}" class="px-5 py-2 text-sm font-semibold text-white rounded-full bg-emerald-600 hover:bg-emerald-500">
-            New product
-        </a>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('products.orders') }}" class="px-5 py-2 text-sm font-semibold border rounded-full border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                Manage orders
+            </a>
+            <a href="{{ route('products.create') }}" class="px-5 py-2 text-sm font-semibold text-white rounded-full bg-emerald-600 hover:bg-emerald-500">
+                New product
+            </a>
+        </div>
     </div>
 
     <div id="export-offcanvas" class="fixed inset-y-0 right-0 z-40 hidden w-full max-w-sm p-6 bg-white border-l shadow-2xl border-slate-200">
@@ -215,7 +220,15 @@
                                     </div>
                                     <div>
                                         <p class="text-sm font-semibold text-slate-900">{{ $product->name }}</p>
-                                        <p class="text-xs text-slate-500">{{ \App\Support\Money::format($product->price, $currency) }}</p>
+                                        <p class="text-xs text-slate-500">
+                                            {{ \App\Support\Money::format($product->price, $currency) }}
+                                            @php
+                                                $ordersCount = (int) ($productOrderCounts[$product->id] ?? 0);
+                                            @endphp
+                                            <span class="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">
+                                                Orders: {{ $ordersCount }}
+                                            </span>
+                                        </p>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3">
@@ -300,6 +313,8 @@
             @endif
         </div>
     </div>
+
+    @include('dashboard.products.partials.orders-by-customer')
 
     @php
         $productEditTemplate = route('products.edit', ['product' => '___ID___']);

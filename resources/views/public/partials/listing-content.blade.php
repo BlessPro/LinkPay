@@ -21,7 +21,64 @@
             Thanks! The seller has been notified.
         </div>
     @endif
+    @if(session('status') === 'cart-updated')
+        <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            Cart updated.
+        </div>
+    @endif
 </div>
+
+@if(($paymentsEnabled ?? true))
+    <div class="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-lg font-semibold text-slate-900">Cart checkout</h2>
+            <span class="text-sm text-slate-500">{{ $cart['count'] ?? 0 }} item(s)</span>
+        </div>
+
+        @if(($cart['count'] ?? 0) > 0)
+            <form method="POST" action="{{ route('public.cart.update', $profile->public_slug) }}" class="mt-4 space-y-3">
+                @csrf
+                @method('PATCH')
+                @foreach(($cart['items'] ?? collect()) as $item)
+                    <div class="grid gap-3 rounded-xl border border-slate-100 p-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-900">{{ $item['product']->name }}</p>
+                            <p class="text-xs text-slate-500">{{ \App\Support\Money::format($item['unit_price'], $currency) }} each</p>
+                        </div>
+                        <input type="number" min="0" max="100" name="items[{{ $item['product']->id }}][quantity]" value="{{ $item['quantity'] }}" class="w-24 rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <p class="text-sm font-semibold text-slate-900">{{ \App\Support\Money::format($item['line_total'], $currency) }}</p>
+                    </div>
+                @endforeach
+                <p class="text-xs text-slate-500">Tip: set quantity to 0 then click "Update cart" to remove an item.</p>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-semibold text-slate-700">Total</span>
+                    <span class="text-lg font-semibold text-emerald-700">{{ \App\Support\Money::format($cart['total'] ?? '0.00', $currency) }}</span>
+                </div>
+                <button type="submit" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                    Update cart
+                </button>
+            </form>
+
+            <form method="POST" action="{{ route('public.cart.checkout', $profile->public_slug) }}" class="mt-4 grid gap-3 sm:grid-cols-2">
+                @csrf
+                <input name="name" placeholder="Customer name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                <input name="phone_number" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" data-strip-leading-zero="true" />
+                <input name="location" placeholder="Location (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 sm:col-span-2" />
+                <label class="inline-flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
+                    <input type="checkbox" name="delivery_required" value="1" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                    Delivery required
+                </label>
+                <textarea name="delivery_note" rows="2" placeholder="Delivery note (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 sm:col-span-2"></textarea>
+                <input type="hidden" name="phone_country" value="+233" />
+                <button type="submit" class="rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500 sm:col-span-2">
+                    Pay total
+                </button>
+            </form>
+        @else
+            <p class="mt-4 text-sm text-slate-500">Cart is empty. Add items below.</p>
+        @endif
+    </div>
+@endif
 
 @if($template === 'services')
     <div class="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -58,7 +115,11 @@
                             $chatMessage = "Hi there, I am interested in {$product->name}. Is it available? Please tell me more.\nLink: {$productUrl}";
                             $chatUrl = $sellerPhone ? \App\Support\WhatsApp::chatUrl($sellerPhone, $chatMessage) : null;
                         @endphp
-                        <div class="sm:col-span-3 flex flex-wrap gap-3">
+                        <div class="sm:col-span-3 flex flex-wrap items-center gap-3">
+                            <input type="number" name="quantity" min="1" value="1" class="w-20 rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <button type="submit" formaction="{{ route('public.products.cart.add', [$profile->public_slug, $product]) }}" class="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                                Add to cart
+                            </button>
                             <button type="submit" class="rounded-full px-4 py-3 text-sm font-semibold text-white {{ ($canPay && ($paymentsEnabled ?? true)) ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-300 cursor-not-allowed' }}" {{ ($profile->paystack_subaccount_code && $canPay && ($paymentsEnabled ?? true)) ? '' : 'disabled' }}>
                                 @if(! ($paymentsEnabled ?? true))
                                     Payments disabled
@@ -111,7 +172,11 @@
                         $chatMessage = "Hi there, I am interested in {$product->name}. Is it available? Please tell me more.\nLink: {$productUrl}";
                         $chatUrl = $sellerPhone ? \App\Support\WhatsApp::chatUrl($sellerPhone, $chatMessage) : null;
                     @endphp
-                    <div class="flex flex-wrap gap-3">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <input type="number" name="quantity" min="1" value="1" class="w-20 rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <button type="submit" formaction="{{ route('public.products.cart.add', [$profile->public_slug, $product]) }}" class="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                            Add to cart
+                        </button>
                         <button type="submit" class="flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white {{ ($canPay && ($paymentsEnabled ?? true)) ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-300 cursor-not-allowed' }}" {{ ($profile->paystack_subaccount_code && $canPay && ($paymentsEnabled ?? true)) ? '' : 'disabled' }}>
                             @if(! ($paymentsEnabled ?? true))
                                 Payments disabled

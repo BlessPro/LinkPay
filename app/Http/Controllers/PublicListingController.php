@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\SellerProfile;
 use App\Models\Lead;
@@ -11,6 +13,7 @@ use App\Services\OgImageService;
 use App\Services\AnalyticsService;
 use App\Services\PaystackService;
 use App\Support\Email;
+use App\Support\Money;
 use App\Support\Phone;
 use App\Support\WhatsApp;
 use Illuminate\Http\Request;
@@ -53,9 +56,12 @@ class PublicListingController extends Controller
             );
         }
 
+        $cart = $this->buildCartSummary($request, $profile);
+
         return view('public.listing', [
             'profile' => $profile,
             'products' => $profile->user->products,
+            'cart' => $cart,
             'currency' => config('services.paystack.currency', 'GHS'),
             'template' => $template,
             'isOwner' => $isOwner,
@@ -216,6 +222,215 @@ class PublicListingController extends Controller
         return redirect()->away($data['authorization_url'] ?? route('public.listing', $public_slug));
     }
 
+    public function addToCart(Request $request, string $public_slug, Product $product)
+    {
+        $request->validate([
+            'quantity' => ['required', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $profile = SellerProfile::where('public_slug', $public_slug)->firstOrFail();
+        abort_unless($product->user_id === $profile->user_id, 404);
+        abort_unless($product->isPayable(), 404);
+
+        $cart = $request->session()->get($this->cartKey($public_slug), []);
+        $currentQty = (int) ($cart[$product->id]['quantity'] ?? 0);
+        $cart[$product->id] = [
+            'product_id' => $product->id,
+            'quantity' => $currentQty + (int) $request->integer('quantity', 1),
+        ];
+
+        $request->session()->put($this->cartKey($public_slug), $cart);
+
+        return back()->with('status', 'cart-updated');
+    }
+
+    public function updateCart(Request $request, string $public_slug)
+    {
+        $request->validate([
+            'items' => ['required', 'array'],
+            'items.*.quantity' => ['required', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $profile = SellerProfile::where('public_slug', $public_slug)->firstOrFail();
+        $productIds = $profile->user->products()->pluck('id')->all();
+
+        $updated = [];
+        foreach ($request->input('items', []) as $productId => $row) {
+            $productId = (int) $productId;
+            if (! in_array($productId, $productIds, true)) {
+                continue;
+            }
+            $quantity = (int) ($row['quantity'] ?? 1);
+            if ($quantity < 1) {
+                continue;
+            }
+            $updated[$productId] = [
+                'product_id' => $productId,
+                'quantity' => $quantity,
+            ];
+        }
+
+        $request->session()->put($this->cartKey($public_slug), $updated);
+
+        return back()->with('status', 'cart-updated');
+    }
+
+    public function removeFromCart(Request $request, string $public_slug, Product $product)
+    {
+        $profile = SellerProfile::where('public_slug', $public_slug)->firstOrFail();
+        abort_unless($product->user_id === $profile->user_id, 404);
+
+        $cart = $request->session()->get($this->cartKey($public_slug), []);
+        unset($cart[$product->id]);
+        $request->session()->put($this->cartKey($public_slug), $cart);
+
+        return back()->with('status', 'cart-updated');
+    }
+
+    public function checkoutCart(Request $request, string $public_slug, PaystackService $paystack)
+    {
+        $request->validate([
+            'name' => ['nullable', 'string', 'max:120'],
+            'location' => ['nullable', 'string', 'max:160'],
+            'phone_number' => ['required', 'string', 'max:25'],
+            'phone_country' => ['nullable', 'string'],
+            'delivery_required' => ['nullable', 'boolean'],
+            'delivery_note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $profile = SellerProfile::where('public_slug', $public_slug)
+            ->with(['user.products' => function ($query) {
+                $query->where('is_active', true)
+                    ->where('status', '!=', Product::STATUS_UNAVAILABLE);
+            }])
+            ->firstOrFail();
+
+        $sellerUser = $profile->user;
+        if (! $sellerUser || ! $sellerUser->canUsePaymentsFeature()) {
+            return back()->withErrors(['paystack' => 'This seller is not on the Payments plan.'])->withInput();
+        }
+        if (! $profile->paystack_subaccount_code) {
+            return back()->withErrors(['paystack' => 'Seller is not connected to Paystack yet.'])->withInput();
+        }
+
+        $cart = $this->buildCartSummary($request, $profile);
+        if ($cart['items']->isEmpty()) {
+            return back()->withErrors(['paystack' => 'Your cart is empty.'])->withInput();
+        }
+
+        $phoneInput = $request->input('phone_number');
+        $phoneParts = array_filter(array_map('trim', explode(',', (string) $phoneInput)));
+        $primaryPhone = $phoneParts[0] ?? $phoneInput;
+        $phone = Phone::normalize($primaryPhone, $request->input('phone_country', '+233'));
+        if (! $phone || ! Phone::isValidGh($primaryPhone)) {
+            return back()->withErrors(['phone_number' => 'Enter a valid WhatsApp number.'])->withInput();
+        }
+
+        $reference = (string) \Illuminate\Support\Str::uuid();
+        $email = Email::placeholder($reference);
+        $location = trim((string) $request->input('location'));
+        $deliveryRequired = (bool) $request->boolean('delivery_required');
+        $deliveryNote = trim((string) $request->input('delivery_note'));
+
+        $order = Order::create([
+            'user_id' => $profile->user_id,
+            'reference' => $reference,
+            'status' => Order::STATUS_PENDING_PAYMENT,
+            'payment_status' => Payment::STATUS_PENDING,
+            'customer_name' => $request->input('name'),
+            'customer_phone' => $phone,
+            'customer_location' => $location !== '' ? $location : null,
+            'delivery_required' => $deliveryRequired,
+            'delivery_note' => $deliveryNote !== '' ? $deliveryNote : null,
+            'subtotal' => $cart['total'],
+            'total' => $cart['total'],
+            'currency' => config('services.paystack.currency', 'GHS'),
+        ]);
+
+        foreach ($cart['items'] as $item) {
+            OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $item['product']->id,
+                'product_name' => $item['product']->name,
+                'unit_price' => $item['unit_price'],
+                'quantity' => $item['quantity'],
+                'line_total' => $item['line_total'],
+            ]);
+        }
+
+        $payment = Payment::create([
+            'user_id' => $profile->user_id,
+            'order_id' => $order->id,
+            'reference' => $reference,
+            'amount' => $cart['total'],
+            'status' => Payment::STATUS_PENDING,
+            'raw_payload' => [
+                'customer' => [
+                    'name' => $request->input('name'),
+                    'email' => $email,
+                    'phone' => $phone,
+                    'location' => $location,
+                ],
+                'order' => [
+                    'id' => $order->id,
+                    'delivery_required' => $deliveryRequired,
+                    'delivery_note' => $deliveryNote,
+                    'items' => $cart['items']->map(function (array $row) {
+                        return [
+                            'product_id' => $row['product']->id,
+                            'name' => $row['product']->name,
+                            'qty' => $row['quantity'],
+                            'unit_price' => $row['unit_price'],
+                            'line_total' => $row['line_total'],
+                        ];
+                    })->values()->all(),
+                ],
+            ],
+        ]);
+
+        $platformFee = $paystack->platformChargeFor((string) $cart['total']);
+
+        try {
+            $data = $paystack->initializeTransaction(
+                (string) $cart['total'],
+                $email,
+                [
+                    'reference' => $reference,
+                    'payment_id' => $payment->id,
+                    'order_id' => $order->id,
+                    'purpose' => 'order',
+                    'platform_fee' => $platformFee,
+                    'customer' => [
+                        'name' => $request->input('name'),
+                        'email' => $email,
+                        'phone' => $phone,
+                        'location' => $location,
+                    ],
+                ],
+                $profile->paystack_subaccount_code,
+                $platformFee
+            );
+        } catch (RequestException $exception) {
+            $payment->status = Payment::STATUS_FAILED;
+            $payment->raw_payload = array_merge($payment->raw_payload ?? [], [
+                'initialize_error' => $exception->getMessage(),
+            ]);
+            $payment->save();
+
+            $order->status = Order::STATUS_CANNOT_FULFILL;
+            $order->payment_status = Payment::STATUS_FAILED;
+            $order->save();
+
+            return back()->withErrors([
+                'paystack' => 'Could not initialize payment. Please try again shortly.',
+            ])->withInput();
+        }
+
+        $request->session()->forget($this->cartKey($public_slug));
+
+        return redirect()->away($data['authorization_url'] ?? route('public.listing', $public_slug));
+    }
+
     public function interest(Request $request, string $public_slug, Product $product)
     {
         $request->validate([
@@ -302,5 +517,61 @@ class PublicListingController extends Controller
         $message .= "Link: {$productUrl}";
 
         return redirect()->away(WhatsApp::chatUrl($sellerPhone, $message));
+    }
+
+    private function cartKey(string $publicSlug): string
+    {
+        return 'public_cart:'.$publicSlug;
+    }
+
+    private function buildCartSummary(Request $request, SellerProfile $profile): array
+    {
+        $raw = $request->session()->get($this->cartKey($profile->public_slug), []);
+        $raw = is_array($raw) ? $raw : [];
+
+        $activeProducts = $profile->user->products
+            ? $profile->user->products->keyBy('id')
+            : $profile->user->products()
+                ->where('is_active', true)
+                ->where('status', '!=', Product::STATUS_UNAVAILABLE)
+                ->get()
+                ->keyBy('id');
+
+        $items = collect();
+        $total = '0.00';
+        $normalizedRaw = [];
+
+        foreach ($raw as $productId => $row) {
+            $productId = (int) $productId;
+            $product = $activeProducts->get($productId);
+            if (! $product || ! $product->isPayable()) {
+                continue;
+            }
+
+            $quantity = max(1, (int) ($row['quantity'] ?? 1));
+            $unitPrice = (string) $product->price;
+            $lineTotal = Money::multiply($unitPrice, $quantity);
+            $total = Money::add($total, $lineTotal);
+
+            $normalizedRaw[$productId] = [
+                'product_id' => $productId,
+                'quantity' => $quantity,
+            ];
+
+            $items->push([
+                'product' => $product,
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'line_total' => $lineTotal,
+            ]);
+        }
+
+        $request->session()->put($this->cartKey($profile->public_slug), $normalizedRaw);
+
+        return [
+            'items' => $items,
+            'total' => $total,
+            'count' => $items->count(),
+        ];
     }
 }

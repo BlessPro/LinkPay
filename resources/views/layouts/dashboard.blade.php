@@ -123,34 +123,39 @@
                 </header>
 
                 <main class="px-4 py-6 pt-24 sm:px-6 lg:px-8">
-                    @if($publicUrl)
+                    @php
+                        $trialActive = $user->isOnTrial() && $user->trial_ends_at;
+                        $daysLeft = $trialActive ? max(0, now()->diffInDays($user->trial_ends_at, false)) : null;
+                    @endphp
+                    @if($publicUrl || $trialActive)
                         <div class="mb-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-                            <div class="flex flex-wrap items-center gap-3">
-                                <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Public link</p>
-                                <a href="{{ $publicUrl }}" target="_blank" rel="noreferrer noopener" class="text-sm font-semibold text-emerald-700 hover:text-emerald-600">
-                                    {{ $publicUrl }}
-                                </a>
-                                <button
-                                    type="button"
-                                    class="ml-auto rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700 js-copy-public-link"
-                                    data-copy-value="{{ $publicUrl }}"
-                                >
-                                    Copy link
-                                </button>
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="min-w-0">
+                                    @if($trialActive)
+                                        <p class="font-semibold text-emerald-800">
+                                            Trial active - {{ $daysLeft }} day{{ $daysLeft === 1 ? '' : 's' }} left (ends {{ $user->trial_ends_at->toFormattedDateString() }})
+                                        </p>
+                                        <a href="{{ route('billing.show') }}" class="mt-2 inline-flex rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500">
+                                            Manage plan
+                                        </a>
+                                    @endif
+                                </div>
+                                @if($publicUrl)
+                                    <div class="ml-auto flex flex-wrap items-center gap-3 sm:justify-end">
+                                        <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Public link</p>
+                                        <a href="{{ $publicUrl }}" target="_blank" rel="noreferrer noopener" class="text-sm font-semibold text-emerald-700 hover:text-emerald-600">
+                                            {{ $publicUrl }}
+                                        </a>
+                                        <button
+                                            type="button"
+                                            class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700 js-copy-public-link"
+                                            data-copy-value="{{ $publicUrl }}"
+                                        >
+                                            Copy link
+                                        </button>
+                                    </div>
+                                @endif
                             </div>
-                        </div>
-                    @endif
-                    @if($user->isOnTrial() && $user->trial_ends_at)
-                        @php
-                            $daysLeft = max(0, now()->diffInDays($user->trial_ends_at, false));
-                        @endphp
-                        <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm">
-                            <div class="font-semibold text-emerald-800">
-                                Trial active - {{ $daysLeft }} day{{ $daysLeft === 1 ? '' : 's' }} left (ends {{ $user->trial_ends_at->toFormattedDateString() }})
-                            </div>
-                            <a href="{{ route('billing.show') }}" class="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500">
-                                Manage plan
-                            </a>
                         </div>
                     @endif
                     {{ $slot ?? '' }}

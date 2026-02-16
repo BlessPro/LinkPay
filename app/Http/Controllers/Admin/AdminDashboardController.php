@@ -64,7 +64,7 @@ class AdminDashboardController extends Controller
         $twilioWindowStart = now()->subDay();
         $twilioTotal24h = TwilioMessageLog::where('sent_at', '>=', $twilioWindowStart)->count();
         $twilioFailed24h = TwilioMessageLog::where('sent_at', '>=', $twilioWindowStart)
-            ->where('status', 'failed')
+            ->whereIn('status', ['failed', 'undelivered'])
             ->count();
         $twilioRecent = TwilioMessageLog::with('user')
             ->latest('sent_at')
@@ -279,7 +279,7 @@ class AdminDashboardController extends Controller
             'Your account was suspended by admin. '.($seller->suspension_note ? 'Reason: '.$seller->suspension_note : ''),
             ['by_admin' => $request->user()->id],
             sendEmail: false,
-            sendWhatsApp: false
+            sendWhatsApp: true
         );
 
         $this->auditGeneric(
@@ -308,7 +308,7 @@ class AdminDashboardController extends Controller
             'Your account has been re-activated by admin.',
             ['by_admin' => $request->user()->id],
             sendEmail: false,
-            sendWhatsApp: false
+            sendWhatsApp: true
         );
 
         $this->auditGeneric(
@@ -337,7 +337,7 @@ class AdminDashboardController extends Controller
             $validated['body'],
             ['by_admin' => $request->user()->id],
             sendEmail: false,
-            sendWhatsApp: false
+            sendWhatsApp: true
         );
 
         $this->auditGeneric(
