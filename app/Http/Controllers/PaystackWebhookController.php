@@ -96,6 +96,9 @@ class PaystackWebhookController extends Controller
             $verifiedStatus = data_get($verification, 'data.status');
 
             if ($verifiedStatus !== 'success') {
+                $this->markPaymentFailed($payment, 'verification_failed', [
+                    'verified_status' => $verifiedStatus,
+                ]);
                 $this->updateEvent($event, [
                     'status' => WebhookEvent::STATUS_FAILED,
                     'verification_status' => 'verification_failed',
@@ -110,6 +113,9 @@ class PaystackWebhookController extends Controller
                 'verification_status' => 'success',
             ]);
         } catch (\Throwable $exception) {
+            $this->markPaymentFailed($payment, 'verification_exception', [
+                'message' => $exception->getMessage(),
+            ]);
             Log::warning('Webhook verification/markSuccess failed', [
                 'reference' => $reference,
                 'message' => $exception->getMessage(),
@@ -141,5 +147,23 @@ class PaystackWebhookController extends Controller
                 'message' => $exception->getMessage(),
             ]);
         }
+    }
+
+    private function markPaymentFailed(Payment $payment, string $reason, array $meta = []): void
+    {
+        if ($payment->status === Payment::STATUS_SUCCESS) {
+            return;
+        }
+
+        $raw = $payment->raw_payload ?? [];
+        $raw['fallback'] = array_merge([
+            'reason' => $reason,
+            'at' => now()->toIso8601String(),
+        ], $meta);
+
+        $payment->status = Payment::STATUS_FAILED;
+        $payment->raw_payload = $raw;
+        $payment->verified_at = now();
+        $payment->save();
     }
 }

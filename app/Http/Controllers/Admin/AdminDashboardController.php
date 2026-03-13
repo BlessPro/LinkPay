@@ -38,17 +38,9 @@ class AdminDashboardController extends Controller
 
         $exceptionPayments = Payment::query()
             ->with('user.sellerProfile')
-            ->where(function ($query) {
-                $query->where(function ($pending) {
-                    $pending->where('status', Payment::STATUS_PENDING)
-                        ->where('created_at', '<=', now()->subMinutes(15));
-                })->orWhere(function ($failed) {
-                    $failed->where('status', Payment::STATUS_FAILED)
-                        ->where('created_at', '>=', now()->subDays(2));
-                });
-            })
+            ->where('status', Payment::STATUS_FAILED)
             ->latest()
-            ->take(20)
+            ->take(30)
             ->get();
 
         $webhookWindowStart = now()->subDay();
@@ -222,6 +214,55 @@ class AdminDashboardController extends Controller
             ]);
 
             return back()->withErrors(['payment' => 'Retry failed: '.$exception->getMessage()]);
+        }
+    }
+
+    public function confirmPayment(
+        Request $request,
+        Payment $payment,
+        PaymentService $paymentsService
+    ): RedirectResponse {
+        if ($payment->status === Payment::STATUS_SUCCESS) {
+            return back()->with('status', 'already-success');
+        }
+
+        if ($payment->status !== Payment::STATUS_FAILED) {
+            return back()->withErrors(['payment' => 'Only failed payments can be manually confirmed here.']);
+        }
+
+        $validated = $request->validate([
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $admin = $request->user();
+
+        $verifiedData = [
+            'status' => 'success',
+            'channel' => 'admin_manual_confirmation',
+            'paid_at' => now()->toIso8601String(),
+            'metadata' => [
+                'admin_confirmed' => true,
+                'admin_confirmed_by' => $admin?->id,
+                'admin_note' => $validated['note'] ?? null,
+            ],
+        ];
+
+        try {
+            $paymentsService->markSuccess($payment, $verifiedData);
+            $this->audit($admin->id, 'payment.manual_confirm.success', $payment, $request, [
+                'reference' => $payment->reference,
+                'note' => $validated['note'] ?? null,
+            ]);
+
+            return back()->with('status', 'manual-confirm-success');
+        } catch (\Throwable $exception) {
+            $this->audit($admin->id, 'payment.manual_confirm.error', $payment, $request, [
+                'reference' => $payment->reference,
+                'message' => $exception->getMessage(),
+                'note' => $validated['note'] ?? null,
+            ]);
+
+            return back()->withErrors(['payment' => 'Manual confirmation failed: '.$exception->getMessage()]);
         }
     }
 

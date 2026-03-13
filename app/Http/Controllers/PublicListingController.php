@@ -36,6 +36,17 @@ class PublicListingController extends Controller
         if (! in_array($template, ['products', 'services'], true)) {
             $template = 'products';
         }
+        $statusFilter = $request->query('status', 'all');
+        $allowedStatusFilters = [
+            'all',
+            Product::STATUS_IN_STOCK,
+            Product::STATUS_LOW_STOCK,
+            Product::STATUS_PRE_ORDER,
+            Product::STATUS_SOLD_OUT,
+        ];
+        if (! in_array($statusFilter, $allowedStatusFilters, true)) {
+            $statusFilter = 'all';
+        }
         $isOwner = $request->user() && $request->user()->id === $profile->user_id;
 
         $analytics->trackEvent(
@@ -56,11 +67,26 @@ class PublicListingController extends Controller
             );
         }
 
+        $allProducts = $profile->user->products->values();
+        $products = $statusFilter === 'all'
+            ? $allProducts
+            : $allProducts->where('status', $statusFilter)->values();
+
+        $statusTabs = [
+            ['key' => 'all', 'label' => 'All products', 'count' => $allProducts->count()],
+            ['key' => Product::STATUS_IN_STOCK, 'label' => 'In stock', 'count' => $allProducts->where('status', Product::STATUS_IN_STOCK)->count()],
+            ['key' => Product::STATUS_LOW_STOCK, 'label' => 'Low stock', 'count' => $allProducts->where('status', Product::STATUS_LOW_STOCK)->count()],
+            ['key' => Product::STATUS_PRE_ORDER, 'label' => 'Pre-order', 'count' => $allProducts->where('status', Product::STATUS_PRE_ORDER)->count()],
+            ['key' => Product::STATUS_SOLD_OUT, 'label' => 'Sold out', 'count' => $allProducts->where('status', Product::STATUS_SOLD_OUT)->count()],
+        ];
+
         $cart = $this->buildCartSummary($request, $profile);
 
         return view('public.listing', [
             'profile' => $profile,
-            'products' => $profile->user->products,
+            'products' => $products,
+            'statusFilter' => $statusFilter,
+            'statusTabs' => $statusTabs,
             'cart' => $cart,
             'currency' => config('services.paystack.currency', 'GHS'),
             'template' => $template,

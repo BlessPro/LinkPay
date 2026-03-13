@@ -26,7 +26,7 @@
         @endphp
 
         <div class="min-h-screen lg:flex">
-            <aside class="hidden lg:sticky lg:top-0 lg:z-30 lg:flex lg:h-screen lg:max-h-screen lg:w-64 lg:flex-col lg:overflow-hidden lg:border-r lg:border-slate-200 lg:bg-white">
+            <aside class="hidden lg:fixed lg:left-0 lg:top-0 lg:z-30 lg:flex lg:h-screen lg:max-h-screen lg:w-64 lg:flex-col lg:overflow-hidden lg:border-r lg:border-slate-200 lg:bg-white">
                 <div class="flex items-center gap-2 px-6 py-6">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold">
                         8K
@@ -41,6 +41,7 @@
                     <a href="{{ route('dashboard') }}" class="{{ $navClass('dashboard') }}">Dashboard</a>
                     <a href="{{ route('profile.edit') }}" class="{{ $navClass('profile.*') }}">Profile</a>
                     <a href="{{ route('products.index') }}" class="{{ $navClass('products.*') }}">Products</a>
+                    <a href="{{ route('customers.index') }}" class="{{ $navClass('customers.*') }}">Customers</a>
                     @if($canUsePayments)
                         <a href="{{ route('invoices.index') }}" class="{{ $navClass('invoices.*') }}">Invoices</a>
                         <a href="{{ route('payments.index') }}" class="{{ $navClass('payments.*') }}">Payments</a>
@@ -55,6 +56,7 @@
                         </a>
                     @endif
                     <a href="{{ route('notifications.index') }}" class="{{ $navClass('notifications.*') }}">Notifications</a>
+                    <a href="{{ route('goals.index') }}" class="{{ $navClass('goals.*') }}">Goals and Target</a>
                     <a href="{{ route('insights.index') }}" class="{{ $navClass('insights.*') }}">Insights</a>
                     <a href="{{ route('billing.show') }}" class="{{ $navClass('billing.*') }}">Billing</a>
                     @if(auth()->user()->is_admin)
@@ -64,7 +66,7 @@
                         <a href="{{ route('public.preview') }}" class="{{ $navClass('public.preview') }}">Public page</a>
                     @endif
                 </nav>
-                
+
                 <div class="mt-auto px-6 py-5">
                     <p class="text-xs uppercase tracking-widest text-slate-400">Payout status</p>
                     @if($profile?->paystack_subaccount_code)
@@ -75,19 +77,25 @@
                 </div>
             </aside>
 
-            <div class="flex-1 overflow-x-hidden">
-                <header class="fixed top-0 right-0 left-0 z-40 border-b border-slate-200 bg-white/70 backdrop-blur lg:left-64">
+            <div class="flex-1 overflow-x-hidden lg:pl-64">
+                <header class="fixed top-0 left-0 right-0 z-40 border-b border-slate-200 bg-white/70 backdrop-blur lg:left-64">
                     <div class="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
                         <div>
                             <p class="text-xs uppercase tracking-widest text-slate-400">Dashboard</p>
                             <h1 class="text-lg font-semibold text-slate-900">{{ $title ?? 'Overview' }}</h1>
                         </div>
-                        <div class="hidden items-center gap-3 sm:flex">
-                            <span class="text-sm text-slate-600">{{ auth()->user()->email }}</span>
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <button type="submit" class="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:border-emerald-200 hover:text-emerald-700">Logout</button>
-                            </form>
+                        <div class="hidden items-center sm:flex">
+                            <div class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                                <div class="text-right">
+                                    <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400">Account</p>
+                                    <p class="text-sm font-medium text-slate-700">{{ auth()->user()->email }}</p>
+                                </div>
+                                <div class="h-7 w-px bg-slate-200"></div>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" class="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:border-emerald-200 hover:text-emerald-700">Logout</button>
+                                </form>
+                            </div>
                         </div>
                         <details class="relative sm:hidden">
                             <summary class="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">Menu</summary>
@@ -96,6 +104,7 @@
                                     <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Dashboard</a>
                                     <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Profile</a>
                                     <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Products</a>
+                                    <a href="{{ route('customers.index') }}" class="{{ request()->routeIs('customers.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Customers</a>
                                     @if($canUsePayments)
                                         <a href="{{ route('invoices.index') }}" class="{{ request()->routeIs('invoices.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Invoices</a>
                                         <a href="{{ route('payments.index') }}" class="{{ request()->routeIs('payments.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Payments</a>
@@ -104,6 +113,7 @@
                                         <a href="{{ route('billing.upgrade') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">Payments <span class="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Upgrade</span></a>
                                     @endif
                                     <a href="{{ route('notifications.index') }}" class="{{ request()->routeIs('notifications.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Notifications</a>
+                                    <a href="{{ route('goals.index') }}" class="{{ request()->routeIs('goals.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Goals and Target</a>
                                     <a href="{{ route('insights.index') }}" class="{{ request()->routeIs('insights.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Insights</a>
                                     <a href="{{ route('billing.show') }}" class="{{ request()->routeIs('billing.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Billing</a>
                                     @if(auth()->user()->is_admin)

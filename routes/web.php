@@ -12,6 +12,7 @@ use App\Http\Controllers\PublicListingController;
 use App\Http\Controllers\PublicProductController;
 use App\Http\Controllers\SellerProfileController;
 use App\Http\Controllers\InsightsController;
+use App\Http\Controllers\GoalsTargetController;
 use App\Http\Controllers\TwilioWebhookController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminInvoiceController;
@@ -19,13 +20,12 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\PricingController;
 use App\Http\Controllers\SellerPublicPreviewController;
 use App\Http\Controllers\Admin\AdminOtpAuthController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\LandingController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome', [
-        'plans' => config('plans'),
-    ]);
-});
+Route::get('/', [LandingController::class, 'index']);
+Route::get('/sellers', [LandingController::class, 'sellers'])->name('marketplace.sellers');
 
 Route::get('/pricing', [PricingController::class, 'index'])->name('pricing');
 
@@ -71,6 +71,8 @@ Route::middleware(['auth', 'active_access'])->group(function () {
         Route::resource('products', ProductController::class)->except(['show']);
         Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
         Route::post('/products/export-pdf', [ProductController::class, 'exportPdf'])->name('products.exportPdf');
+        Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
         Route::get('/public-preview', [SellerPublicPreviewController::class, 'show'])->name('public.preview');
     });
 
@@ -83,6 +85,7 @@ Route::middleware(['auth', 'active_access'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/orders/{order}/accept', [NotificationController::class, 'acceptOrder'])->name('notifications.orders.accept');
     Route::post('/notifications/orders/{order}/reject', [NotificationController::class, 'rejectOrder'])->name('notifications.orders.reject');
+    Route::get('/goals-target', [GoalsTargetController::class, 'index'])->name('goals.index');
     Route::get('/insights', [InsightsController::class, 'index'])->name('insights.index');
 });
 
@@ -104,6 +107,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('/sellers/{seller}/unsuspend', [AdminDashboardController::class, 'unsuspendSeller'])->name('sellers.unsuspend');
     Route::post('/sellers/{seller}/notify', [AdminDashboardController::class, 'notifySeller'])->name('sellers.notify');
     Route::post('/payments/{payment}/retry', [AdminDashboardController::class, 'retryPayment'])->name('payments.retry');
+    Route::post('/payments/{payment}/confirm', [AdminDashboardController::class, 'confirmPayment'])->name('payments.confirm');
     Route::get('/invoices', [AdminInvoiceController::class, 'index'])->name('invoices.index');
     Route::get('/invoices/{invoice}', [AdminInvoiceController::class, 'show'])->name('invoices.show');
 });

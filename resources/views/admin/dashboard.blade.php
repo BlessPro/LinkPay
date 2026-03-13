@@ -18,6 +18,11 @@
             Payment is already marked as success.
         </div>
     @endif
+    @if(session('status') === 'manual-confirm-success')
+        <div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            Payment manually confirmed and removed from fallback queue.
+        </div>
+    @endif
     @if($errors->has('payment'))
         <div class="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {{ $errors->first('payment') }}
@@ -94,8 +99,8 @@
     <div id="exceptions" class="mt-10 grid gap-6 lg:grid-cols-2">
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-slate-900">Payment exception queue</h2>
-                <span class="text-xs uppercase tracking-[0.3em] text-slate-400">Pending >15m / failed</span>
+                <h2 class="text-lg font-semibold text-slate-900">Payment fallback queue</h2>
+                <span class="text-xs uppercase tracking-[0.3em] text-slate-400">Failed only</span>
             </div>
             <div class="mt-4 space-y-3">
                 @forelse($exceptionPayments as $payment)
@@ -105,15 +110,32 @@
                                 <p class="text-sm font-semibold text-slate-900">{{ \App\Support\Money::format($payment->amount, $currency) }} · {{ $payment->status }}</p>
                                 <p class="text-xs text-slate-500">{{ $payment->reference }}</p>
                                 <p class="mt-1 text-xs text-slate-400">{{ $payment->user?->sellerProfile?->business_name ?? $payment->user?->email ?? 'Unknown seller' }}</p>
+                                @if($payment->user)
+                                    <a href="{{ route('admin.sellers.show', $payment->user) }}" class="mt-2 inline-flex rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300">
+                                        Open seller
+                                    </a>
+                                @endif
                             </div>
-                            <form method="POST" action="{{ route('admin.payments.retry', $payment) }}">
-                                @csrf
-                                <button type="submit" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300">Retry verify</button>
-                            </form>
+                            <div class="flex flex-col items-end gap-2">
+                                <form method="POST" action="{{ route('admin.payments.retry', $payment) }}">
+                                    @csrf
+                                    <button type="submit" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300">Retry verify</button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.payments.confirm', $payment) }}" class="flex items-center gap-2">
+                                    @csrf
+                                    <input
+                                        type="text"
+                                        name="note"
+                                        placeholder="Optional note"
+                                        class="w-32 rounded-full border-slate-200 px-3 py-1 text-xs focus:border-emerald-500 focus:ring-emerald-500"
+                                    >
+                                    <button type="submit" class="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500">Confirm paid</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 @empty
-                    <p class="text-sm text-slate-500">No exceptions right now.</p>
+                    <p class="text-sm text-slate-500">No failed fallback payments right now.</p>
                 @endforelse
             </div>
         </div>
@@ -283,3 +305,4 @@
         <div class="mt-6">{{ $sellers->links() }}</div>
     </div>
 @endsection
+
