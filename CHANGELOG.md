@@ -89,6 +89,9 @@ All notable changes to this project will be documented here.
 - Mobile KPI behavior updated to two-cards-per-row and a flat marquee summary strip.
 - Dashboard mobile navigation restyled to a floating dark glass bar with icon-first items and raised center action button.
 - Product OG image layout refreshed to prioritize a large product image with the price shown beneath for stronger share previews.
+- Product-card WhatsApp CTA now includes an on-image icon shortcut that opens chat with seller context for that specific product.
+- Product OG generation now preserves the full source image (portrait or landscape) using contain-fit rendering to avoid trimmed/cropped previews.
+- Product OG asset path versioned (`v2`) so updated OG layout is applied immediately without stale image cache conflicts.
 - Replaced Quick Action standalone page navigation with in-layout offcanvas interaction.
 - Paystack service expanded to fetch transactions by date range for reconciliation workflows.
 - Admin layout navigation updated with dedicated `Reconciliation` entry.

@@ -160,15 +160,31 @@
                     };
                 @endphp
                 <article class="group overflow-hidden rounded-xl border border-slate-200 bg-white">
-                    <a href="{{ $productUrl }}" class="block bg-slate-100">
-                        @if($product->image_path)
-                            <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->name }}" class="h-44 w-full object-cover transition duration-300 group-hover:scale-[1.02] sm:h-56">
-                        @else
-                            <div class="flex h-56 items-center justify-center bg-slate-100 text-slate-400">
-                                <span class="text-xs uppercase tracking-[0.25em]">No image</span>
-                            </div>
+                    <div class="relative bg-slate-100">
+                        <a href="{{ $productUrl }}" class="block">
+                            @if($product->image_path)
+                                <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->name }}" class="h-44 w-full object-cover transition duration-300 group-hover:scale-[1.02] sm:h-56">
+                            @else
+                                <div class="flex h-56 items-center justify-center bg-slate-100 text-slate-400">
+                                    <span class="text-xs uppercase tracking-[0.25em]">No image</span>
+                                </div>
+                            @endif
+                        </a>
+                        @if($chatUrl)
+                            <a
+                                href="{{ $chatUrl }}"
+                                target="_blank"
+                                rel="noreferrer noopener"
+                                aria-label="Chat on WhatsApp"
+                                title="Chat on WhatsApp"
+                                class="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-200 bg-white/95 text-emerald-700 shadow-sm hover:bg-emerald-50"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                                    <path d="M20.5 3.5A11 11 0 0 0 3.54 17.14L2 22l4.99-1.5A11 11 0 1 0 20.5 3.5Zm-8.52 17a9.08 9.08 0 0 1-4.63-1.27l-.33-.19-2.97.89.9-2.9-.22-.35a9.09 9.09 0 1 1 7.25 3.82Zm4.98-6.84c-.27-.14-1.62-.8-1.87-.89-.25-.09-.43-.14-.61.14-.18.27-.7.88-.86 1.06-.16.18-.31.2-.58.07a7.46 7.46 0 0 1-2.19-1.35 8.24 8.24 0 0 1-1.52-1.9c-.16-.27-.02-.42.12-.56.12-.12.27-.31.41-.47.14-.16.18-.27.27-.45.09-.18.05-.34-.02-.47-.07-.14-.61-1.48-.84-2.03-.22-.53-.45-.46-.61-.47h-.52c-.18 0-.47.07-.72.34s-.95.93-.95 2.27.98 2.63 1.11 2.81c.14.18 1.92 2.93 4.66 4.11.65.28 1.16.45 1.55.58.65.21 1.24.18 1.71.11.52-.08 1.62-.66 1.85-1.3.23-.64.23-1.18.16-1.3-.07-.12-.25-.2-.52-.34Z"/>
+                                </svg>
+                            </a>
                         @endif
-                    </a>
+                    </div>
                     <div class="space-y-3 p-3">
                         <a href="{{ $productUrl }}" class="block text-xs font-bold uppercase leading-5 tracking-[0.02em] text-slate-900 hover:text-emerald-700">{{ $product->name }}</a>
                         <p class="line-clamp-1 text-sm text-emerald-700/80">{{ $product->description ?: $product->statusLabel() }}</p>

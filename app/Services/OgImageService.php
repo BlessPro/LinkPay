@@ -12,6 +12,7 @@ class OgImageService
 {
     public const WIDTH = 1200;
     public const HEIGHT = 630;
+    private const PRODUCT_OG_VERSION = 'v2';
 
     public function generateSeller(SellerProfile $profile): void
     {
@@ -45,7 +46,7 @@ class OgImageService
         $jpg = $this->renderProductJpeg($title, $subtitle, $price, $imagePath);
 
         if ($jpg) {
-            $this->storePublicJpeg('og/products/'.$product->id.'.jpg', $jpg);
+            $this->storePublicJpeg($this->publicProductOgPath($product->id), $jpg);
         }
     }
 
@@ -75,7 +76,7 @@ class OgImageService
 
     public function publicProductOgPath(int|string $productId): string
     {
-        return 'og/products/'.$productId.'.jpg';
+        return 'og/products/'.$productId.'-'.self::PRODUCT_OG_VERSION.'.jpg';
     }
 
     public function publicInvoiceOgPath(string $invoiceId): string
@@ -242,7 +243,8 @@ class OgImageService
         if ($photoPath) {
             $photo = $this->loadImage($photoPath);
             if ($photo) {
-                $this->drawImageCover($img, $photo, $cardX, $cardY, $cardW, $cardH);
+                // Keep full source image visible (no trimming/cropping).
+                $this->drawImageContain($img, $photo, $cardX, $cardY, $cardW, $cardH);
                 imagedestroy($photo);
             }
         }
@@ -400,5 +402,22 @@ class OgImageService
         }
 
         imagecopyresampled($dst, $src, $x, $y, $srcX, $srcY, $w, $h, $newW, $newH);
+    }
+
+    private function drawImageContain($dst, $src, int $x, int $y, int $w, int $h): void
+    {
+        $srcW = imagesx($src);
+        $srcH = imagesy($src);
+        if ($srcW <= 0 || $srcH <= 0) {
+            return;
+        }
+
+        $scale = min($w / $srcW, $h / $srcH);
+        $drawW = max(1, (int) floor($srcW * $scale));
+        $drawH = max(1, (int) floor($srcH * $scale));
+        $drawX = $x + (int) floor(($w - $drawW) / 2);
+        $drawY = $y + (int) floor(($h - $drawH) / 2);
+
+        imagecopyresampled($dst, $src, $drawX, $drawY, 0, 0, $drawW, $drawH, $srcW, $srcH);
     }
 }
