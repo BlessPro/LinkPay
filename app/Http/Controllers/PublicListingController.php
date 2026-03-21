@@ -265,7 +265,7 @@ class PublicListingController extends Controller
     public function addToCart(Request $request, string $public_slug, Product $product, AnalyticsService $analytics)
     {
         $request->validate([
-            'quantity' => ['required', 'integer', 'min:1', 'max:100'],
+            'quantity' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $profile = SellerProfile::where('public_slug', $public_slug)->firstOrFail();
@@ -274,7 +274,8 @@ class PublicListingController extends Controller
 
         $cart = $this->readCartRaw($request, $public_slug);
         $currentQty = (int) ($cart[$product->id]['quantity'] ?? 0);
-        $newQuantity = $currentQty + (int) $request->integer('quantity', 1);
+        $requestedQuantity = max(1, (int) $request->integer('quantity', 1));
+        $newQuantity = $currentQty + $requestedQuantity;
         if ($product->isInventoryManaged() && $newQuantity > (int) $product->stock_quantity) {
             return back()->withErrors([
                 'paystack' => 'Only '.$product->stock_quantity.' item(s) left for '.$product->name.'.',

@@ -73,6 +73,7 @@ All notable changes to this project will be documented here.
 - Added `ops:failed-jobs:retry-latest` command for controlled bulk retry operations with audit logging.
 - Added `MonitoringServiceProvider` with environment-driven provider/DSN config (`MONITORING_PROVIDER`, `MONITORING_DSN`) and Sentry auto-binding when SDK is installed.
 - Added operations drill log template (`docs/OPERATIONS_DRILL_LOG.md`) and expanded deployment/backup docs with executable runbook commands.
+- Added `docs/SECURITY_CHECKLIST.md` to track prioritized future security hardening work.
 - Race-condition hardening:
 - `PaymentService::markSuccess` now uses a per-payment lock to prevent duplicate side effects under concurrent webhook/success callbacks.
 - Webhook event storage now enforces unique `(provider, event_hash)` with migration-time dedupe of older duplicates.
@@ -106,3 +107,5 @@ All notable changes to this project will be documented here.
 - Fixed cart remove method mismatch handling and route usage around listing cart actions.
 - Fixed customer status derivation failure caused by missing `days_since_last` key path.
 - Hardened users phone migration to be idempotent to reduce migration failures across environments.
+- Public add-to-cart now defaults missing quantity to `1` instead of failing validation.
+- Public listing error banner now shows exact validation messages (not only generic text).

@@ -15,7 +15,12 @@
 
 @if($errors->any())
     <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-        Please correct the highlighted fields and try again.
+        <p class="font-semibold">Please correct the highlighted fields and try again.</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5 text-xs sm:text-sm">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
 @endif
 @if(session('status') === 'interest-captured')
