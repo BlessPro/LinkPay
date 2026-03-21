@@ -160,8 +160,18 @@ class User extends Authenticatable
         return $this->hasMany(TwilioMessageLog::class);
     }
 
+    public function coupons()
+    {
+        return $this->hasMany(Coupon::class);
+    }
+
     public function adminAuditLogs()
     {
         return $this->hasMany(AdminAuditLog::class, 'admin_user_id');
+    }
+
+    public function dataDeletionRequests()
+    {
+        return $this->hasMany(DataDeletionRequest::class);
     }
 }

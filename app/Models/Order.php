@@ -30,6 +30,8 @@ class Order extends Model
         'delivery_required',
         'delivery_note',
         'subtotal',
+        'coupon_code',
+        'discount_amount',
         'total',
         'currency',
         'paid_at',
@@ -40,6 +42,7 @@ class Order extends Model
         return [
             'delivery_required' => 'boolean',
             'subtotal' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
             'total' => 'decimal:2',
             'paid_at' => 'datetime',
         ];
@@ -60,4 +63,3 @@ class Order extends Model
         return $this->hasMany(Payment::class);
     }
 }
-

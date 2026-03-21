@@ -166,6 +166,9 @@
             <div class="rounded-2xl border border-rose-100 bg-white p-6 shadow-sm">
                 <h2 class="text-lg font-semibold text-rose-600">Danger zone</h2>
                 <div class="mt-4">
+                    @include('profile.partials.data-deletion-request-form')
+                </div>
+                <div class="mt-6">
                     @include('profile.partials.delete-user-form')
                 </div>
             </div>

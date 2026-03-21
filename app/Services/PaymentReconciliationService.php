@@ -16,7 +16,7 @@ class PaymentReconciliationService
     /**
      * @return array<string, mixed>
      */
-    public function buildReport(int $days = 7, ?int $sellerId = null): array
+    public function buildReport(int $days = 7, ?int $sellerId = null, ?string $type = null, bool $agedOnly = false): array
     {
         $days = max(1, min(30, $days));
         $from = now()->subDays($days - 1)->startOfDay();
@@ -114,17 +114,40 @@ class PaymentReconciliationService
                 ['is_aged', 'desc'],
                 ['severity_score', 'desc'],
                 ['created_at', 'asc'],
-            ])
+            ]);
+
+        if ($type) {
+            $exceptions = $exceptions->where('type', $type);
+        }
+
+        if ($agedOnly) {
+            $exceptions = $exceptions->where('is_aged', true);
+        }
+
+        $exceptions = $exceptions
             ->values()
             ->all();
+
+        $exceptionSummary = collect($exceptions);
+        $severityBuckets = [
+            'critical' => $exceptionSummary->where('severity_score', '>=', 1000)->count(),
+            'high' => $exceptionSummary->whereBetween('severity_score', [90, 999])->count(),
+            'medium' => $exceptionSummary->whereBetween('severity_score', [70, 89])->count(),
+            'low' => $exceptionSummary->where('severity_score', '<', 70)->count(),
+        ];
 
         return [
             'from' => $from,
             'to' => $to,
             'days' => $days,
             'sellerId' => $sellerId,
+            'type' => $type,
+            'agedOnly' => $agedOnly,
             'statusCounts' => $statusCounts,
             'exceptions' => $exceptions,
+            'exceptionTotal' => count($exceptions),
+            'agedExceptionTotal' => $exceptionSummary->where('is_aged', true)->count(),
+            'severityBuckets' => $severityBuckets,
             'localTotal' => $localPayments->count(),
             'paystackTotal' => $paystackTransactions->count(),
             'duplicateReferences' => $duplicateReferences,

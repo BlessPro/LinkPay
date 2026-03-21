@@ -45,7 +45,9 @@
                 </div>
             </div>
             <div class="flex items-center gap-3 text-sm font-medium text-slate-600">
+                <a href="{{ route('public.orders.track') }}" class="rounded-full border border-transparent px-4 py-2 hover:border-emerald-200 hover:text-emerald-700">Track order</a>
                 <a href="{{ route('pricing') }}" class="rounded-full border border-transparent px-4 py-2 hover:border-emerald-200 hover:text-emerald-700">Pricing</a>
+                <a href="{{ route('legal.privacy') }}" class="rounded-full border border-transparent px-4 py-2 hover:border-emerald-200 hover:text-emerald-700">Privacy</a>
                 <a href="{{ route('login') }}" class="rounded-full border border-slate-200 px-4 py-2 hover:border-emerald-200 hover:text-emerald-700">Seller login</a>
             </div>
         </header>
@@ -54,6 +56,14 @@
             {{ $slot ?? '' }}
             @yield('content')
         </main>
+
+        <footer class="mx-auto mb-10 flex w-full max-w-6xl items-center justify-between px-6 text-xs text-slate-500">
+            <p>© {{ date('Y') }} 8Kommerce</p>
+            <div class="flex items-center gap-4">
+                <a href="{{ route('legal.privacy') }}" class="hover:text-emerald-700">Privacy</a>
+                <a href="{{ route('legal.terms') }}" class="hover:text-emerald-700">Terms</a>
+            </div>
+        </footer>
     </body>
     
 </html>

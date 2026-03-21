@@ -17,6 +17,7 @@ class WebhookEvent extends Model
     protected $fillable = [
         'provider',
         'event',
+        'event_hash',
         'reference',
         'payment_id',
         'status',
@@ -39,4 +40,3 @@ class WebhookEvent extends Model
         return $this->belongsTo(Payment::class);
     }
 }
-

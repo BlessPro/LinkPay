@@ -6,8 +6,11 @@ use App\Models\Payment;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\Coupon;
+use App\Models\CouponRedemption;
 use App\Models\SellerProfile;
 use App\Models\Lead;
+use App\Models\PublicCartSession;
 use App\Services\SellerNotifier;
 use App\Services\OgImageService;
 use App\Services\AnalyticsService;
@@ -18,11 +21,15 @@ use App\Support\Phone;
 use App\Support\WhatsApp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Client\RequestException;
 
 class PublicListingController extends Controller
 {
+    private const CART_TOKEN_COOKIE = 'lp_cart_token';
+    private const CART_TTL_DAYS = 30;
+
     public function show(string $public_slug, Request $request, AnalyticsService $analytics)
     {
         $profile = SellerProfile::where('public_slug', $public_slug)
@@ -145,12 +152,7 @@ class PublicListingController extends Controller
         AnalyticsService $analytics
     )
     {
-        $request->validate([
-            'name' => ['nullable', 'string', 'max:120'],
-            'location' => ['nullable', 'string', 'max:160'],
-            'phone_number' => ['required', 'string', 'max:25'],
-            'phone_country' => ['nullable', 'string'],
-        ]);
+        $validated = $this->validateCheckoutContact($request, withDeliveryFields: false);
 
         $profile = SellerProfile::where('public_slug', $public_slug)->firstOrFail();
 
@@ -170,22 +172,27 @@ class PublicListingController extends Controller
             in_array($product->status, [Product::STATUS_IN_STOCK, Product::STATUS_LOW_STOCK, Product::STATUS_PRE_ORDER], true),
             404
         );
+        if ($product->isInventoryManaged() && (int) $product->stock_quantity < 1) {
+            return back()->withErrors([
+                'paystack' => 'This item is currently out of stock. Please remove it or contact the seller.',
+            ])->withInput();
+        }
 
         if (! $profile->paystack_subaccount_code) {
             return back()->withErrors(['paystack' => 'Seller is not connected to Paystack yet.']);
         }
 
         $reference = (string) Str::uuid();
-        $phoneInput = $request->input('phone_number');
+        $phoneInput = $validated['phone_number'];
         $phoneParts = array_filter(array_map('trim', explode(',', (string) $phoneInput)));
         $primaryPhone = $phoneParts[0] ?? $phoneInput;
-        $phone = Phone::normalize($primaryPhone, $request->input('phone_country', '+233'));
-        if (! $phone || ! Phone::isValidGh($primaryPhone)) {
-            return back()->withErrors(['phone_number' => 'Enter a valid WhatsApp number.'])->withInput();
+        $phone = Phone::normalize($primaryPhone, $validated['phone_country'] ?? '+233');
+        if (! $phone) {
+            return back()->withErrors(['phone_number' => 'Please enter a valid phone number.'])->withInput();
         }
 
         $email = Email::placeholder($reference);
-        $location = trim((string) $request->input('location'));
+        $location = trim((string) ($validated['location'] ?? ''));
 
         $analytics->trackEvent(
             $request,
@@ -210,7 +217,7 @@ class PublicListingController extends Controller
             'status' => Payment::STATUS_PENDING,
             'raw_payload' => [
                 'customer' => [
-                    'name' => $request->input('name'),
+                    'name' => $validated['name'] ?? null,
                     'email' => $email,
                     'phone' => $phone,
                     'location' => $location,
@@ -231,12 +238,12 @@ class PublicListingController extends Controller
                     'purpose' => 'product',
                     'platform_fee' => $platformFee,
                     'customer' => [
-                    'name' => $request->input('name'),
-                    'email' => $email,
-                    'phone' => $phone,
-                    'location' => $location,
+                        'name' => $validated['name'] ?? null,
+                        'email' => $email,
+                        'phone' => $phone,
+                        'location' => $location,
+                    ],
                 ],
-            ],
                 $profile->paystack_subaccount_code,
                 $platformFee
             );
@@ -265,14 +272,21 @@ class PublicListingController extends Controller
         abort_unless($product->user_id === $profile->user_id, 404);
         abort_unless($product->isPayable(), 404);
 
-        $cart = $request->session()->get($this->cartKey($public_slug), []);
+        $cart = $this->readCartRaw($request, $public_slug);
         $currentQty = (int) ($cart[$product->id]['quantity'] ?? 0);
+        $newQuantity = $currentQty + (int) $request->integer('quantity', 1);
+        if ($product->isInventoryManaged() && $newQuantity > (int) $product->stock_quantity) {
+            return back()->withErrors([
+                'paystack' => 'Only '.$product->stock_quantity.' item(s) left for '.$product->name.'.',
+            ])->withInput();
+        }
+
         $cart[$product->id] = [
             'product_id' => $product->id,
-            'quantity' => $currentQty + (int) $request->integer('quantity', 1),
+            'quantity' => $newQuantity,
         ];
 
-        $request->session()->put($this->cartKey($public_slug), $cart);
+        $this->persistCartRaw($request, $public_slug, $cart);
 
         $analytics->trackEvent(
             $request,
@@ -305,13 +319,19 @@ class PublicListingController extends Controller
             if ($quantity < 1) {
                 continue;
             }
+            $product = $profile->user->products()->find($productId);
+            if ($product && $product->isInventoryManaged() && $quantity > (int) $product->stock_quantity) {
+                return back()->withErrors([
+                    'paystack' => 'Quantity for '.$product->name.' exceeds available stock ('.$product->stock_quantity.').',
+                ])->withInput();
+            }
             $updated[$productId] = [
                 'product_id' => $productId,
                 'quantity' => $quantity,
             ];
         }
 
-        $request->session()->put($this->cartKey($public_slug), $updated);
+        $this->persistCartRaw($request, $public_slug, $updated);
 
         return back()->with('status', 'cart-updated');
     }
@@ -321,23 +341,16 @@ class PublicListingController extends Controller
         $profile = SellerProfile::where('public_slug', $public_slug)->firstOrFail();
         abort_unless($product->user_id === $profile->user_id, 404);
 
-        $cart = $request->session()->get($this->cartKey($public_slug), []);
+        $cart = $this->readCartRaw($request, $public_slug);
         unset($cart[$product->id]);
-        $request->session()->put($this->cartKey($public_slug), $cart);
+        $this->persistCartRaw($request, $public_slug, $cart);
 
         return back()->with('status', 'cart-updated');
     }
 
     public function checkoutCart(Request $request, string $public_slug, PaystackService $paystack, AnalyticsService $analytics)
     {
-        $request->validate([
-            'name' => ['nullable', 'string', 'max:120'],
-            'location' => ['nullable', 'string', 'max:160'],
-            'phone_number' => ['required', 'string', 'max:25'],
-            'phone_country' => ['nullable', 'string'],
-            'delivery_required' => ['nullable', 'boolean'],
-            'delivery_note' => ['nullable', 'string', 'max:500'],
-        ]);
+        $validated = $this->validateCheckoutContact($request, withDeliveryFields: true);
 
         $profile = SellerProfile::where('public_slug', $public_slug)
             ->with(['user.products' => function ($query) {
@@ -358,6 +371,76 @@ class PublicListingController extends Controller
         if ($cart['items']->isEmpty()) {
             return back()->withErrors(['paystack' => 'Your cart is empty.'])->withInput();
         }
+        $stockIssues = collect($cart['items'])
+            ->filter(function (array $row) {
+                return $row['product']->isInventoryManaged() && $row['quantity'] > (int) $row['product']->stock_quantity;
+            })
+            ->map(function (array $row) {
+                return $row['product']->name.' (available '.$row['product']->stock_quantity.')';
+            })
+            ->values();
+        if ($stockIssues->isNotEmpty()) {
+            return back()->withErrors([
+                'paystack' => 'Some cart quantities exceed stock: '.$stockIssues->implode(', ').'. Please reduce quantity and try again.',
+            ])->withInput();
+        }
+
+        $phoneInput = $validated['phone_number'];
+        $phoneParts = array_filter(array_map('trim', explode(',', (string) $phoneInput)));
+        $primaryPhone = $phoneParts[0] ?? $phoneInput;
+        $phone = Phone::normalize($primaryPhone, $validated['phone_country'] ?? '+233');
+        if (! $phone) {
+            return back()->withErrors(['phone_number' => 'Please enter a valid phone number.'])->withInput();
+        }
+
+        $subtotal = (string) $cart['total'];
+        $discountAmount = '0.00';
+        $couponCode = null;
+        $couponInput = trim((string) ($validated['coupon_code'] ?? ''));
+        if ($couponInput !== '') {
+            $coupon = Coupon::query()
+                ->where('user_id', $profile->user_id)
+                ->where('code', strtoupper($couponInput))
+                ->first();
+            if (! $coupon || ! $coupon->isUsableNow($subtotal)) {
+                return back()->withErrors([
+                    'coupon_code' => 'Coupon code is invalid or not active for this cart total.',
+                ])->withInput();
+            }
+
+            $customerFingerprint = Coupon::customerFingerprint($phone);
+            $alreadyUsedByCustomer = CouponRedemption::query()
+                ->where('coupon_id', $coupon->id)
+                ->where('customer_fingerprint', $customerFingerprint)
+                ->exists();
+            if ($alreadyUsedByCustomer) {
+                return back()->withErrors([
+                    'coupon_code' => 'This coupon has already been used by this customer.',
+                ])->withInput();
+            }
+
+            $ipAddress = $request->ip();
+            $ipReuseBlockHours = max(0, (int) config('coupons.ip_reuse_block_hours', 24));
+            if ($ipAddress && $ipReuseBlockHours > 0) {
+                $alreadyUsedFromIp = CouponRedemption::query()
+                    ->where('coupon_id', $coupon->id)
+                    ->where('ip_address', $ipAddress)
+                    ->where('used_at', '>=', now()->subHours($ipReuseBlockHours))
+                    ->exists();
+                if ($alreadyUsedFromIp) {
+                    return back()->withErrors([
+                        'coupon_code' => 'This coupon was already used recently from this network. Please try another coupon.',
+                    ])->withInput();
+                }
+            }
+
+            $discountAmount = $coupon->computeDiscount($subtotal);
+            $couponCode = $coupon->code;
+        }
+        $total = Money::subtract($subtotal, $discountAmount);
+        if (Money::compare($total, '0.00') === -1) {
+            $total = '0.00';
+        }
 
         $analytics->trackEvent(
             $request,
@@ -367,32 +450,26 @@ class PublicListingController extends Controller
             (string) $profile->id
         );
 
-        $phoneInput = $request->input('phone_number');
-        $phoneParts = array_filter(array_map('trim', explode(',', (string) $phoneInput)));
-        $primaryPhone = $phoneParts[0] ?? $phoneInput;
-        $phone = Phone::normalize($primaryPhone, $request->input('phone_country', '+233'));
-        if (! $phone || ! Phone::isValidGh($primaryPhone)) {
-            return back()->withErrors(['phone_number' => 'Enter a valid WhatsApp number.'])->withInput();
-        }
-
         $reference = (string) \Illuminate\Support\Str::uuid();
         $email = Email::placeholder($reference);
-        $location = trim((string) $request->input('location'));
-        $deliveryRequired = (bool) $request->boolean('delivery_required');
-        $deliveryNote = trim((string) $request->input('delivery_note'));
+        $location = trim((string) ($validated['location'] ?? ''));
+        $deliveryRequired = (bool) ($validated['delivery_required'] ?? false);
+        $deliveryNote = trim((string) ($validated['delivery_note'] ?? ''));
 
         $order = Order::create([
             'user_id' => $profile->user_id,
             'reference' => $reference,
             'status' => Order::STATUS_PENDING_PAYMENT,
             'payment_status' => Payment::STATUS_PENDING,
-            'customer_name' => $request->input('name'),
+            'customer_name' => $validated['name'] ?? null,
             'customer_phone' => $phone,
             'customer_location' => $location !== '' ? $location : null,
             'delivery_required' => $deliveryRequired,
             'delivery_note' => $deliveryNote !== '' ? $deliveryNote : null,
-            'subtotal' => $cart['total'],
-            'total' => $cart['total'],
+            'subtotal' => $subtotal,
+            'coupon_code' => $couponCode,
+            'discount_amount' => $discountAmount,
+            'total' => $total,
             'currency' => config('services.paystack.currency', 'GHS'),
         ]);
 
@@ -411,17 +488,20 @@ class PublicListingController extends Controller
             'user_id' => $profile->user_id,
             'order_id' => $order->id,
             'reference' => $reference,
-            'amount' => $cart['total'],
+            'amount' => $total,
             'status' => Payment::STATUS_PENDING,
             'raw_payload' => [
                 'customer' => [
-                    'name' => $request->input('name'),
+                    'name' => $validated['name'] ?? null,
                     'email' => $email,
                     'phone' => $phone,
                     'location' => $location,
+                    'ip_address' => $request->ip(),
                 ],
                 'order' => [
                     'id' => $order->id,
+                    'coupon_code' => $couponCode,
+                    'discount_amount' => $discountAmount,
                     'delivery_required' => $deliveryRequired,
                     'delivery_note' => $deliveryNote,
                     'items' => $cart['items']->map(function (array $row) {
@@ -437,11 +517,11 @@ class PublicListingController extends Controller
             ],
         ]);
 
-        $platformFee = $paystack->platformChargeFor((string) $cart['total']);
+        $platformFee = $paystack->platformChargeFor($total);
 
         try {
             $data = $paystack->initializeTransaction(
-                (string) $cart['total'],
+                $total,
                 $email,
                 [
                     'reference' => $reference,
@@ -450,7 +530,7 @@ class PublicListingController extends Controller
                     'purpose' => 'order',
                     'platform_fee' => $platformFee,
                     'customer' => [
-                        'name' => $request->input('name'),
+                        'name' => $validated['name'] ?? null,
                         'email' => $email,
                         'phone' => $phone,
                         'location' => $location,
@@ -475,7 +555,7 @@ class PublicListingController extends Controller
             ])->withInput();
         }
 
-        $request->session()->forget($this->cartKey($public_slug));
+        $this->persistCartRaw($request, $public_slug, []);
 
         return redirect()->away($data['authorization_url'] ?? route('public.listing', $public_slug));
     }
@@ -575,7 +655,7 @@ class PublicListingController extends Controller
 
     private function buildCartSummary(Request $request, SellerProfile $profile): array
     {
-        $raw = $request->session()->get($this->cartKey($profile->public_slug), []);
+        $raw = $this->readCartRaw($request, $profile->public_slug);
         $raw = is_array($raw) ? $raw : [];
 
         $activeProducts = $profile->user->products
@@ -615,12 +695,127 @@ class PublicListingController extends Controller
             ]);
         }
 
-        $request->session()->put($this->cartKey($profile->public_slug), $normalizedRaw);
+        $this->persistCartRaw($request, $profile->public_slug, $normalizedRaw);
 
         return [
             'items' => $items,
             'total' => $total,
             'count' => $items->count(),
         ];
+    }
+
+    private function validateCheckoutContact(Request $request, bool $withDeliveryFields): array
+    {
+        $rules = [
+            'name' => ['nullable', 'string', 'max:120'],
+            'location' => ['nullable', 'string', 'max:160'],
+            'phone_number' => [
+                'required',
+                'string',
+                'max:25',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $parts = array_filter(array_map('trim', explode(',', (string) $value)));
+                    $primaryPhone = $parts[0] ?? $value;
+                    if (! Phone::isValidGh((string) $primaryPhone)) {
+                        $fail('Please enter a valid Ghana phone number (example: 0541900229).');
+                    }
+                },
+            ],
+            'phone_country' => ['nullable', 'string', 'max:8'],
+            'coupon_code' => ['nullable', 'string', 'max:40'],
+        ];
+
+        if ($withDeliveryFields) {
+            $rules['delivery_required'] = ['nullable', 'boolean'];
+            $rules['delivery_note'] = ['nullable', 'string', 'max:500'];
+        }
+
+        return $request->validate($rules, [
+            'phone_number.required' => 'A phone number is required so the seller can reach you.',
+            'location.max' => 'Location must be 160 characters or less.',
+            'delivery_note.max' => 'Delivery note must be 500 characters or less.',
+        ]);
+    }
+
+    private function readCartRaw(Request $request, string $publicSlug): array
+    {
+        $sessionKey = $this->cartKey($publicSlug);
+        $sessionCart = $request->session()->get($sessionKey, []);
+        $sessionCart = is_array($sessionCart) ? $sessionCart : [];
+        $token = $this->resolveCartToken($request);
+
+        if (! empty($sessionCart)) {
+            $this->persistCartSession($publicSlug, $token, $sessionCart);
+            return $sessionCart;
+        }
+
+        $stored = PublicCartSession::query()
+            ->where('public_slug', $publicSlug)
+            ->where('session_token', $token)
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->first();
+
+        $restored = is_array($stored?->cart_payload) ? $stored->cart_payload : [];
+        if (! empty($restored)) {
+            $request->session()->put($sessionKey, $restored);
+        }
+
+        return $restored;
+    }
+
+    private function persistCartRaw(Request $request, string $publicSlug, array $raw): void
+    {
+        $sessionKey = $this->cartKey($publicSlug);
+        $normalized = is_array($raw) ? $raw : [];
+
+        $token = $this->resolveCartToken($request);
+        if (empty($normalized)) {
+            $request->session()->forget($sessionKey);
+            PublicCartSession::query()
+                ->where('public_slug', $publicSlug)
+                ->where('session_token', $token)
+                ->delete();
+            return;
+        }
+
+        $request->session()->put($sessionKey, $normalized);
+        $this->persistCartSession($publicSlug, $token, $normalized);
+    }
+
+    private function persistCartSession(string $publicSlug, string $token, array $payload): void
+    {
+        PublicCartSession::query()->updateOrCreate(
+            [
+                'public_slug' => $publicSlug,
+                'session_token' => $token,
+            ],
+            [
+                'cart_payload' => $payload,
+                'expires_at' => now()->addDays(self::CART_TTL_DAYS),
+            ]
+        );
+    }
+
+    private function resolveCartToken(Request $request): string
+    {
+        $token = (string) $request->cookie(self::CART_TOKEN_COOKIE, '');
+        if ($token === '' || ! Str::isUuid($token)) {
+            $token = (string) Str::uuid();
+        }
+
+        Cookie::queue(cookie(
+            self::CART_TOKEN_COOKIE,
+            $token,
+            self::CART_TTL_DAYS * 24 * 60,
+            path: '/',
+            secure: $request->isSecure(),
+            httpOnly: true,
+            sameSite: 'lax'
+        ));
+
+        return $token;
     }
 }

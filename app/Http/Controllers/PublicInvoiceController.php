@@ -67,11 +67,25 @@ class PublicInvoiceController extends Controller
 
     public function pay(Request $request, string $token, PaystackService $paystack, AnalyticsService $analytics)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:120'],
             'location' => ['nullable', 'string', 'max:160'],
-            'phone_number' => ['required', 'string', 'max:25'],
-            'phone_country' => ['nullable', 'string'],
+            'phone_number' => [
+                'required',
+                'string',
+                'max:25',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $parts = array_filter(array_map('trim', explode(',', (string) $value)));
+                    $primaryPhone = $parts[0] ?? $value;
+                    if (! Phone::isValidGh((string) $primaryPhone)) {
+                        $fail('Please enter a valid Ghana phone number (example: 0541900229).');
+                    }
+                },
+            ],
+            'phone_country' => ['nullable', 'string', 'max:8'],
+        ], [
+            'phone_number.required' => 'A phone number is required so the seller can reach you.',
+            'location.max' => 'Location must be 160 characters or less.',
         ]);
 
         $invoice = Invoice::where('token', $token)
@@ -102,16 +116,16 @@ class PublicInvoiceController extends Controller
         }
 
         $reference = (string) Str::uuid();
-        $phoneInput = $request->input('phone_number');
+        $phoneInput = $validated['phone_number'];
         $phoneParts = array_filter(array_map('trim', explode(',', (string) $phoneInput)));
         $primaryPhone = $phoneParts[0] ?? $phoneInput;
-        $phone = Phone::normalize($primaryPhone, $request->input('phone_country', '+233'));
-        if (! $phone || ! Phone::isValidGh($primaryPhone)) {
-            return back()->withErrors(['phone_number' => 'Enter a valid WhatsApp number.'])->withInput();
+        $phone = Phone::normalize($primaryPhone, $validated['phone_country'] ?? '+233');
+        if (! $phone) {
+            return back()->withErrors(['phone_number' => 'Please enter a valid phone number.'])->withInput();
         }
 
         $email = Email::placeholder($reference);
-        $location = trim((string) $request->input('location'));
+        $location = trim((string) ($validated['location'] ?? ''));
 
         $analytics->trackEvent(
             $request,
@@ -129,7 +143,7 @@ class PublicInvoiceController extends Controller
             'status' => Payment::STATUS_PENDING,
             'raw_payload' => [
                 'customer' => [
-                    'name' => $request->input('name'),
+                    'name' => $validated['name'] ?? null,
                     'email' => $email,
                     'phone' => $phone,
                     'location' => $location,
@@ -150,7 +164,7 @@ class PublicInvoiceController extends Controller
                     'purpose' => 'invoice',
                     'platform_fee' => $platformFee,
                     'customer' => [
-                        'name' => $request->input('name'),
+                        'name' => $validated['name'] ?? null,
                         'email' => $email,
                         'phone' => $phone,
                         'location' => $location,

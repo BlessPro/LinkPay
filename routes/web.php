@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicInvoiceController;
 use App\Http\Controllers\PublicListingController;
+use App\Http\Controllers\PublicOrderTrackingController;
 use App\Http\Controllers\PublicProductController;
 use App\Http\Controllers\SellerProfileController;
 use App\Http\Controllers\InsightsController;
@@ -21,31 +22,44 @@ use App\Http\Controllers\PricingController;
 use App\Http\Controllers\SellerPublicPreviewController;
 use App\Http\Controllers\Admin\AdminOtpAuthController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CouponController;
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\LegalController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index']);
 Route::get('/sellers', [LandingController::class, 'sellers'])->name('marketplace.sellers');
+Route::get('/privacy', [LegalController::class, 'privacy'])->name('legal.privacy');
+Route::get('/terms', [LegalController::class, 'terms'])->name('legal.terms');
 
 Route::get('/pricing', [PricingController::class, 'index'])->name('pricing');
 
 Route::get('/s/{public_slug}', [PublicListingController::class, 'show'])->name('public.listing');
 Route::post('/s/{public_slug}/products/{product}/pay', [PublicListingController::class, 'pay'])
+    ->middleware('throttle:12,1')
     ->name('public.products.pay');
 Route::post('/s/{public_slug}/products/{product}/interest', [PublicListingController::class, 'interest'])
+    ->middleware('throttle:20,1')
     ->name('public.products.interest');
 Route::post('/s/{public_slug}/products/{product}/cart', [PublicListingController::class, 'addToCart'])
+    ->middleware('throttle:60,1')
     ->name('public.products.cart.add');
 Route::patch('/s/{public_slug}/cart', [PublicListingController::class, 'updateCart'])
+    ->middleware('throttle:40,1')
     ->name('public.cart.update');
 Route::delete('/s/{public_slug}/products/{product}/cart', [PublicListingController::class, 'removeFromCart'])
+    ->middleware('throttle:40,1')
     ->name('public.products.cart.remove');
 Route::post('/s/{public_slug}/cart/checkout', [PublicListingController::class, 'checkoutCart'])
+    ->middleware('throttle:10,1')
     ->name('public.cart.checkout');
+Route::get('/orders/track', [PublicOrderTrackingController::class, 'show'])->name('public.orders.track');
 
 Route::get('/pay/success', [PublicInvoiceController::class, 'success'])->name('pay.success');
 Route::get('/pay/{token}', [PublicInvoiceController::class, 'show'])->name('public.invoice');
-Route::post('/pay/{token}', [PublicInvoiceController::class, 'pay'])->name('public.invoice.pay');
+Route::post('/pay/{token}', [PublicInvoiceController::class, 'pay'])
+    ->middleware('throttle:10,1')
+    ->name('public.invoice.pay');
 Route::get('/p/{product_slug}', [PublicProductController::class, 'show'])->name('public.product');
 
 Route::post('/webhooks/paystack', [PaystackWebhookController::class, 'handle'])->name('webhooks.paystack');
@@ -63,6 +77,9 @@ Route::middleware(['auth', 'active_access'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/privacy/data-deletion-request', [LegalController::class, 'storeDataDeletionRequest'])
+        ->middleware('throttle:3,10')
+        ->name('legal.data-deletion.store');
     Route::put('/profile/seller', [SellerProfileController::class, 'update'])->name('profile.seller.update');
     Route::post('/profile/seller/test-connection', [SellerProfileController::class, 'testConnection'])->name('profile.seller.test');
 
@@ -73,6 +90,9 @@ Route::middleware(['auth', 'active_access'])->group(function () {
         Route::post('/products/export-pdf', [ProductController::class, 'exportPdf'])->name('products.exportPdf');
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
         Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        Route::get('/coupons', [CouponController::class, 'index'])->name('coupons.index');
+        Route::post('/coupons', [CouponController::class, 'store'])->name('coupons.store');
+        Route::patch('/coupons/{coupon}', [CouponController::class, 'update'])->name('coupons.update');
         Route::get('/public-preview', [SellerPublicPreviewController::class, 'show'])->name('public.preview');
     });
 
@@ -103,14 +123,44 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/payments/reconciliation', [AdminDashboardController::class, 'reconciliation'])->name('payments.reconciliation');
     Route::get('/payments/reconciliation/export', [AdminDashboardController::class, 'reconciliationExport'])->name('payments.reconciliation.export');
+    Route::post('/payments/reconciliation/bulk-retry', [AdminDashboardController::class, 'bulkRetryReconciliation'])
+        ->middleware('throttle:20,1')
+        ->name('payments.reconciliation.bulk-retry');
+    Route::post('/payments/reconciliation/bulk-mark-failed', [AdminDashboardController::class, 'bulkMarkFailedReconciliation'])
+        ->middleware('throttle:20,1')
+        ->name('payments.reconciliation.bulk-mark-failed');
+    Route::get('/jobs/failed', [AdminDashboardController::class, 'failedJobs'])->name('jobs.failed');
+    Route::post('/jobs/failed/retry-all', [AdminDashboardController::class, 'retryAllFailedJobs'])
+        ->middleware('throttle:10,1')
+        ->name('jobs.failed.retry-all');
+    Route::post('/jobs/failed/{id}/retry', [AdminDashboardController::class, 'retryFailedJob'])
+        ->middleware('throttle:30,1')
+        ->name('jobs.failed.retry');
+    Route::delete('/jobs/failed/{id}', [AdminDashboardController::class, 'forgetFailedJob'])
+        ->middleware('throttle:30,1')
+        ->name('jobs.failed.forget');
     Route::get('/sellers/{seller}', [AdminDashboardController::class, 'seller'])->name('sellers.show');
-    Route::post('/sellers/{seller}/sync-paystack', [AdminDashboardController::class, 'syncSellerPaystack'])->name('sellers.sync-paystack');
-    Route::post('/sellers/{seller}/suspend', [AdminDashboardController::class, 'suspendSeller'])->name('sellers.suspend');
-    Route::post('/sellers/{seller}/unsuspend', [AdminDashboardController::class, 'unsuspendSeller'])->name('sellers.unsuspend');
-    Route::post('/sellers/{seller}/notify', [AdminDashboardController::class, 'notifySeller'])->name('sellers.notify');
-    Route::post('/payments/{payment}/retry', [AdminDashboardController::class, 'retryPayment'])->name('payments.retry');
-    Route::post('/payments/{payment}/confirm', [AdminDashboardController::class, 'confirmPayment'])->name('payments.confirm');
-    Route::post('/payments/{payment}/mark-failed', [AdminDashboardController::class, 'markPaymentFailed'])->name('payments.mark-failed');
+    Route::post('/sellers/{seller}/sync-paystack', [AdminDashboardController::class, 'syncSellerPaystack'])
+        ->middleware('throttle:20,1')
+        ->name('sellers.sync-paystack');
+    Route::post('/sellers/{seller}/suspend', [AdminDashboardController::class, 'suspendSeller'])
+        ->middleware('throttle:20,1')
+        ->name('sellers.suspend');
+    Route::post('/sellers/{seller}/unsuspend', [AdminDashboardController::class, 'unsuspendSeller'])
+        ->middleware('throttle:20,1')
+        ->name('sellers.unsuspend');
+    Route::post('/sellers/{seller}/notify', [AdminDashboardController::class, 'notifySeller'])
+        ->middleware('throttle:30,1')
+        ->name('sellers.notify');
+    Route::post('/payments/{payment}/retry', [AdminDashboardController::class, 'retryPayment'])
+        ->middleware('throttle:30,1')
+        ->name('payments.retry');
+    Route::post('/payments/{payment}/confirm', [AdminDashboardController::class, 'confirmPayment'])
+        ->middleware('throttle:30,1')
+        ->name('payments.confirm');
+    Route::post('/payments/{payment}/mark-failed', [AdminDashboardController::class, 'markPaymentFailed'])
+        ->middleware('throttle:30,1')
+        ->name('payments.mark-failed');
     Route::get('/invoices', [AdminInvoiceController::class, 'index'])->name('invoices.index');
     Route::get('/invoices/{invoice}', [AdminInvoiceController::class, 'show'])->name('invoices.show');
 });

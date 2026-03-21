@@ -15,7 +15,7 @@
 
 @if($errors->any())
     <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-        {{ $errors->first() }}
+        Please correct the highlighted fields and try again.
     </div>
 @endif
 @if(session('status') === 'interest-captured')
@@ -255,14 +255,30 @@
 
             <form method="POST" action="{{ route('public.cart.checkout', $profile->public_slug) }}" class="mt-4 grid gap-3 sm:grid-cols-2">
                 @csrf
-                <input name="name" placeholder="Customer name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-                <input name="phone_number" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" data-strip-leading-zero="true" />
-                <input name="location" placeholder="Location (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 sm:col-span-2" />
+                <div>
+                    <input name="name" value="{{ old('name') }}" placeholder="Customer name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('name') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror" />
+                    @error('name') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <input name="phone_number" value="{{ old('phone_number') }}" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('phone_number') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror" data-strip-leading-zero="true" />
+                    @error('phone_number') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
+                <div class="sm:col-span-2">
+                    <input name="location" value="{{ old('location') }}" placeholder="Location (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('location') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror" />
+                    @error('location') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
+                <div class="sm:col-span-2">
+                    <input name="coupon_code" value="{{ old('coupon_code') }}" placeholder="Coupon code (optional)" class="w-full rounded-xl border-slate-200 text-sm uppercase focus:border-emerald-500 focus:ring-emerald-500 @error('coupon_code') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror" />
+                    @error('coupon_code') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
                 <label class="inline-flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
-                    <input type="checkbox" name="delivery_required" value="1" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                    <input type="checkbox" name="delivery_required" value="1" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" @checked(old('delivery_required'))>
                     Delivery required
                 </label>
-                <textarea name="delivery_note" rows="2" placeholder="Delivery note (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 sm:col-span-2"></textarea>
+                <div class="sm:col-span-2">
+                    <textarea name="delivery_note" rows="2" placeholder="Delivery note (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('delivery_note') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror">{{ old('delivery_note') }}</textarea>
+                    @error('delivery_note') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
                 <input type="hidden" name="phone_country" value="+233" />
                 <button type="submit" class="rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500 sm:col-span-2">
                     Pay total

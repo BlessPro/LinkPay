@@ -58,7 +58,7 @@
 
             @if($errors->any())
                 <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-                    {{ $errors->first() }}
+                    Please correct the highlighted fields and try again.
                 </div>
             @endif
 
@@ -81,9 +81,18 @@
 
             <form method="POST" action="{{ route('public.invoice.pay', $invoice->token) }}" class="mt-5 space-y-3">
                 @csrf
-                <input name="name" placeholder="Name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-                <input name="phone_number" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" required data-strip-leading-zero="true" />
-                <input name="location" placeholder="Location (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                <div>
+                    <input name="name" value="{{ old('name') }}" placeholder="Name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('name') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror" />
+                    @error('name') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <input name="phone_number" value="{{ old('phone_number') }}" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('phone_number') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror" required data-strip-leading-zero="true" />
+                    @error('phone_number') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <input name="location" value="{{ old('location') }}" placeholder="Location (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('location') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror" />
+                    @error('location') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
                 <input type="hidden" name="phone_country" value="+233" />
                 <button type="submit" class="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500" {{ $invoice->status === \App\Models\Invoice::STATUS_PAID || ! $seller?->paystack_subaccount_code || ! ($paymentsEnabled ?? true) ? 'disabled' : '' }}>
                     Pay amount due

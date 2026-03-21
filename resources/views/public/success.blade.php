@@ -18,12 +18,20 @@
                     ?? 'Seller';
                 $itemName = $payment->invoice?->title ?? $payment->product?->name ?? 'payment';
                 $message = "Hi {$sellerName}, I just paid {$currency} ".number_format((float) $payment->amount, 2, '.', ',')." for {$itemName}. Reference: {$payment->reference}.";
+                $orderTrackingUrl = $payment->order?->reference
+                    ? route('public.orders.track', ['reference' => $payment->order->reference])
+                    : null;
             @endphp
 
             <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-left">
                 <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Copy message to seller</p>
                 <textarea readonly class="mt-3 w-full rounded-xl border-slate-200 bg-white p-3 text-sm text-slate-700" rows="4">{{ $message }}</textarea>
             </div>
+            @if($orderTrackingUrl)
+                <a href="{{ $orderTrackingUrl }}" class="mt-4 inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-emerald-300 hover:text-emerald-700">
+                    Track this order
+                </a>
+            @endif
         @else
             @if($reference)
                 <p class="mt-6 text-sm text-slate-500">Reference: {{ $reference }}</p>
@@ -36,7 +44,7 @@
             <a href="{{ $listingUrl }}" class="mt-4 inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500">
                 Back to storefront
             </a>
-            <p class="mt-2 text-xs text-slate-400">Redirecting automatically in 8 seconds…</p>
+            <p class="mt-2 text-xs text-slate-400">Redirecting automatically in 8 seconds...</p>
         </div>
         <script>
             setTimeout(() => {

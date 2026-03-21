@@ -54,7 +54,7 @@
         </div>
     </div>
 
-    <div class="mt-6 grid gap-4 lg:grid-cols-5">
+    <div class="mt-6 grid gap-4 lg:grid-cols-6">
         <div class="rounded-2xl border border-amber-100 bg-amber-50/70 p-5">
             <p class="text-xs uppercase tracking-[0.3em] text-amber-700">Pending invoices</p>
             <p class="mt-3 text-2xl font-semibold text-amber-900">{{ $pendingInvoices }}</p>
@@ -76,6 +76,13 @@
             <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Message delivery (24h)</p>
             <p class="mt-3 text-2xl font-semibold text-slate-900">{{ $deliveryRate }}%</p>
             <p class="mt-1 text-xs text-slate-500">{{ $twilioTotal24h - $twilioFailed24h }}/{{ $twilioTotal24h }}</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Failed jobs (24h)</p>
+            <p class="mt-3 text-2xl font-semibold text-slate-900">{{ $failedJobs24h }}</p>
+            <a href="{{ route('admin.jobs.failed') }}" class="mt-2 inline-flex text-xs font-semibold text-slate-600 hover:text-slate-900">
+                Open queue
+            </a>
         </div>
     </div>
 

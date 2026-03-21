@@ -17,6 +17,8 @@ use App\Services\SellerNotifier;
 use App\Support\Money;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -65,6 +67,11 @@ class AdminDashboardController extends Controller
             ->take(12)
             ->get();
 
+        $failedJobsTotal = $this->failedJobsQuery()->count();
+        $failedJobs24h = $this->failedJobsQuery()
+            ->where('failed_at', '>=', now()->subDay())
+            ->count();
+
         $dailySeries = $this->buildDailySeries();
         $weeklySeries = $this->buildWeeklySeries();
         $monthlySeries = $this->buildMonthlySeries();
@@ -111,6 +118,8 @@ class AdminDashboardController extends Controller
             'twilioTotal24h' => $twilioTotal24h,
             'twilioFailed24h' => $twilioFailed24h,
             'twilioRecent' => $twilioRecent,
+            'failedJobsTotal' => $failedJobsTotal,
+            'failedJobs24h' => $failedJobs24h,
             'dailySeries' => $dailySeries,
             'weeklySeries' => $weeklySeries,
             'monthlySeries' => $monthlySeries,
@@ -121,6 +130,106 @@ class AdminDashboardController extends Controller
             'recentAudits' => $recentAudits,
             'currency' => config('services.paystack.currency', 'GHS'),
         ]);
+    }
+
+    public function failedJobs(): View
+    {
+        $failedJobs = $this->failedJobsQuery()
+            ->orderByDesc('failed_at')
+            ->paginate(30);
+
+        return view('admin.jobs.failed', [
+            'failedJobs' => $failedJobs,
+            'failedJobsTotal' => $this->failedJobsQuery()->count(),
+            'failedJobs24h' => $this->failedJobsQuery()->where('failed_at', '>=', now()->subDay())->count(),
+        ]);
+    }
+
+    public function retryFailedJob(Request $request, string $id): RedirectResponse
+    {
+        try {
+            Artisan::call('queue:retry', ['id' => $id]);
+
+            $this->auditGeneric(
+                (int) $request->user()->id,
+                'queue.failed_job.retry',
+                'failed_jobs',
+                $id,
+                'Retry failed job '.$id,
+                $request
+            );
+
+            return back()->with('status', 'failed-job-retried');
+        } catch (\Throwable $exception) {
+            $this->auditGeneric(
+                (int) $request->user()->id,
+                'queue.failed_job.retry.error',
+                'failed_jobs',
+                $id,
+                'Retry failed job error '.$id,
+                $request,
+                ['message' => $exception->getMessage()]
+            );
+            return back()->withErrors(['failed_jobs' => 'Retry failed: '.$exception->getMessage()]);
+        }
+    }
+
+    public function forgetFailedJob(Request $request, string $id): RedirectResponse
+    {
+        try {
+            Artisan::call('queue:forget', ['id' => $id]);
+
+            $this->auditGeneric(
+                (int) $request->user()->id,
+                'queue.failed_job.forget',
+                'failed_jobs',
+                $id,
+                'Forget failed job '.$id,
+                $request
+            );
+
+            return back()->with('status', 'failed-job-forgotten');
+        } catch (\Throwable $exception) {
+            $this->auditGeneric(
+                (int) $request->user()->id,
+                'queue.failed_job.forget.error',
+                'failed_jobs',
+                $id,
+                'Forget failed job error '.$id,
+                $request,
+                ['message' => $exception->getMessage()]
+            );
+            return back()->withErrors(['failed_jobs' => 'Forget failed: '.$exception->getMessage()]);
+        }
+    }
+
+    public function retryAllFailedJobs(Request $request): RedirectResponse
+    {
+        try {
+            Artisan::call('queue:retry', ['id' => 'all']);
+
+            $this->auditGeneric(
+                (int) $request->user()->id,
+                'queue.failed_job.retry_all',
+                'failed_jobs',
+                null,
+                'Retry all failed jobs',
+                $request
+            );
+
+            return back()->with('status', 'failed-jobs-retried-all');
+        } catch (\Throwable $exception) {
+            $this->auditGeneric(
+                (int) $request->user()->id,
+                'queue.failed_job.retry_all.error',
+                'failed_jobs',
+                null,
+                'Retry all failed jobs error',
+                $request,
+                ['message' => $exception->getMessage()]
+            );
+            return back()->withErrors(['failed_jobs' => 'Retry all failed: '.$exception->getMessage()]);
+        }
     }
 
     public function seller(User $seller): View
@@ -182,11 +291,20 @@ class AdminDashboardController extends Controller
 
     public function reconciliation(Request $request, PaymentReconciliationService $reconciliation): View
     {
-        $days = (int) $request->query('days', 7);
-        $sellerId = $request->query('seller_id');
-        $sellerId = is_numeric($sellerId) ? (int) $sellerId : null;
+        ['days' => $days, 'sellerId' => $sellerId, 'type' => $type, 'agedOnly' => $agedOnly] = $this->reconciliationFilters($request);
 
-        $report = $reconciliation->buildReport($days, $sellerId);
+        $report = $reconciliation->buildReport($days, $sellerId, $type, $agedOnly);
+        $criticalThreshold = (int) config('monitoring.reconciliation.critical_threshold', 1);
+        $highThreshold = (int) config('monitoring.reconciliation.high_threshold', 3);
+        $criticalCount = (int) ($report['severityBuckets']['critical'] ?? 0);
+        $highCount = (int) ($report['severityBuckets']['high'] ?? 0);
+        $alertLevel = null;
+        if ($criticalCount >= $criticalThreshold) {
+            $alertLevel = 'critical';
+        } elseif ($highCount >= $highThreshold) {
+            $alertLevel = 'high';
+        }
+
         $sellers = User::query()
             ->has('sellerProfile')
             ->with('sellerProfile:id,user_id,business_name')
@@ -197,15 +315,16 @@ class AdminDashboardController extends Controller
             'report' => $report,
             'sellers' => $sellers,
             'currency' => config('services.paystack.currency', 'GHS'),
+            'alertLevel' => $alertLevel,
+            'criticalThreshold' => $criticalThreshold,
+            'highThreshold' => $highThreshold,
         ]);
     }
 
     public function reconciliationExport(Request $request, PaymentReconciliationService $reconciliation): Response
     {
-        $days = (int) $request->query('days', 7);
-        $sellerId = $request->query('seller_id');
-        $sellerId = is_numeric($sellerId) ? (int) $sellerId : null;
-        $report = $reconciliation->buildReport($days, $sellerId);
+        ['days' => $days, 'sellerId' => $sellerId, 'type' => $type, 'agedOnly' => $agedOnly] = $this->reconciliationFilters($request);
+        $report = $reconciliation->buildReport($days, $sellerId, $type, $agedOnly);
 
         $rows = [];
         $rows[] = [
@@ -250,6 +369,153 @@ class AdminDashboardController extends Controller
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="reconciliation-exceptions.csv"',
         ]);
+    }
+
+    public function bulkRetryReconciliation(
+        Request $request,
+        PaymentReconciliationService $reconciliation,
+        PaystackService $paystack,
+        PaymentService $paymentsService
+    ): RedirectResponse {
+        ['days' => $days, 'sellerId' => $sellerId, 'type' => $type, 'agedOnly' => $agedOnly] = $this->reconciliationFilters($request);
+        $report = $reconciliation->buildReport($days, $sellerId, $type, $agedOnly);
+        $paymentIds = collect($report['exceptions'])
+            ->pluck('payment_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $payments = Payment::query()->whereIn('id', $paymentIds)->get()->keyBy('id');
+
+        $retried = 0;
+        $settled = 0;
+        $failed = 0;
+
+        foreach ($paymentIds as $paymentId) {
+            /** @var Payment|null $payment */
+            $payment = $payments->get($paymentId);
+            if (! $payment || $payment->status === Payment::STATUS_SUCCESS) {
+                continue;
+            }
+
+            $retried++;
+            try {
+                $verification = $paystack->verifyTransaction($payment->reference);
+                if (data_get($verification, 'data.status') === 'success') {
+                    $paymentsService->markSuccess($payment, data_get($verification, 'data', []));
+                    $settled++;
+                } else {
+                    $failed++;
+                }
+            } catch (\Throwable $exception) {
+                $failed++;
+            }
+        }
+
+        $this->auditGeneric(
+            (int) $request->user()->id,
+            'payment.reconciliation.bulk_retry',
+            'payment',
+            null,
+            'Reconciliation bulk retry',
+            $request,
+            [
+                'retried' => $retried,
+                'settled' => $settled,
+                'failed' => $failed,
+                'filters' => [
+                    'days' => $days,
+                    'sellerId' => $sellerId,
+                    'type' => $type,
+                    'agedOnly' => $agedOnly,
+                ],
+            ]
+        );
+
+        return redirect()->route('admin.payments.reconciliation', [
+            'days' => $days,
+            'seller_id' => $sellerId,
+            'type' => $type,
+            'aged_only' => $agedOnly ? 1 : 0,
+        ])->with('status', 'reconciliation-bulk-retry')
+            ->with('bulk_retry', [
+                'retried' => $retried,
+                'settled' => $settled,
+                'failed' => $failed,
+            ]);
+    }
+
+    public function bulkMarkFailedReconciliation(
+        Request $request,
+        PaymentReconciliationService $reconciliation
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'note' => ['required', 'string', 'min:5', 'max:500'],
+        ]);
+
+        ['days' => $days, 'sellerId' => $sellerId, 'type' => $type, 'agedOnly' => $agedOnly] = $this->reconciliationFilters($request);
+        $report = $reconciliation->buildReport($days, $sellerId, $type, $agedOnly);
+        $paymentIds = collect($report['exceptions'])
+            ->pluck('payment_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $payments = Payment::query()->whereIn('id', $paymentIds)->get();
+        $marked = 0;
+        $skipped = 0;
+
+        foreach ($payments as $payment) {
+            if ($payment->status === Payment::STATUS_SUCCESS) {
+                $skipped++;
+                continue;
+            }
+
+            $payment->status = Payment::STATUS_FAILED;
+            $payment->verified_at = now();
+            $payment->raw_payload = array_replace_recursive($payment->raw_payload ?? [], [
+                'admin_manual_update' => [
+                    'marked_failed' => true,
+                    'by_admin' => $request->user()->id,
+                    'note' => $validated['note'],
+                    'at' => now()->toIso8601String(),
+                    'source' => 'reconciliation_bulk',
+                ],
+            ]);
+            $payment->save();
+            $marked++;
+        }
+
+        $this->auditGeneric(
+            (int) $request->user()->id,
+            'payment.reconciliation.bulk_mark_failed',
+            'payment',
+            null,
+            'Reconciliation bulk mark failed',
+            $request,
+            [
+                'marked' => $marked,
+                'skipped' => $skipped,
+                'note' => $validated['note'],
+                'filters' => [
+                    'days' => $days,
+                    'sellerId' => $sellerId,
+                    'type' => $type,
+                    'agedOnly' => $agedOnly,
+                ],
+            ]
+        );
+
+        return redirect()->route('admin.payments.reconciliation', [
+            'days' => $days,
+            'seller_id' => $sellerId,
+            'type' => $type,
+            'aged_only' => $agedOnly ? 1 : 0,
+        ])->with('status', 'reconciliation-bulk-mark-failed')
+            ->with('bulk_mark_failed', [
+                'marked' => $marked,
+                'skipped' => $skipped,
+            ]);
     }
 
     public function retryPayment(
@@ -301,7 +567,7 @@ class AdminDashboardController extends Controller
         }
 
         $validated = $request->validate([
-            'note' => ['nullable', 'string', 'max:500'],
+            'note' => ['required', 'string', 'min:5', 'max:500'],
         ]);
 
         $admin = $request->user();
@@ -343,7 +609,7 @@ class AdminDashboardController extends Controller
         }
 
         $validated = $request->validate([
-            'note' => ['nullable', 'string', 'max:500'],
+            'note' => ['required', 'string', 'min:5', 'max:500'],
         ]);
 
         $payment->status = Payment::STATUS_FAILED;
@@ -401,6 +667,15 @@ class AdminDashboardController extends Controller
 
             return back()->with('status', 'seller-paystack-synced');
         } catch (\Throwable $exception) {
+            $this->auditGeneric(
+                (int) $request->user()->id,
+                'seller.paystack.sync.error',
+                User::class,
+                (string) $seller->id,
+                'Paystack sync error '.$seller->email,
+                $request,
+                ['message' => $exception->getMessage()]
+            );
             return back()->withErrors(['seller' => 'Paystack sync failed: '.$exception->getMessage()]);
         }
     }
@@ -639,7 +914,9 @@ class AdminDashboardController extends Controller
             'target_type' => Payment::class,
             'target_id' => (string) $payment->id,
             'title' => 'Payment '.$payment->reference,
-            'meta' => $meta,
+            'meta' => array_merge($meta, [
+                'user_agent' => $request->userAgent(),
+            ]),
             'ip_address' => $request->ip(),
         ]);
     }
@@ -659,8 +936,35 @@ class AdminDashboardController extends Controller
             'target_type' => $targetType,
             'target_id' => $targetId,
             'title' => $title,
-            'meta' => $meta,
+            'meta' => array_merge($meta, [
+                'user_agent' => $request->userAgent(),
+            ]),
             'ip_address' => $request->ip(),
         ]);
+    }
+
+    private function failedJobsQuery()
+    {
+        return DB::table(config('queue.failed.table', 'failed_jobs'));
+    }
+
+    /**
+     * @return array{days:int,sellerId:?int,type:?string,agedOnly:bool}
+     */
+    private function reconciliationFilters(Request $request): array
+    {
+        $days = (int) $request->input('days', 7);
+        $sellerId = $request->input('seller_id');
+        $sellerId = is_numeric($sellerId) ? (int) $sellerId : null;
+        $type = $request->input('type');
+        $type = is_string($type) && $type !== '' ? $type : null;
+        $agedOnly = (bool) $request->boolean('aged_only');
+
+        return [
+            'days' => $days,
+            'sellerId' => $sellerId,
+            'type' => $type,
+            'agedOnly' => $agedOnly,
+        ];
     }
 }

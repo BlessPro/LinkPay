@@ -6,6 +6,7 @@ use App\Models\Payment;
 use App\Models\WebhookEvent;
 use App\Services\PaymentService;
 use App\Services\PaystackService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -14,16 +15,65 @@ class PaystackWebhookController extends Controller
     public function handle(Request $request, PaystackService $paystack, PaymentService $payments)
     {
         $payload = $request->getContent();
+        $eventHash = hash('sha256', $payload);
+        $eventName = (string) $request->input('event');
+        $reference = data_get($request->input('data'), 'reference');
+
+        $existingEvent = null;
+        try {
+            $existingEvent = WebhookEvent::query()
+                ->where('provider', 'paystack')
+                ->where('event_hash', $eventHash)
+                ->latest('id')
+                ->first();
+        } catch (\Throwable $exception) {
+            Log::warning('Webhook duplicate lookup failed', [
+                'message' => $exception->getMessage(),
+            ]);
+        }
+
+        if ($existingEvent && in_array($existingEvent->status, [WebhookEvent::STATUS_PROCESSED, WebhookEvent::STATUS_IGNORED], true)) {
+            return response()->json(['status' => 'duplicate_ignored']);
+        }
+
         $event = null;
         try {
-            $event = WebhookEvent::create([
-                'provider' => 'paystack',
-                'event' => $request->input('event'),
-                'reference' => data_get($request->input('data'), 'reference'),
-                'status' => WebhookEvent::STATUS_RECEIVED,
-                'payload' => $request->all(),
-                'received_at' => now(),
-            ]);
+            if ($existingEvent) {
+                $event = $existingEvent;
+            } else {
+                try {
+                    $event = WebhookEvent::create([
+                        'provider' => 'paystack',
+                        'event' => $eventName,
+                        'event_hash' => $eventHash,
+                        'reference' => $reference,
+                        'status' => WebhookEvent::STATUS_RECEIVED,
+                        'payload' => $request->all(),
+                        'received_at' => now(),
+                    ]);
+                } catch (QueryException $exception) {
+                    if (! $this->isDuplicateEventHashException($exception)) {
+                        throw $exception;
+                    }
+
+                    $event = WebhookEvent::query()
+                        ->where('provider', 'paystack')
+                        ->where('event_hash', $eventHash)
+                        ->latest('id')
+                        ->first();
+                }
+            }
+
+            if ($existingEvent) {
+                $existingEvent->update([
+                    'event' => $eventName,
+                    'reference' => $reference,
+                    'status' => WebhookEvent::STATUS_RECEIVED,
+                    'payload' => $request->all(),
+                    'error_message' => null,
+                    'received_at' => now(),
+                ]);
+            }
         } catch (\Throwable $exception) {
             // Webhook handling must continue even if observability tables are missing.
             Log::warning('Webhook event logging failed', [
@@ -43,7 +93,7 @@ class PaystackWebhookController extends Controller
             return response()->json(['status' => 'invalid_signature'], 401);
         }
 
-        if ($request->input('event') !== 'charge.success') {
+        if ($eventName !== 'charge.success') {
             $this->updateEvent($event, [
                 'status' => WebhookEvent::STATUS_IGNORED,
                 'verification_status' => 'ignored_event',
@@ -51,7 +101,6 @@ class PaystackWebhookController extends Controller
             return response()->json(['status' => 'ignored']);
         }
 
-        $reference = data_get($request->input('data'), 'reference');
         if (! $reference) {
             $this->updateEvent($event, [
                 'status' => WebhookEvent::STATUS_FAILED,
@@ -165,5 +214,14 @@ class PaystackWebhookController extends Controller
         $payment->raw_payload = $raw;
         $payment->verified_at = now();
         $payment->save();
+    }
+
+    private function isDuplicateEventHashException(QueryException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        return str_contains($message, 'webhook_events_provider_event_hash_unique')
+            || str_contains($message, 'duplicate key value')
+            || str_contains($message, 'unique constraint');
     }
 }
