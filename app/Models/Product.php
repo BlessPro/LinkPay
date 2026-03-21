@@ -21,9 +21,13 @@ class Product extends Model
         'slug',
         'description',
         'price',
+        'stock_quantity',
+        'low_stock_threshold',
         'image_path',
         'is_active',
         'status',
+        'stock_alert_state',
+        'stock_alerted_at',
     ];
 
     protected function casts(): array
@@ -31,6 +35,9 @@ class Product extends Model
         return [
             'price' => 'decimal:2',
             'is_active' => 'boolean',
+            'stock_quantity' => 'integer',
+            'low_stock_threshold' => 'integer',
+            'stock_alerted_at' => 'datetime',
         ];
     }
 
@@ -70,6 +77,11 @@ class Product extends Model
     public function isPayable(): bool
     {
         return in_array($this->status, [self::STATUS_IN_STOCK, self::STATUS_LOW_STOCK, self::STATUS_PRE_ORDER], true);
+    }
+
+    public function isInventoryManaged(): bool
+    {
+        return ! in_array($this->status, [self::STATUS_PRE_ORDER, self::STATUS_UNAVAILABLE], true);
     }
 
     public function user()

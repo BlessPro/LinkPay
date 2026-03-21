@@ -18,6 +18,7 @@ class SellerNotification extends Model
     public const TYPE_ADMIN_MESSAGE = 'ADMIN_MESSAGE';
     public const TYPE_ORDER_ACCEPTED = 'ORDER_ACCEPTED';
     public const TYPE_ORDER_REJECTED = 'ORDER_REJECTED';
+    public const TYPE_STOCK_ALERT = 'STOCK_ALERT';
 
     protected $table = 'notifications';
 

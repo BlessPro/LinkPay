@@ -2,44 +2,97 @@
     $title = 'Dashboard';
     $listingUrl = $profile ? route('public.listing', $profile->public_slug) : null;
 @endphp
+
+@once
+    <style>
+        @keyframes dashboard-marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .dashboard-marquee-track {
+            display: inline-flex;
+            min-width: max-content;
+            animation: dashboard-marquee 16s linear infinite;
+        }
+    </style>
+@endonce
 @extends('layouts.dashboard')
 
 @section('content')
-    <div class="grid gap-6 lg:grid-cols-5">
-        <div class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
-            <p class="text-xs uppercase tracking-[0.3em] text-emerald-500">Total received</p>
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-5 lg:gap-6">
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.3em] text-emerald-500">Orders</p>
             <p class="mt-4 text-2xl font-semibold text-slate-900">
-                {{ \App\Support\Money::format($totalReceived, $currency) }}
+                {{ number_format($ordersCount) }}
             </p>
-            <p class="mt-2 text-xs text-slate-500">Last 30 days: {{ number_format($totalChange, 1) }}%</p>
+            <p class="mt-2 text-xs text-slate-500">Confirmed in {{ now()->format('F') }}</p>
         </div>
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p class="text-xs uppercase tracking-[0.3em] text-slate-400">This week</p>
+        <div class="rounded-2xl border border-blue-200 bg-blue-50/60 p-5 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.3em] text-blue-500">Amount received</p>
             <p class="mt-4 text-2xl font-semibold text-slate-900">
-                {{ \App\Support\Money::format($thisWeek, $currency) }}
+                {{ \App\Support\Money::format($amountReceived, $currency) }}
             </p>
-            <p class="mt-2 text-xs text-slate-500">Change: {{ number_format($weekChange, 1) }}%</p>
+            <p class="mt-2 text-xs text-slate-500">Successful payments this month</p>
         </div>
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p class="text-xs uppercase tracking-[0.3em] text-slate-400">This month</p>
+        <div class="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-5 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.3em] text-indigo-500">Traffic</p>
             <p class="mt-4 text-2xl font-semibold text-slate-900">
-                {{ \App\Support\Money::format($thisMonth, $currency) }}
+                {{ number_format($trafficCount) }}
             </p>
-            <p class="mt-2 text-xs text-slate-500">Change: {{ number_format($monthChange, 1) }}%</p>
+            <p class="mt-2 text-xs text-slate-500">Views and clicks this month</p>
         </div>
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Pending balance</p>
+        <div class="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.3em] text-amber-600">New customers</p>
             <p class="mt-4 text-2xl font-semibold text-slate-900">
-                {{ \App\Support\Money::format($pendingBalance, $currency) }}
+                {{ number_format($newCustomersCount) }}
             </p>
-            <p class="mt-2 text-xs text-slate-500">Open invoices: {{ $invoiceCount }}</p>
+            <p class="mt-2 text-xs text-slate-500">Unique buyers this month</p>
         </div>
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Invoice conversion</p>
+        <div class="col-span-2 overflow-hidden rounded-xl border border-fuchsia-200 bg-fuchsia-50/70 p-3 shadow-sm lg:hidden">
+            <div class="dashboard-marquee-track items-center gap-10 text-sm font-semibold text-fuchsia-700">
+                <span>Conversion Rate {{ number_format($salesConversionRate, 1) }}%</span>
+                <span>Orders {{ number_format($ordersCount) }}</span>
+                <span>Traffic {{ number_format($trafficCount) }}</span>
+                <span>New Customers {{ number_format($newCustomersCount) }}</span>
+                <span>Conversion Rate {{ number_format($salesConversionRate, 1) }}%</span>
+                <span>Orders {{ number_format($ordersCount) }}</span>
+                <span>Traffic {{ number_format($trafficCount) }}</span>
+                <span>New Customers {{ number_format($newCustomersCount) }}</span>
+            </div>
+        </div>
+        <div class="hidden rounded-2xl border border-fuchsia-200 bg-fuchsia-50/60 p-5 shadow-sm lg:block">
+            <p class="text-xs uppercase tracking-[0.3em] text-fuchsia-500">Conversion rate</p>
             <p class="mt-4 text-2xl font-semibold text-slate-900">
-                {{ number_format($conversionRate, 1) }}%
+                {{ number_format($salesConversionRate, 1) }}%
             </p>
-            <p class="mt-2 text-xs text-slate-500">{{ $conversionCount }} of {{ $invoiceCount }} converted</p>
+            <p class="mt-2 text-xs text-slate-500">Orders ÷ Traffic ({{ now()->format('F') }})</p>
+        </div>
+    </div>
+
+    <div class="mt-6 rounded-2xl border border-amber-200 bg-amber-50/60 p-5 shadow-sm">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-[0.2em] text-amber-700">Inventory alerts</p>
+                <p class="mt-1 text-sm text-amber-900">Low stock and sold out products that need attention.</p>
+            </div>
+            <a href="{{ route('products.index', ['stock' => \App\Models\Product::STATUS_LOW_STOCK]) }}" class="rounded-full border border-amber-300 bg-white px-4 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100">Review low stock</a>
+        </div>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            @forelse($inventoryAlerts as $item)
+                <div class="rounded-xl border border-amber-100 bg-white px-4 py-3">
+                    <p class="text-sm font-semibold text-slate-900">{{ $item->name }}</p>
+                    <p class="mt-1 text-xs text-slate-600">
+                        {{ $item->status === \App\Models\Product::STATUS_SOLD_OUT ? 'Sold out' : 'Low stock' }}
+                        · Qty {{ $item->stock_quantity }}
+                        · Threshold {{ $item->low_stock_threshold }}
+                    </p>
+                    <a href="{{ route('products.edit', $item) }}" class="mt-2 inline-flex text-xs font-semibold text-amber-700 hover:text-amber-800">Restock / Edit</a>
+                </div>
+            @empty
+                <div class="col-span-full rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    No low-stock alerts right now.
+                </div>
+            @endforelse
         </div>
     </div>
 

@@ -25,6 +25,18 @@
                 <input name="price" value="{{ old('price', $product->price) }}" required type="number" step="0.01" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
                 @error('price') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
             </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="text-sm font-medium text-slate-700">Stock quantity</label>
+                    <input name="stock_quantity" value="{{ old('stock_quantity', $product->stock_quantity) }}" type="number" min="0" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
+                    @error('stock_quantity') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-slate-700">Low stock threshold</label>
+                    <input name="low_stock_threshold" value="{{ old('low_stock_threshold', $product->low_stock_threshold) }}" type="number" min="0" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
+                    @error('low_stock_threshold') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
+                </div>
+            </div>
             <div>
                 <label class="text-sm font-medium text-slate-700">Image (optional)</label>
                 <input name="image" type="file" class="mt-2 w-full rounded-xl border-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-emerald-700" />
@@ -79,6 +91,10 @@
                 <div class="rounded-lg border border-slate-100 bg-slate-50/70 px-3 py-2">
                     <p class="text-xs text-slate-400">Conversion</p>
                     <p class="text-sm font-semibold text-slate-900">{{ number_format($stats['conversion'], 1) }}%</p>
+                </div>
+                <div class="rounded-lg border border-slate-100 bg-slate-50/70 px-3 py-2 sm:col-span-2">
+                    <p class="text-xs text-slate-400">Inventory</p>
+                    <p class="text-sm font-semibold text-slate-900">Qty {{ $product->stock_quantity }} · Threshold {{ $product->low_stock_threshold }}</p>
                 </div>
             </div>
             <p class="mt-4 text-sm text-slate-600">Total paid: {{ \App\Support\Money::format($stats['paymentTotal'], $currency) }}</p>

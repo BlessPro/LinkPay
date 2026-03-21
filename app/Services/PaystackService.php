@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\SellerProfile;
 use App\Support\Money;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -92,6 +93,59 @@ class PaystackService
             ->get('/transaction/verify/'.$reference)
             ->throw()
             ->json();
+    }
+
+    /**
+     * @return array{data: array<int, array<string, mixed>>, meta: array<string, mixed>}
+     */
+    public function fetchTransactionsByDateRange(
+        CarbonInterface $from,
+        CarbonInterface $to,
+        int $maxPages = 5,
+        int $perPage = 100
+    ): array {
+        if (! config('services.paystack.secret_key')) {
+            return [
+                'data' => [],
+                'meta' => ['total' => 0, 'perPage' => $perPage, 'page' => 1, 'pageCount' => 0],
+            ];
+        }
+
+        $all = [];
+        $meta = [];
+        $page = 1;
+
+        while ($page <= $maxPages) {
+            $response = $this->client()
+                ->get('/transaction', [
+                    'from' => $from->toDateString(),
+                    'to' => $to->toDateString(),
+                    'perPage' => $perPage,
+                    'page' => $page,
+                ])
+                ->throw()
+                ->json();
+
+            $pageData = $response['data'] ?? [];
+            $meta = $response['meta'] ?? [];
+            if (! is_array($pageData) || $pageData === []) {
+                break;
+            }
+
+            $all = array_merge($all, $pageData);
+
+            $pageCount = (int) ($meta['pageCount'] ?? 1);
+            if ($page >= $pageCount) {
+                break;
+            }
+
+            $page++;
+        }
+
+        return [
+            'data' => $all,
+            'meta' => $meta,
+        ];
     }
 
     public function listBanks(string $currency = 'GHS'): array

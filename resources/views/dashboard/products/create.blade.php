@@ -23,6 +23,18 @@
                 <input name="price" value="{{ old('price') }}" required type="number" step="0.01" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
                 @error('price') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
             </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="text-sm font-medium text-slate-700">Stock quantity</label>
+                    <input name="stock_quantity" value="{{ old('stock_quantity', 0) }}" type="number" min="0" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
+                    @error('stock_quantity') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-slate-700">Low stock threshold</label>
+                    <input name="low_stock_threshold" value="{{ old('low_stock_threshold', 5) }}" type="number" min="0" class="mt-2 w-full rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500" />
+                    @error('low_stock_threshold') <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
+                </div>
+            </div>
             <div>
                 <label class="text-sm font-medium text-slate-700">Image (optional)</label>
                 <input name="image" type="file" class="mt-2 w-full rounded-xl border-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-emerald-700" />

@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use App\Models\Lead;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Product;
 use Carbon\Carbon;
 use App\Services\SellerNotifier;
 use App\Services\HubtelSmsService;
@@ -122,6 +123,13 @@ class PaymentService
             }
         }
 
+        if ($payment->product_id && ! $payment->order_id) {
+            $product = Product::find($payment->product_id);
+            if ($product) {
+                app(InventoryService::class)->decrementForDirectProductPayment($product, 1, $user);
+            }
+        }
+
         if ($payment->order_id) {
             $order = Order::with('items')->find($payment->order_id);
             if ($order) {
@@ -154,6 +162,8 @@ class PaymentService
                         ]
                     );
                 }
+
+                app(InventoryService::class)->decrementForOrder($order, $user);
             }
         }
 

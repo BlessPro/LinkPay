@@ -194,6 +194,13 @@ class PublicListingController extends Controller
             'product',
             (string) $product->id
         );
+        $analytics->trackEvent(
+            $request,
+            $profile->user_id,
+            \App\Models\AnalyticsEvent::TYPE_CHECKOUT_STARTED,
+            'product',
+            (string) $product->id
+        );
 
         $payment = Payment::create([
             'user_id' => $profile->user_id,
@@ -248,7 +255,7 @@ class PublicListingController extends Controller
         return redirect()->away($data['authorization_url'] ?? route('public.listing', $public_slug));
     }
 
-    public function addToCart(Request $request, string $public_slug, Product $product)
+    public function addToCart(Request $request, string $public_slug, Product $product, AnalyticsService $analytics)
     {
         $request->validate([
             'quantity' => ['required', 'integer', 'min:1', 'max:100'],
@@ -266,6 +273,14 @@ class PublicListingController extends Controller
         ];
 
         $request->session()->put($this->cartKey($public_slug), $cart);
+
+        $analytics->trackEvent(
+            $request,
+            $profile->user_id,
+            \App\Models\AnalyticsEvent::TYPE_ADD_TO_CART,
+            'product',
+            (string) $product->id
+        );
 
         return back()->with('status', 'cart-updated');
     }
@@ -313,7 +328,7 @@ class PublicListingController extends Controller
         return back()->with('status', 'cart-updated');
     }
 
-    public function checkoutCart(Request $request, string $public_slug, PaystackService $paystack)
+    public function checkoutCart(Request $request, string $public_slug, PaystackService $paystack, AnalyticsService $analytics)
     {
         $request->validate([
             'name' => ['nullable', 'string', 'max:120'],
@@ -343,6 +358,14 @@ class PublicListingController extends Controller
         if ($cart['items']->isEmpty()) {
             return back()->withErrors(['paystack' => 'Your cart is empty.'])->withInput();
         }
+
+        $analytics->trackEvent(
+            $request,
+            $profile->user_id,
+            \App\Models\AnalyticsEvent::TYPE_CHECKOUT_STARTED,
+            'listing',
+            (string) $profile->id
+        );
 
         $phoneInput = $request->input('phone_number');
         $phoneParts = array_filter(array_map('trim', explode(',', (string) $phoneInput)));

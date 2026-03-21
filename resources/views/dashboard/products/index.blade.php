@@ -19,6 +19,20 @@
         </div>
     </div>
 
+    <div class="mt-4 flex flex-wrap gap-2">
+        @php
+            $stockTabs = array_merge(['all' => 'All'], \App\Models\Product::statusOptions());
+        @endphp
+        @foreach($stockTabs as $key => $label)
+            <a
+                href="{{ route('products.index', array_merge(request()->query(), ['stock' => $key])) }}"
+                class="rounded-full border px-4 py-1.5 text-xs font-semibold {{ ($stockFilter ?? 'all') === $key ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:text-emerald-700' }}"
+            >
+                {{ $label }}
+            </a>
+        @endforeach
+    </div>
+
     <div id="export-offcanvas" class="fixed inset-y-0 right-0 z-40 hidden w-full max-w-sm p-6 bg-white border-l shadow-2xl border-slate-200">
         <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-slate-900">Custom range</h3>
@@ -298,6 +312,10 @@
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-3 sm:col-span-3">
+                                        <div class="grid flex-1 gap-2 sm:grid-cols-2">
+                                            <input name="stock_quantity" value="{{ $product->stock_quantity }}" type="number" min="0" class="w-full rounded-xl border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="Stock qty">
+                                            <input name="low_stock_threshold" value="{{ $product->low_stock_threshold }}" type="number" min="0" class="w-full rounded-xl border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="Low threshold">
+                                        </div>
                                         <button type="submit" class="px-4 py-2 text-xs font-semibold text-white rounded-full bg-emerald-600 hover:bg-emerald-500">
                                             Save changes
                                         </button>

@@ -12,6 +12,8 @@ class AnalyticsEvent extends Model
     public const TYPE_LISTING_VIEW = 'listing_view';
     public const TYPE_PRODUCT_IMPRESSION = 'product_impression';
     public const TYPE_PRODUCT_CLICK = 'product_click';
+    public const TYPE_ADD_TO_CART = 'add_to_cart';
+    public const TYPE_CHECKOUT_STARTED = 'checkout_started';
     public const TYPE_INVOICE_VIEW = 'invoice_view';
     public const TYPE_INVOICE_CLICK = 'invoice_click';
 

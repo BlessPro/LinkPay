@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AnalyticsEvent;
 use App\Models\Invoice;
+use App\Models\Order;
 use App\Models\Payment;
 use App\Services\PaymentService;
 use App\Services\PaystackService;
@@ -45,6 +47,44 @@ class DashboardController extends Controller
         $productCount = $user->products()->count();
 
         $now = Carbon::now();
+        $periodStart = $now->copy()->startOfMonth();
+        $periodEnd = $now->copy()->endOfMonth();
+
+        $ordersCount = $user->orders()
+            ->where('payment_status', Payment::STATUS_SUCCESS)
+            ->whereBetween('created_at', [$periodStart, $periodEnd])
+            ->count();
+
+        $amountReceived = $this->sumPayments(
+            $user->payments()
+                ->where('status', Payment::STATUS_SUCCESS)
+                ->whereBetween('created_at', [$periodStart, $periodEnd])
+        );
+
+        $trafficCount = $user->analyticsEvents()
+            ->whereIn('event_type', [
+                AnalyticsEvent::TYPE_LISTING_VIEW,
+                AnalyticsEvent::TYPE_PRODUCT_IMPRESSION,
+                AnalyticsEvent::TYPE_PRODUCT_CLICK,
+            ])
+            ->whereBetween('created_at', [$periodStart, $periodEnd])
+            ->count();
+
+        $newCustomersCount = $user->orders()
+            ->where('payment_status', Payment::STATUS_SUCCESS)
+            ->whereBetween('created_at', [$periodStart, $periodEnd])
+            ->get(['customer_phone', 'customer_name'])
+            ->map(function (Order $order) {
+                return trim((string) ($order->customer_phone ?: $order->customer_name));
+            })
+            ->filter()
+            ->unique()
+            ->count();
+
+        $salesConversionRate = $trafficCount > 0
+            ? round(($ordersCount / $trafficCount) * 100, 1)
+            : 0.0;
+
         $thisWeek = $this->sumPayments(
             $user->payments()
                 ->where('status', Payment::STATUS_SUCCESS)
@@ -129,8 +169,19 @@ class DashboardController extends Controller
             ->get();
 
         $activity = $this->buildActivityFeed($user);
+        $inventoryAlerts = $user->products()
+            ->whereIn('status', [\App\Models\Product::STATUS_LOW_STOCK, \App\Models\Product::STATUS_SOLD_OUT])
+            ->orderByRaw("CASE WHEN status = ? THEN 0 ELSE 1 END", [\App\Models\Product::STATUS_SOLD_OUT])
+            ->orderBy('stock_quantity')
+            ->take(6)
+            ->get(['id', 'name', 'status', 'stock_quantity', 'low_stock_threshold']);
 
         return view('dashboard.index', [
+            'ordersCount' => $ordersCount,
+            'amountReceived' => $amountReceived,
+            'trafficCount' => $trafficCount,
+            'newCustomersCount' => $newCustomersCount,
+            'salesConversionRate' => $salesConversionRate,
             'totalReceived' => $totalReceived,
             'totalChange' => $totalChange,
             'thisWeek' => $thisWeek,
@@ -148,6 +199,7 @@ class DashboardController extends Controller
             'recentInvoices' => $recentInvoices,
             'recentProducts' => $recentProducts,
             'activity' => $activity,
+            'inventoryAlerts' => $inventoryAlerts,
             'profile' => $user->sellerProfile,
             'currency' => $currency,
         ]);

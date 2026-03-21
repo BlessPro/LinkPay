@@ -16,6 +16,7 @@
         @php
             $user = auth()->user();
             $profile = $user->sellerProfile;
+            $canPromotion = $user->canUsePromotionFeatures();
             $canUsePayments = $user->canUsePaymentsFeature();
             $publicUrl = $profile?->public_slug ? route('public.listing', $profile->public_slug) : null;
             $navClass = function (string $route) {
@@ -39,6 +40,7 @@
 
                 <nav class="space-y-1 px-4">
                     <a href="{{ route('dashboard') }}" class="{{ $navClass('dashboard') }}">Dashboard</a>
+                    <button type="button" class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 js-quick-actions-open">Quick Action</button>
                     <a href="{{ route('profile.edit') }}" class="{{ $navClass('profile.*') }}">Profile</a>
                     <a href="{{ route('products.index') }}" class="{{ $navClass('products.*') }}">Products</a>
                     <a href="{{ route('customers.index') }}" class="{{ $navClass('customers.*') }}">Customers</a>
@@ -102,6 +104,7 @@
                             <div class="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
                                 <nav class="space-y-2 text-sm">
                                     <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Dashboard</a>
+                                    <button type="button" class="block w-full rounded-lg px-3 py-2 text-left text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 js-quick-actions-open">Quick Action</button>
                                     <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Profile</a>
                                     <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Products</a>
                                     <a href="{{ route('customers.index') }}" class="{{ request()->routeIs('customers.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Customers</a>
@@ -132,7 +135,7 @@
                     </div>
                 </header>
 
-                <main class="px-4 py-6 pt-24 sm:px-6 lg:px-8">
+                <main class="px-4 py-6 pb-24 pt-24 sm:px-6 sm:pb-6 lg:px-8">
                     @php
                         $trialActive = $user->isOnTrial() && $user->trial_ends_at;
                         $daysLeft = $trialActive ? max(0, now()->diffInDays($user->trial_ends_at, false)) : null;
@@ -173,46 +176,120 @@
                 </main>
             </div>
         </div>
+        <nav class="fixed bottom-3 left-3 right-3 z-40 lg:hidden">
+            <div class="grid grid-cols-5 items-end rounded-[2rem] border border-slate-700/70 bg-slate-950/95 px-2 pb-2 pt-1 shadow-2xl backdrop-blur-xl">
+                <a href="{{ route('dashboard') }}" class="flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] {{ request()->routeIs('dashboard') ? 'text-emerald-400' : 'text-slate-300' }}">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 11.25 8.25-7.5 8.25 7.5v8.25a.75.75 0 0 1-.75.75h-4.5a.75.75 0 0 1-.75-.75V15a2.25 2.25 0 1 0-4.5 0v4.5a.75.75 0 0 1-.75.75h-4.5a.75.75 0 0 1-.75-.75v-8.25Z"/></svg>
+                    <span class="font-medium">Home</span>
+                </a>
+                <a href="{{ $canPromotion ? route('products.orders') : route('billing.upgrade') }}" class="flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] {{ request()->routeIs('products.orders') ? 'text-emerald-400' : 'text-slate-300' }}">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5m-15 3h13.5m-12 3h10.5m-9 3h7.5"/></svg>
+                    <span class="font-medium">Orders</span>
+                </a>
+                <button type="button" class="group -mt-6 flex flex-col items-center gap-1 px-1 py-1 text-[11px] text-slate-200 js-quick-actions-open">
+                    <span class="flex h-14 w-14 items-center justify-center rounded-full border-4 border-slate-900 bg-blue-600 shadow-[0_10px_22px_rgba(37,99,235,0.5)] transition group-active:scale-95">
+                        <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5.25v13.5m6.75-6.75H5.25"/></svg>
+                    </span>
+                    <span class="font-semibold">Quick</span>
+                </button>
+                <a href="{{ $canPromotion ? route('products.index') : route('billing.upgrade') }}" class="flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] {{ request()->routeIs('products.*') ? 'text-emerald-400' : 'text-slate-300' }}">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 6.75h9a2.25 2.25 0 0 1 2.25 2.25v7.5A2.25 2.25 0 0 1 16.5 18.75h-9a2.25 2.25 0 0 1-2.25-2.25V9A2.25 2.25 0 0 1 7.5 6.75Zm3-3h3m-1.5 0v3"/></svg>
+                    <span class="font-medium">Products</span>
+                </a>
+                <a href="{{ $canUsePayments ? route('payments.index') : route('billing.upgrade') }}" class="flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] {{ request()->routeIs('payments.*') ? 'text-emerald-400' : 'text-slate-300' }}">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 7.5A2.25 2.25 0 0 1 6 5.25h12a2.25 2.25 0 0 1 2.25 2.25v9A2.25 2.25 0 0 1 18 18.75H6a2.25 2.25 0 0 1-2.25-2.25v-9ZM3.75 9.75h16.5"/></svg>
+                    <span class="font-medium">Payments</span>
+                </a>
+            </div>
+        </nav>
+        <div class="pointer-events-none fixed inset-0 z-50 bg-slate-900/40 opacity-0 transition-opacity duration-300 js-quick-actions-backdrop"></div>
+        <section class="fixed inset-x-0 bottom-0 z-50 translate-y-full rounded-t-3xl border-t border-slate-200 bg-white p-5 shadow-2xl transition-transform duration-300 ease-out js-quick-actions-panel">
+            <div class="mx-auto mb-4 h-1.5 w-14 rounded-full bg-slate-200"></div>
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-base font-semibold text-slate-900">Quick Actions</h2>
+                <button type="button" class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 js-quick-actions-close">Close</button>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+                <a href="{{ $canPromotion ? route('products.create') : route('billing.upgrade') }}" class="rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm font-medium text-slate-800">Add product</a>
+                <a href="{{ $canPromotion ? route('products.orders') : route('billing.upgrade') }}" class="rounded-xl border border-blue-200 bg-blue-50/70 px-4 py-3 text-sm font-medium text-slate-800">Review orders</a>
+                <a href="{{ $canUsePayments ? route('payments.index') : route('billing.upgrade') }}" class="rounded-xl border border-indigo-200 bg-indigo-50/70 px-4 py-3 text-sm font-medium text-slate-800">Check payments</a>
+                <a href="{{ $canUsePayments ? route('invoices.create') : route('billing.upgrade') }}" class="rounded-xl border border-fuchsia-200 bg-fuchsia-50/70 px-4 py-3 text-sm font-medium text-slate-800">Create invoice</a>
+                <a href="{{ $canPromotion ? route('products.index', ['stock' => \App\Models\Product::STATUS_LOW_STOCK]) : route('billing.upgrade') }}" class="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm font-medium text-slate-800">Review low stock</a>
+                <a href="{{ route('notifications.index') }}" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">Open notifications</a>
+            </div>
+        </section>
         <script>
             document.addEventListener('DOMContentLoaded', () => {
                 const copyButton = document.querySelector('.js-copy-public-link');
-                if (!copyButton) {
-                    return;
+                if (copyButton) {
+                    const copyValue = copyButton.dataset.copyValue || '';
+                    const setLabel = (text) => {
+                        copyButton.textContent = text;
+                        setTimeout(() => {
+                            copyButton.textContent = 'Copy link';
+                        }, 1200);
+                    };
+
+                    copyButton.addEventListener('click', async () => {
+                        if (!copyValue) {
+                            return;
+                        }
+
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            try {
+                                await navigator.clipboard.writeText(copyValue);
+                                setLabel('Copied');
+                                return;
+                            } catch (_) {
+                                // Fallback below.
+                            }
+                        }
+
+                        const helper = document.createElement('textarea');
+                        helper.value = copyValue;
+                        helper.setAttribute('readonly', '');
+                        helper.style.position = 'absolute';
+                        helper.style.left = '-9999px';
+                        document.body.appendChild(helper);
+                        helper.select();
+                        const ok = document.execCommand('copy');
+                        document.body.removeChild(helper);
+                        setLabel(ok ? 'Copied' : 'Copy failed');
+                    });
                 }
 
-                const copyValue = copyButton.dataset.copyValue || '';
-                const setLabel = (text) => {
-                    copyButton.textContent = text;
-                    setTimeout(() => {
-                        copyButton.textContent = 'Copy link';
-                    }, 1200);
-                };
+                const panel = document.querySelector('.js-quick-actions-panel');
+                const backdrop = document.querySelector('.js-quick-actions-backdrop');
+                const openButtons = document.querySelectorAll('.js-quick-actions-open');
+                const closeButtons = document.querySelectorAll('.js-quick-actions-close');
 
-                copyButton.addEventListener('click', async () => {
-                    if (!copyValue) {
+                const setQuickActions = (open) => {
+                    if (!panel || !backdrop) {
                         return;
                     }
 
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        try {
-                            await navigator.clipboard.writeText(copyValue);
-                            setLabel('Copied');
-                            return;
-                        } catch (_) {
-                            // Fallback below.
-                        }
-                    }
+                    panel.classList.toggle('translate-y-full', !open);
+                    backdrop.classList.toggle('opacity-0', !open);
+                    backdrop.classList.toggle('pointer-events-none', !open);
+                    document.body.classList.toggle('overflow-hidden', open);
+                };
 
-                    const helper = document.createElement('textarea');
-                    helper.value = copyValue;
-                    helper.setAttribute('readonly', '');
-                    helper.style.position = 'absolute';
-                    helper.style.left = '-9999px';
-                    document.body.appendChild(helper);
-                    helper.select();
-                    const ok = document.execCommand('copy');
-                    document.body.removeChild(helper);
-                    setLabel(ok ? 'Copied' : 'Copy failed');
+                openButtons.forEach((button) => {
+                    button.addEventListener('click', () => setQuickActions(true));
+                });
+
+                closeButtons.forEach((button) => {
+                    button.addEventListener('click', () => setQuickActions(false));
+                });
+
+                if (backdrop) {
+                    backdrop.addEventListener('click', () => setQuickActions(false));
+                }
+
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        setQuickActions(false);
+                    }
                 });
             });
         </script>

@@ -11,6 +11,7 @@ use App\Models\TwilioMessageLog;
 use App\Models\User;
 use App\Models\WebhookEvent;
 use App\Services\PaymentService;
+use App\Services\PaymentReconciliationService;
 use App\Services\PaystackService;
 use App\Services\SellerNotifier;
 use App\Support\Money;
@@ -18,6 +19,7 @@ use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 class AdminDashboardController extends Controller
@@ -178,6 +180,78 @@ class AdminDashboardController extends Controller
         ]);
     }
 
+    public function reconciliation(Request $request, PaymentReconciliationService $reconciliation): View
+    {
+        $days = (int) $request->query('days', 7);
+        $sellerId = $request->query('seller_id');
+        $sellerId = is_numeric($sellerId) ? (int) $sellerId : null;
+
+        $report = $reconciliation->buildReport($days, $sellerId);
+        $sellers = User::query()
+            ->has('sellerProfile')
+            ->with('sellerProfile:id,user_id,business_name')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
+        return view('admin.payments.reconciliation', [
+            'report' => $report,
+            'sellers' => $sellers,
+            'currency' => config('services.paystack.currency', 'GHS'),
+        ]);
+    }
+
+    public function reconciliationExport(Request $request, PaymentReconciliationService $reconciliation): Response
+    {
+        $days = (int) $request->query('days', 7);
+        $sellerId = $request->query('seller_id');
+        $sellerId = is_numeric($sellerId) ? (int) $sellerId : null;
+        $report = $reconciliation->buildReport($days, $sellerId);
+
+        $rows = [];
+        $rows[] = [
+            'type',
+            'reference',
+            'seller_name',
+            'local_status',
+            'local_amount',
+            'paystack_status',
+            'paystack_amount',
+            'age_hours',
+            'is_aged',
+            'message',
+            'created_at',
+        ];
+
+        foreach ($report['exceptions'] as $exception) {
+            $rows[] = [
+                $exception['type'] ?? '',
+                $exception['reference'] ?? '',
+                $exception['seller_name'] ?? '',
+                $exception['local_status'] ?? '',
+                $exception['local_amount'] ?? '',
+                $exception['paystack_status'] ?? '',
+                $exception['paystack_amount'] ?? '',
+                (string) ($exception['age_hours'] ?? ''),
+                ! empty($exception['is_aged']) ? 'yes' : 'no',
+                $exception['message'] ?? '',
+                isset($exception['created_at']) ? $exception['created_at']->toDateTimeString() : '',
+            ];
+        }
+
+        $handle = fopen('php://temp', 'r+');
+        foreach ($rows as $row) {
+            fputcsv($handle, $row);
+        }
+        rewind($handle);
+        $content = stream_get_contents($handle);
+        fclose($handle);
+
+        return response($content, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="reconciliation-exceptions.csv"',
+        ]);
+    }
+
     public function retryPayment(
         Request $request,
         Payment $payment,
@@ -226,10 +300,6 @@ class AdminDashboardController extends Controller
             return back()->with('status', 'already-success');
         }
 
-        if ($payment->status !== Payment::STATUS_FAILED) {
-            return back()->withErrors(['payment' => 'Only failed payments can be manually confirmed here.']);
-        }
-
         $validated = $request->validate([
             'note' => ['nullable', 'string', 'max:500'],
         ]);
@@ -264,6 +334,42 @@ class AdminDashboardController extends Controller
 
             return back()->withErrors(['payment' => 'Manual confirmation failed: '.$exception->getMessage()]);
         }
+    }
+
+    public function markPaymentFailed(Request $request, Payment $payment): RedirectResponse
+    {
+        if ($payment->status === Payment::STATUS_FAILED) {
+            return back()->with('status', 'already-failed');
+        }
+
+        $validated = $request->validate([
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $payment->status = Payment::STATUS_FAILED;
+        $payment->verified_at = now();
+        $payment->raw_payload = array_replace_recursive($payment->raw_payload ?? [], [
+            'admin_manual_update' => [
+                'marked_failed' => true,
+                'by_admin' => $request->user()->id,
+                'note' => $validated['note'] ?? null,
+                'at' => now()->toIso8601String(),
+            ],
+        ]);
+        $payment->save();
+
+        $this->audit(
+            (int) $request->user()->id,
+            'payment.manual_mark_failed.success',
+            $payment,
+            $request,
+            [
+                'reference' => $payment->reference,
+                'note' => $validated['note'] ?? null,
+            ]
+        );
+
+        return back()->with('status', 'manual-mark-failed-success');
     }
 
     public function syncSellerPaystack(Request $request, User $seller, PaystackService $paystack): RedirectResponse

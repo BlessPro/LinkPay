@@ -19,6 +19,8 @@ class CreateProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:2000'],
             'price' => ['required', 'numeric', 'min:0.01'],
+            'stock_quantity' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'low_stock_threshold' => ['nullable', 'integer', 'min:0', 'max:1000000'],
             'image' => ['nullable', 'image', 'max:2048'],
             'is_active' => ['nullable', 'boolean'],
             'status' => ['nullable', 'string', Rule::in(array_keys(Product::statusOptions()))],

@@ -9,6 +9,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Payment;
 use App\Services\OgImageService;
+use App\Services\InventoryService;
 use App\Support\Money;
 use App\Support\Phone;
 use App\Support\WhatsApp;
@@ -33,7 +34,17 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $products = $user->products()->latest()->paginate(10);
+        $stockFilter = (string) $request->query('stock', 'all');
+        $allowedStockFilters = array_merge(['all'], array_keys(Product::statusOptions()));
+        if (! in_array($stockFilter, $allowedStockFilters, true)) {
+            $stockFilter = 'all';
+        }
+
+        $products = $user->products()
+            ->when($stockFilter !== 'all', fn ($query) => $query->where('status', $stockFilter))
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
         $chartRange = $request->query('chart_range', '30days');
         [$chartStart, $chartEnd] = $this->resolveChartDateRange($chartRange);
         $series = $this->buildProductSeries($user->id, $chartRange);
@@ -127,6 +138,7 @@ class ProductController extends Controller
 
         return view('dashboard.products.index', [
             'products' => $products,
+            'stockFilter' => $stockFilter,
             'currency' => config('services.paystack.currency', 'GHS'),
             'series' => $series,
             'chartRange' => $chartRange,
@@ -383,6 +395,8 @@ class ProductController extends Controller
         $data['user_id'] = $request->user()->id;
         $data['is_active'] = $request->boolean('is_active');
         $data['status'] = $request->input('status', Product::STATUS_IN_STOCK);
+        $data['stock_quantity'] = max(0, (int) $request->input('stock_quantity', 0));
+        $data['low_stock_threshold'] = max(0, (int) $request->input('low_stock_threshold', 5));
         $data['slug'] = $this->generateProductSlug($data['name']);
 
         if ($request->hasFile('image')) {
@@ -390,6 +404,7 @@ class ProductController extends Controller
         }
 
         $product = Product::create($data);
+        app(InventoryService::class)->syncStatusAndAlert($product, $request->user(), false);
 
         // Pre-render a large OG image for WhatsApp previews.
         try {
@@ -428,6 +443,12 @@ class ProductController extends Controller
             ? $request->boolean('is_active')
             : $product->is_active;
         $data['status'] = $request->input('status', Product::STATUS_IN_STOCK);
+        if ($request->has('stock_quantity')) {
+            $data['stock_quantity'] = max(0, (int) $request->input('stock_quantity', $product->stock_quantity));
+        }
+        if ($request->has('low_stock_threshold')) {
+            $data['low_stock_threshold'] = max(0, (int) $request->input('low_stock_threshold', $product->low_stock_threshold));
+        }
         $data['slug'] = $this->generateProductSlug($data['name'], $product);
 
         if ($request->hasFile('image')) {
@@ -438,6 +459,7 @@ class ProductController extends Controller
         }
 
         $product->update($data);
+        app(InventoryService::class)->syncStatusAndAlert($product->fresh(), $request->user(), true);
 
         // Regenerate OG image after edits.
         try {

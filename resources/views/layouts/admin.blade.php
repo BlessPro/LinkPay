@@ -27,6 +27,7 @@
                 <nav class="space-y-1 px-4">
                     <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-900 text-white' : 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900 hover:text-white' }}">Overview</a>
                     <a href="{{ route('admin.dashboard') }}#exceptions" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900 hover:text-white">Ops queue</a>
+                    <a href="{{ route('admin.payments.reconciliation') }}" class="{{ request()->routeIs('admin.payments.reconciliation') ? 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-900 text-white' : 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900 hover:text-white' }}">Reconciliation</a>
                     <a href="{{ route('admin.dashboard') }}#sellers" class="{{ request()->routeIs('admin.sellers.*') ? 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-900 text-white' : 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900 hover:text-white' }}">Sellers</a>
                     <a href="{{ route('admin.invoices.index') }}" class="{{ request()->routeIs('admin.invoices.*') ? 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-900 text-white' : 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900 hover:text-white' }}">Invoices</a>
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">Seller dashboard</a>
@@ -56,6 +57,7 @@
                                 <nav class="space-y-2 text-sm">
                                     <a href="{{ route('admin.dashboard') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-900 hover:text-white">Overview</a>
                                     <a href="{{ route('admin.dashboard') }}#exceptions" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-900 hover:text-white">Ops queue</a>
+                                    <a href="{{ route('admin.payments.reconciliation') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-900 hover:text-white">Reconciliation</a>
                                     <a href="{{ route('admin.dashboard') }}#sellers" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-900 hover:text-white">Sellers</a>
                                     <a href="{{ route('admin.invoices.index') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-900 hover:text-white">Invoices</a>
                                     <a href="{{ route('dashboard') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">Seller dashboard</a>

@@ -101,6 +101,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
 Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/payments/reconciliation', [AdminDashboardController::class, 'reconciliation'])->name('payments.reconciliation');
+    Route::get('/payments/reconciliation/export', [AdminDashboardController::class, 'reconciliationExport'])->name('payments.reconciliation.export');
     Route::get('/sellers/{seller}', [AdminDashboardController::class, 'seller'])->name('sellers.show');
     Route::post('/sellers/{seller}/sync-paystack', [AdminDashboardController::class, 'syncSellerPaystack'])->name('sellers.sync-paystack');
     Route::post('/sellers/{seller}/suspend', [AdminDashboardController::class, 'suspendSeller'])->name('sellers.suspend');
@@ -108,6 +110,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('/sellers/{seller}/notify', [AdminDashboardController::class, 'notifySeller'])->name('sellers.notify');
     Route::post('/payments/{payment}/retry', [AdminDashboardController::class, 'retryPayment'])->name('payments.retry');
     Route::post('/payments/{payment}/confirm', [AdminDashboardController::class, 'confirmPayment'])->name('payments.confirm');
+    Route::post('/payments/{payment}/mark-failed', [AdminDashboardController::class, 'markPaymentFailed'])->name('payments.mark-failed');
     Route::get('/invoices', [AdminInvoiceController::class, 'index'])->name('invoices.index');
     Route::get('/invoices/{invoice}', [AdminInvoiceController::class, 'show'])->name('invoices.show');
 });
