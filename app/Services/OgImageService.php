@@ -42,7 +42,7 @@ class OgImageService
         $price = (string) $product->price;
 
         $imagePath = $product->image_path ? $this->publicDiskAbsolutePath($product->image_path) : null;
-        $jpg = $this->renderJpeg($title, $subtitle, $price, $imagePath);
+        $jpg = $this->renderProductJpeg($title, $subtitle, $price, $imagePath);
 
         if ($jpg) {
             $this->storePublicJpeg('og/products/'.$product->id.'.jpg', $jpg);
@@ -198,6 +198,92 @@ class OgImageService
         imagejpeg($img, null, 88);
         $jpg = ob_get_clean();
 
+        imagedestroy($img);
+
+        return is_string($jpg) ? $jpg : null;
+    }
+
+    /**
+     * Product-focused OG layout:
+     * - large product image area
+     * - title
+     * - prominent price directly under title
+     */
+    private function renderProductJpeg(string $title, string $subtitle, ?string $price, ?string $photoPath): ?string
+    {
+        if (! extension_loaded('gd')) {
+            return null;
+        }
+
+        $img = imagecreatetruecolor(self::WIDTH, self::HEIGHT);
+        if (! $img) {
+            return null;
+        }
+
+        $top = [243, 248, 255];
+        $bottom = [224, 244, 236];
+        for ($y = 0; $y < self::HEIGHT; $y++) {
+            $t = $y / max(1, (self::HEIGHT - 1));
+            $r = (int) round($top[0] + ($bottom[0] - $top[0]) * $t);
+            $g = (int) round($top[1] + ($bottom[1] - $top[1]) * $t);
+            $b = (int) round($top[2] + ($bottom[2] - $top[2]) * $t);
+            $col = imagecolorallocate($img, $r, $g, $b);
+            imageline($img, 0, $y, self::WIDTH, $y, $col);
+        }
+
+        // Main image card (largest element in OG).
+        $cardX = 60;
+        $cardY = 42;
+        $cardW = 1080;
+        $cardH = 410;
+        $cardBg = imagecolorallocate($img, 255, 255, 255);
+        imagefilledrectangle($img, $cardX, $cardY, $cardX + $cardW, $cardY + $cardH, $cardBg);
+
+        if ($photoPath) {
+            $photo = $this->loadImage($photoPath);
+            if ($photo) {
+                $this->drawImageCover($img, $photo, $cardX, $cardY, $cardW, $cardH);
+                imagedestroy($photo);
+            }
+        }
+
+        $titleColor = imagecolorallocate($img, 15, 23, 42);
+        $muted = imagecolorallocate($img, 71, 85, 105);
+        $accent = imagecolorallocate($img, 5, 150, 105);
+        $chipBg = imagecolorallocatealpha($img, 16, 185, 129, 22);
+        $chipText = imagecolorallocate($img, 6, 95, 70);
+        $font = $this->fontPath();
+
+        // Brand chip and title block under the image.
+        imagefilledrectangle($img, 70, 475, 250, 515, $chipBg);
+        $this->drawText($img, '8Kommerce', 82, 503, 18, $chipText);
+
+        $title = trim($title);
+        $subtitle = trim($subtitle);
+        if ($font) {
+            $titleLines = $this->wrapTtf($title, $font, 42, 1030);
+            $y = 560;
+            foreach (array_slice($titleLines, 0, 1) as $line) {
+                imagettftext($img, 42, 0, 70, $y, $titleColor, $font, $line);
+            }
+
+            if ($price !== null && $price !== '') {
+                $currency = (string) config('services.paystack.currency', 'GHS');
+                imagettftext($img, 34, 0, 70, 606, $accent, $font, $currency.' '.number_format((float) $price, 2, '.', ','));
+            }
+
+            imagettftext($img, 19, 0, 430, 606, $muted, $font, $subtitle);
+        } else {
+            imagestring($img, 5, 70, 535, $this->truncate($title, 48), $titleColor);
+            if ($price !== null && $price !== '') {
+                imagestring($img, 5, 70, 570, ((string) config('services.paystack.currency', 'GHS')).' '.number_format((float) $price, 2, '.', ','), $accent);
+            }
+            imagestring($img, 3, 430, 575, $this->truncate($subtitle, 40), $muted);
+        }
+
+        ob_start();
+        imagejpeg($img, null, 90);
+        $jpg = ob_get_clean();
         imagedestroy($img);
 
         return is_string($jpg) ? $jpg : null;

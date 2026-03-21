@@ -88,6 +88,7 @@ All notable changes to this project will be documented here.
 - Added subtle color differentiation for KPI cards.
 - Mobile KPI behavior updated to two-cards-per-row and a flat marquee summary strip.
 - Dashboard mobile navigation restyled to a floating dark glass bar with icon-first items and raised center action button.
+- Product OG image layout refreshed to prioritize a large product image with the price shown beneath for stronger share previews.
 - Replaced Quick Action standalone page navigation with in-layout offcanvas interaction.
 - Paystack service expanded to fetch transactions by date range for reconciliation workflows.
 - Admin layout navigation updated with dedicated `Reconciliation` entry.
@@ -109,3 +110,4 @@ All notable changes to this project will be documented here.
 - Hardened users phone migration to be idempotent to reduce migration failures across environments.
 - Public add-to-cart now defaults missing quantity to `1` instead of failing validation.
 - Public listing error banner now shows exact validation messages (not only generic text).
+- Added HTTPS URL forcing support (`APP_FORCE_HTTPS`) to prevent insecure form action URLs in production deployments.

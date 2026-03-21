@@ -121,7 +121,17 @@ class PublicListingController extends Controller
         if ($firstWithImage) {
             $ogService = app(OgImageService::class);
             $ogPath = $ogService->publicProductOgPath($firstWithImage->id);
-            if (! Storage::disk('public')->exists($ogPath)) {
+            $shouldGenerate = ! Storage::disk('public')->exists($ogPath);
+            if (! $shouldGenerate) {
+                try {
+                    $absolutePath = Storage::disk('public')->path($ogPath);
+                    $mtime = @filemtime($absolutePath);
+                    $shouldGenerate = ! $mtime || $firstWithImage->updated_at?->timestamp > $mtime;
+                } catch (\Throwable $e) {
+                    $shouldGenerate = false;
+                }
+            }
+            if ($shouldGenerate) {
                 try {
                     $firstWithImage->loadMissing('user.sellerProfile');
                     $ogService->generateProduct($firstWithImage);

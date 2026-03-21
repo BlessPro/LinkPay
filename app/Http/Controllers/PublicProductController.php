@@ -31,7 +31,17 @@ class PublicProductController extends Controller
 
         $ogService = app(OgImageService::class);
         $ogPath = $ogService->publicProductOgPath($product->id);
-        if (! Storage::disk('public')->exists($ogPath)) {
+        $shouldGenerate = ! Storage::disk('public')->exists($ogPath);
+        if (! $shouldGenerate) {
+            try {
+                $absolutePath = Storage::disk('public')->path($ogPath);
+                $mtime = @filemtime($absolutePath);
+                $shouldGenerate = ! $mtime || $product->updated_at?->timestamp > $mtime;
+            } catch (\Throwable $e) {
+                $shouldGenerate = false;
+            }
+        }
+        if ($shouldGenerate) {
             try {
                 $product->loadMissing('user.sellerProfile');
                 $ogService->generateProduct($product);
