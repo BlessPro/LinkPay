@@ -6,9 +6,88 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ config('app.name', '8Kommerce') }}</title>
+        <script>
+            (function () {
+                try {
+                    var saved = localStorage.getItem('lp_theme');
+                    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    var dark = saved ? saved === 'dark' : prefersDark;
+                    document.documentElement.classList.toggle('theme-dark', dark);
+                } catch (_) {}
+            })();
+        </script>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=space-grotesk:400,500,600,700&display=swap" rel="stylesheet" />
+        <style>
+            body, aside, header, main, nav, section, div, a, button, input, textarea, select {
+                transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+            }
+            html.theme-dark body {
+                background: linear-gradient(140deg, #020617 0%, #0f172a 45%, #022c22 100%);
+                color: #e2e8f0;
+            }
+            html.theme-dark aside,
+            html.theme-dark header,
+            html.theme-dark .js-mobile-menu-panel {
+                background-color: #0b1220 !important;
+            }
+            html.theme-dark .bg-white,
+            html.theme-dark .bg-white\/70,
+            html.theme-dark .bg-white\/90,
+            html.theme-dark .bg-slate-50,
+            html.theme-dark .bg-slate-50\/60,
+            html.theme-dark .bg-slate-50\/70 {
+                background-color: #0f172a !important;
+            }
+            html.theme-dark .border-slate-200,
+            html.theme-dark .border-slate-100,
+            html.theme-dark .border-slate-300\/70,
+            html.theme-dark .border-slate-700\/70 {
+                border-color: #334155 !important;
+            }
+            html.theme-dark .text-slate-900 { color: #f8fafc !important; }
+            html.theme-dark .text-slate-800 { color: #e2e8f0 !important; }
+            html.theme-dark .text-slate-700 { color: #cbd5e1 !important; }
+            html.theme-dark .text-slate-600 { color: #94a3b8 !important; }
+            html.theme-dark .text-slate-500,
+            html.theme-dark .text-slate-400 { color: #94a3b8 !important; }
+            html.theme-dark .js-mobile-menu-panel a,
+            html.theme-dark aside a,
+            html.theme-dark aside button {
+                color: #cbd5e1 !important;
+            }
+            html.theme-dark aside .bg-emerald-50,
+            html.theme-dark .js-mobile-menu-panel .bg-emerald-50 {
+                background-color: rgba(16, 185, 129, 0.18) !important;
+            }
+            html.theme-dark .hover\:bg-emerald-50:hover { background-color: rgba(16, 185, 129, 0.12) !important; }
+            html.theme-dark .shadow-sm,
+            html.theme-dark .shadow-2xl,
+            html.theme-dark .shadow-lg {
+                box-shadow: 0 12px 34px rgba(2, 6, 23, 0.45) !important;
+            }
+
+            /* Forms: keep readable text and placeholders in all modes */
+            input,
+            textarea,
+            select {
+                background-color: #ffffff !important;
+                color: #111827 !important;
+            }
+            input::placeholder,
+            textarea::placeholder {
+                color: #334155 !important;
+                opacity: 1;
+            }
+            html.theme-dark input,
+            html.theme-dark textarea,
+            html.theme-dark select {
+                background-color: #ffffff !important;
+                color: #111827 !important;
+                border-color: #cbd5e1 !important;
+            }
+        </style>
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
@@ -84,11 +163,16 @@
                 <header class="fixed top-0 left-0 right-0 z-40 border-b border-slate-200 bg-white/70 backdrop-blur lg:left-64">
                     <div class="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
                         <div>
-                            <p class="text-xs uppercase tracking-widest text-slate-400">Dashboard</p>
+                            <p class="text-xs uppercase tracking-widest text-slate-400 sm:hidden">8Kommerce</p>
+                            <p class="hidden text-xs uppercase tracking-widest text-slate-400 sm:block">Dashboard</p>
                             <h1 class="text-lg font-semibold text-slate-900">{{ $title ?? 'Overview' }}</h1>
                         </div>
                         <div class="hidden items-center sm:flex">
-                            <div class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                            <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                                <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-700 js-theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+                                    <svg class="h-4 w-4 js-theme-icon-moon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c0 .3-.01.6-.01.91A8.99 8.99 0 0 0 21 12.79Z"/></svg>
+                                    <svg class="hidden h-4 w-4 js-theme-icon-sun" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21m9-9h-2.25M5.25 12H3m15.114 6.364-1.591-1.591M7.477 7.477 5.886 5.886m12.228 0-1.591 1.591M7.477 16.523l-1.591 1.591M12 16.5A4.5 4.5 0 1 0 12 7.5a4.5 4.5 0 0 0 0 9Z"/></svg>
+                                </button>
                                 <div class="text-right">
                                     <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400">Account</p>
                                     <p class="text-sm font-medium text-slate-700">{{ auth()->user()->email }}</p>
@@ -100,40 +184,30 @@
                                 </form>
                             </div>
                         </div>
-                        <details class="relative sm:hidden">
-                            <summary class="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">Menu</summary>
-                            <div class="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
-                                <nav class="space-y-2 text-sm">
-                                    <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Dashboard</a>
-                                    <button type="button" class="block w-full rounded-lg px-3 py-2 text-left text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 js-quick-actions-open">Quick Action</button>
-                                    <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Profile</a>
-                                    <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Products</a>
-                                    <a href="{{ route('coupons.index') }}" class="{{ request()->routeIs('coupons.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Coupons</a>
-                                    <a href="{{ route('customers.index') }}" class="{{ request()->routeIs('customers.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Customers</a>
-                                    @if($canUsePayments)
-                                        <a href="{{ route('invoices.index') }}" class="{{ request()->routeIs('invoices.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Invoices</a>
-                                        <a href="{{ route('payments.index') }}" class="{{ request()->routeIs('payments.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Payments</a>
-                                    @else
-                                        <a href="{{ route('billing.upgrade') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">Invoices <span class="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Upgrade</span></a>
-                                        <a href="{{ route('billing.upgrade') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">Payments <span class="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Upgrade</span></a>
-                                    @endif
-                                    <a href="{{ route('notifications.index') }}" class="{{ request()->routeIs('notifications.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Notifications</a>
-                                    <a href="{{ route('goals.index') }}" class="{{ request()->routeIs('goals.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Goals and Target</a>
-                                    <a href="{{ route('insights.index') }}" class="{{ request()->routeIs('insights.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Insights</a>
-                                    <a href="{{ route('billing.show') }}" class="{{ request()->routeIs('billing.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Billing</a>
-                                    @if(auth()->user()->is_admin)
-                                        <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Admin</a>
-                                    @endif
-                                    @if($profile)
-                                        <a href="{{ route('public.preview') }}" class="{{ request()->routeIs('public.preview') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Public page</a>
-                                    @endif
-                                </nav>
-                                <form method="POST" action="{{ route('logout') }}" class="mt-3 border-t border-slate-100 pt-3">
-                                    @csrf
-                                    <button type="submit" class="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white">Logout</button>
-                                </form>
-                            </div>
-                        </details>
+                        <div class="flex items-center gap-2 sm:hidden">
+                            <button
+                                type="button"
+                                aria-label="Toggle dark mode"
+                                class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 js-theme-toggle"
+                            >
+                                <svg class="h-5 w-5 js-theme-icon-moon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c0 .3-.01.6-.01.91A8.99 8.99 0 0 0 21 12.79Z"/></svg>
+                                <svg class="hidden h-5 w-5 js-theme-icon-sun" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21m9-9h-2.25M5.25 12H3m15.114 6.364-1.591-1.591M7.477 7.477 5.886 5.886m12.228 0-1.591 1.591M7.477 16.523l-1.591 1.591M12 16.5A4.5 4.5 0 1 0 12 7.5a4.5 4.5 0 0 0 0 9Z"/></svg>
+                            </button>
+                            <a
+                                href="{{ route('notifications.index') }}"
+                                aria-label="Notifications"
+                                class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 17.25h5.25l-1.431-1.431A2.25 2.25 0 0 1 17.25 14.25V10.5a5.25 5.25 0 1 0-10.5 0v3.75a2.25 2.25 0 0 1-.819 1.569L4.5 17.25h5.25m4.5 0a2.25 2.25 0 1 1-4.5 0m4.5 0h-4.5"/></svg>
+                            </a>
+                            <button
+                                type="button"
+                                aria-label="Open menu"
+                                class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 js-mobile-menu-open"
+                            >
+                                Menu
+                            </button>
+                        </div>
                     </div>
                 </header>
 
@@ -204,6 +278,48 @@
                 </a>
             </div>
         </nav>
+        <div class="pointer-events-none fixed inset-0 z-40 bg-slate-900/40 opacity-0 transition-opacity duration-300 js-mobile-menu-backdrop"></div>
+        <aside class="fixed right-0 top-0 z-50 h-full w-[84%] max-w-xs translate-x-full border-l border-slate-200 bg-white p-4 shadow-2xl transition-transform duration-300 ease-out js-mobile-menu-panel lg:hidden">
+            <div class="mb-3 flex items-center justify-between">
+                <p class="text-sm font-semibold text-slate-900">Menu</p>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-600 js-theme-toggle" aria-label="Toggle dark mode">
+                        <svg class="h-4 w-4 js-theme-icon-moon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c0 .3-.01.6-.01.91A8.99 8.99 0 0 0 21 12.79Z"/></svg>
+                        <svg class="hidden h-4 w-4 js-theme-icon-sun" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21m9-9h-2.25M5.25 12H3m15.114 6.364-1.591-1.591M7.477 7.477 5.886 5.886m12.228 0-1.591 1.591M7.477 16.523l-1.591 1.591M12 16.5A4.5 4.5 0 1 0 12 7.5a4.5 4.5 0 0 0 0 9Z"/></svg>
+                    </button>
+                    <button type="button" class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 js-mobile-menu-close">Close</button>
+                </div>
+            </div>
+            <nav class="space-y-2 text-sm">
+                <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Dashboard</a>
+                <button type="button" class="block w-full rounded-lg px-3 py-2 text-left text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 js-quick-actions-open">Quick Action</button>
+                <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Profile</a>
+                <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Products</a>
+                <a href="{{ route('coupons.index') }}" class="{{ request()->routeIs('coupons.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Coupons</a>
+                <a href="{{ route('customers.index') }}" class="{{ request()->routeIs('customers.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Customers</a>
+                @if($canUsePayments)
+                    <a href="{{ route('invoices.index') }}" class="{{ request()->routeIs('invoices.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Invoices</a>
+                    <a href="{{ route('payments.index') }}" class="{{ request()->routeIs('payments.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Payments</a>
+                @else
+                    <a href="{{ route('billing.upgrade') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">Invoices <span class="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Upgrade</span></a>
+                    <a href="{{ route('billing.upgrade') }}" class="block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">Payments <span class="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Upgrade</span></a>
+                @endif
+                <a href="{{ route('notifications.index') }}" class="{{ request()->routeIs('notifications.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Notifications</a>
+                <a href="{{ route('goals.index') }}" class="{{ request()->routeIs('goals.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Goals and Target</a>
+                <a href="{{ route('insights.index') }}" class="{{ request()->routeIs('insights.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Insights</a>
+                <a href="{{ route('billing.show') }}" class="{{ request()->routeIs('billing.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Billing</a>
+                @if(auth()->user()->is_admin)
+                    <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.*') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Admin</a>
+                @endif
+                @if($profile)
+                    <a href="{{ route('public.preview') }}" class="{{ request()->routeIs('public.preview') ? 'block rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 font-semibold' : 'block rounded-lg px-3 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' }}">Public page</a>
+                @endif
+            </nav>
+            <form method="POST" action="{{ route('logout') }}" class="mt-3 border-t border-slate-100 pt-3">
+                @csrf
+                <button type="submit" class="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white">Logout</button>
+            </form>
+        </aside>
         <div class="pointer-events-none fixed inset-0 z-50 bg-slate-900/40 opacity-0 transition-opacity duration-300 js-quick-actions-backdrop"></div>
         <section class="fixed inset-x-0 bottom-0 z-50 translate-y-full rounded-t-3xl border-t border-slate-200 bg-white p-5 shadow-2xl transition-transform duration-300 ease-out js-quick-actions-panel">
             <div class="mx-auto mb-4 h-1.5 w-14 rounded-full bg-slate-200"></div>
@@ -265,6 +381,45 @@
                 const backdrop = document.querySelector('.js-quick-actions-backdrop');
                 const openButtons = document.querySelectorAll('.js-quick-actions-open');
                 const closeButtons = document.querySelectorAll('.js-quick-actions-close');
+                const themeToggles = document.querySelectorAll('.js-theme-toggle');
+                const themeMoonIcons = document.querySelectorAll('.js-theme-icon-moon');
+                const themeSunIcons = document.querySelectorAll('.js-theme-icon-sun');
+                const mobileMenuPanel = document.querySelector('.js-mobile-menu-panel');
+                const mobileMenuBackdrop = document.querySelector('.js-mobile-menu-backdrop');
+                const mobileMenuOpenButtons = document.querySelectorAll('.js-mobile-menu-open');
+                const mobileMenuCloseButtons = document.querySelectorAll('.js-mobile-menu-close');
+                const root = document.documentElement;
+                const applyTheme = (mode) => {
+                    const dark = mode === 'dark';
+                    root.classList.toggle('theme-dark', dark);
+                    themeMoonIcons.forEach((icon) => icon.classList.toggle('hidden', dark));
+                    themeSunIcons.forEach((icon) => icon.classList.toggle('hidden', !dark));
+                };
+                const detectTheme = () => {
+                    try {
+                        const saved = localStorage.getItem('lp_theme');
+                        if (saved === 'dark' || saved === 'light') {
+                            return saved;
+                        }
+                    } catch (_) {}
+                    return root.classList.contains('theme-dark') ? 'dark' : 'light';
+                };
+                let currentTheme = detectTheme();
+                applyTheme(currentTheme);
+                themeToggles.forEach((button) => {
+                    button.addEventListener('click', () => {
+                        currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                        applyTheme(currentTheme);
+                        try {
+                            localStorage.setItem('lp_theme', currentTheme);
+                        } catch (_) {}
+                    });
+                });
+                const syncBodyLock = () => {
+                    const quickOpen = panel && !panel.classList.contains('translate-y-full');
+                    const menuOpen = mobileMenuPanel && !mobileMenuPanel.classList.contains('translate-x-full');
+                    document.body.classList.toggle('overflow-hidden', Boolean(quickOpen || menuOpen));
+                };
 
                 const setQuickActions = (open) => {
                     if (!panel || !backdrop) {
@@ -274,24 +429,44 @@
                     panel.classList.toggle('translate-y-full', !open);
                     backdrop.classList.toggle('opacity-0', !open);
                     backdrop.classList.toggle('pointer-events-none', !open);
-                    document.body.classList.toggle('overflow-hidden', open);
+                    syncBodyLock();
+                };
+                const setMobileMenu = (open) => {
+                    if (!mobileMenuPanel || !mobileMenuBackdrop) {
+                        return;
+                    }
+
+                    mobileMenuPanel.classList.toggle('translate-x-full', !open);
+                    mobileMenuBackdrop.classList.toggle('opacity-0', !open);
+                    mobileMenuBackdrop.classList.toggle('pointer-events-none', !open);
+                    syncBodyLock();
                 };
 
                 openButtons.forEach((button) => {
                     button.addEventListener('click', () => setQuickActions(true));
                 });
+                mobileMenuOpenButtons.forEach((button) => {
+                    button.addEventListener('click', () => setMobileMenu(true));
+                });
 
                 closeButtons.forEach((button) => {
                     button.addEventListener('click', () => setQuickActions(false));
+                });
+                mobileMenuCloseButtons.forEach((button) => {
+                    button.addEventListener('click', () => setMobileMenu(false));
                 });
 
                 if (backdrop) {
                     backdrop.addEventListener('click', () => setQuickActions(false));
                 }
+                if (mobileMenuBackdrop) {
+                    mobileMenuBackdrop.addEventListener('click', () => setMobileMenu(false));
+                }
 
                 document.addEventListener('keydown', (event) => {
                     if (event.key === 'Escape') {
                         setQuickActions(false);
+                        setMobileMenu(false);
                     }
                 });
             });
