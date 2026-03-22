@@ -12,7 +12,7 @@ class OgImageService
 {
     public const WIDTH = 1200;
     public const HEIGHT = 630;
-    private const PRODUCT_OG_VERSION = 'v2';
+    private const PRODUCT_OG_VERSION = 'v3';
 
     public function generateSeller(SellerProfile $profile): void
     {
@@ -221,66 +221,56 @@ class OgImageService
             return null;
         }
 
-        $top = [243, 248, 255];
-        $bottom = [224, 244, 236];
-        for ($y = 0; $y < self::HEIGHT; $y++) {
-            $t = $y / max(1, (self::HEIGHT - 1));
-            $r = (int) round($top[0] + ($bottom[0] - $top[0]) * $t);
-            $g = (int) round($top[1] + ($bottom[1] - $top[1]) * $t);
-            $b = (int) round($top[2] + ($bottom[2] - $top[2]) * $t);
-            $col = imagecolorallocate($img, $r, $g, $b);
-            imageline($img, 0, $y, self::WIDTH, $y, $col);
-        }
+        $titleColor = imagecolorallocate($img, 255, 255, 255);
+        $muted = imagecolorallocate($img, 226, 232, 240);
+        $accent = imagecolorallocate($img, 74, 222, 128);
+        $chipBg = imagecolorallocatealpha($img, 16, 185, 129, 24);
+        $chipText = imagecolorallocate($img, 209, 250, 229);
+        $font = $this->fontPath();
 
-        // Main image card (largest element in OG).
-        $cardX = 60;
-        $cardY = 42;
-        $cardW = 1080;
-        $cardH = 410;
-        $cardBg = imagecolorallocate($img, 255, 255, 255);
-        imagefilledrectangle($img, $cardX, $cardY, $cardX + $cardW, $cardY + $cardH, $cardBg);
+        // Base background.
+        $bg = imagecolorallocate($img, 18, 23, 36);
+        imagefilledrectangle($img, 0, 0, self::WIDTH, self::HEIGHT, $bg);
 
         if ($photoPath) {
             $photo = $this->loadImage($photoPath);
             if ($photo) {
-                // Keep full source image visible (no trimming/cropping).
-                $this->drawImageContain($img, $photo, $cardX, $cardY, $cardW, $cardH);
+                // Background fill from the same image (cover) to avoid empty side bars.
+                $this->drawImageCover($img, $photo, 0, 0, self::WIDTH, self::HEIGHT);
+                // Foreground image keeps full image visible (contain), larger and centered.
+                $this->drawImageContain($img, $photo, 40, 24, 1120, 470);
                 imagedestroy($photo);
             }
         }
 
-        $titleColor = imagecolorallocate($img, 15, 23, 42);
-        $muted = imagecolorallocate($img, 71, 85, 105);
-        $accent = imagecolorallocate($img, 5, 150, 105);
-        $chipBg = imagecolorallocatealpha($img, 16, 185, 129, 22);
-        $chipText = imagecolorallocate($img, 6, 95, 70);
-        $font = $this->fontPath();
+        // Dark overlay band for readable text.
+        $overlay = imagecolorallocatealpha($img, 2, 6, 23, 35);
+        imagefilledrectangle($img, 0, 500, self::WIDTH, self::HEIGHT, $overlay);
 
-        // Brand chip and title block under the image.
-        imagefilledrectangle($img, 70, 475, 250, 515, $chipBg);
-        $this->drawText($img, '8Kommerce', 82, 503, 18, $chipText);
+        imagefilledrectangle($img, 60, 518, 250, 556, $chipBg);
+        $this->drawText($img, '8Kommerce', 76, 545, 18, $chipText);
 
         $title = trim($title);
         $subtitle = trim($subtitle);
         if ($font) {
-            $titleLines = $this->wrapTtf($title, $font, 42, 1030);
-            $y = 560;
+            $titleLines = $this->wrapTtf($title, $font, 40, 1080);
+            $y = 590;
             foreach (array_slice($titleLines, 0, 1) as $line) {
-                imagettftext($img, 42, 0, 70, $y, $titleColor, $font, $line);
+                imagettftext($img, 40, 0, 60, $y, $titleColor, $font, $line);
             }
 
             if ($price !== null && $price !== '') {
                 $currency = (string) config('services.paystack.currency', 'GHS');
-                imagettftext($img, 34, 0, 70, 606, $accent, $font, $currency.' '.number_format((float) $price, 2, '.', ','));
+                imagettftext($img, 32, 0, 60, 625, $accent, $font, $currency.' '.number_format((float) $price, 2, '.', ','));
             }
 
-            imagettftext($img, 19, 0, 430, 606, $muted, $font, $subtitle);
+            imagettftext($img, 18, 0, 760, 624, $muted, $font, $this->truncate($subtitle, 34));
         } else {
-            imagestring($img, 5, 70, 535, $this->truncate($title, 48), $titleColor);
+            imagestring($img, 5, 60, 560, $this->truncate($title, 44), $titleColor);
             if ($price !== null && $price !== '') {
-                imagestring($img, 5, 70, 570, ((string) config('services.paystack.currency', 'GHS')).' '.number_format((float) $price, 2, '.', ','), $accent);
+                imagestring($img, 5, 60, 595, ((string) config('services.paystack.currency', 'GHS')).' '.number_format((float) $price, 2, '.', ','), $accent);
             }
-            imagestring($img, 3, 430, 575, $this->truncate($subtitle, 40), $muted);
+            imagestring($img, 3, 760, 598, $this->truncate($subtitle, 34), $muted);
         }
 
         ob_start();

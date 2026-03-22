@@ -92,6 +92,9 @@ All notable changes to this project will be documented here.
 - Product-card WhatsApp CTA now includes an on-image icon shortcut that opens chat with seller context for that specific product.
 - Product OG generation now preserves the full source image (portrait or landscape) using contain-fit rendering to avoid trimmed/cropped previews.
 - Product OG asset path versioned (`v2`) so updated OG layout is applied immediately without stale image cache conflicts.
+- Product page OG metadata now points directly to the original uploaded product image (with source dimensions + cache-busting version) for full-image social previews.
+- Product OG strategy for WhatsApp was tuned again: generated 1200x630 social card now uses image-backed fill + full-image contain foreground for larger, clearer product visibility.
+- Product OG cache/version key bumped to `v3` to force fresh previews after deployment.
 - Replaced Quick Action standalone page navigation with in-layout offcanvas interaction.
 - Paystack service expanded to fetch transactions by date range for reconciliation workflows.
 - Admin layout navigation updated with dedicated `Reconciliation` entry.

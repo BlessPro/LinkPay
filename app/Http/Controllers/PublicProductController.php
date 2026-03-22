@@ -49,8 +49,9 @@ class PublicProductController extends Controller
                 // ignore
             }
         }
+
         $ogImage = Storage::disk('public')->exists($ogPath)
-            ? url(Storage::url($ogPath))
+            ? url(Storage::url($ogPath)).'?v='.($product->updated_at?->timestamp ?: time())
             : url('/images/og-default.jpg');
 
         return view('public.product', [
@@ -62,6 +63,8 @@ class PublicProductController extends Controller
             'ogTitle' => "{$product->name} - {$sellerName}",
             'ogDescription' => "{$shortDescription} Price: {$currency} ".number_format((float) $product->price, 2, '.', ','),
             'ogImage' => $ogImage,
+            'ogImageWidth' => '1200',
+            'ogImageHeight' => '630',
             'ogUrl' => route('public.product', $product->slug),
             'ogType' => 'website',
         ]);
