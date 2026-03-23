@@ -19,7 +19,16 @@
         </div>
     </div>
 
-    <div class="mt-4 flex flex-wrap gap-2">
+    <div class="mt-4 sm:hidden">
+        <button type="button" id="stock-filter-open" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M3 5.75A.75.75 0 0 1 3.75 5h12.5a.75.75 0 0 1 .53 1.28l-4.47 4.47v4a.75.75 0 0 1-1.2.6l-2-1.5a.75.75 0 0 1-.3-.6v-2.5L3.22 6.28A.75.75 0 0 1 3 5.75Z"/>
+            </svg>
+            Filter products
+        </button>
+    </div>
+
+    <div class="mt-4 hidden flex-wrap gap-2 sm:flex">
         @php
             $stockTabs = array_merge(['all' => 'All'], \App\Models\Product::statusOptions());
         @endphp
@@ -31,6 +40,26 @@
                 {{ $label }}
             </a>
         @endforeach
+    </div>
+
+    <div id="stock-filter-sheet" class="fixed inset-0 z-40 hidden bg-slate-900/35 sm:hidden">
+        <div id="stock-filter-backdrop" class="absolute inset-0"></div>
+        <div class="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-slate-200 bg-white p-5 shadow-2xl">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-slate-900">Filter products</h3>
+                <button type="button" id="stock-filter-close" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">Close</button>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                @foreach($stockTabs as $key => $label)
+                    <a
+                        href="{{ route('products.index', array_merge(request()->query(), ['stock' => $key])) }}"
+                        class="rounded-full border px-4 py-2 text-center text-xs font-semibold {{ ($stockFilter ?? 'all') === $key ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600' }}"
+                    >
+                        {{ $label }}
+                    </a>
+                @endforeach
+            </div>
+        </div>
     </div>
 
     <div id="export-offcanvas" class="fixed inset-y-0 right-0 z-40 hidden w-full max-w-sm p-6 bg-white border-l shadow-2xl border-slate-200">
@@ -385,6 +414,33 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const stockFilterSheet = document.getElementById('stock-filter-sheet');
+            const stockFilterOpen = document.getElementById('stock-filter-open');
+            const stockFilterClose = document.getElementById('stock-filter-close');
+            const stockFilterBackdrop = document.getElementById('stock-filter-backdrop');
+
+            const openStockFilterSheet = () => {
+                if (!stockFilterSheet) return;
+                stockFilterSheet.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+            };
+
+            const closeStockFilterSheet = () => {
+                if (!stockFilterSheet) return;
+                stockFilterSheet.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            };
+
+            if (stockFilterOpen) {
+                stockFilterOpen.addEventListener('click', openStockFilterSheet);
+            }
+            if (stockFilterClose) {
+                stockFilterClose.addEventListener('click', closeStockFilterSheet);
+            }
+            if (stockFilterBackdrop) {
+                stockFilterBackdrop.addEventListener('click', closeStockFilterSheet);
+            }
+
             const modal = document.getElementById('product-manage-modal');
             const modalTitle = document.getElementById('product-manage-title');
             const viewLink = document.getElementById('product-manage-view');

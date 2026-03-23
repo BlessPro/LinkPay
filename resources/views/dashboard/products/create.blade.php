@@ -17,7 +17,7 @@
 @extends('layouts.dashboard')
 
 @section('content')
-    <div class="max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div class="max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 pb-24 shadow-sm">
         <h2 class="text-lg font-semibold text-slate-900">Add products</h2>
         <p class="mt-1 text-sm text-slate-500">You can upload multiple products at once.</p>
         @error('upload')
@@ -72,7 +72,7 @@
                         </div>
                         <div class="mt-4">
                             <label class="text-sm font-medium text-slate-700">Image (optional)</label>
-                            <input name="products[{{ $index }}][image]" type="file" accept="image/*" data-product-image="true" class="mt-2 w-full rounded-xl border-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-emerald-700" />
+                            <input name="products[{{ $index }}][image]" type="file" accept="image/*" capture="environment" data-product-image="true" class="mt-2 w-full rounded-xl border-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-emerald-700" />
                             @error("products.$index.image") <p class="mt-2 text-xs text-rose-500">{{ $message }}</p> @enderror
                             <p class="mt-1 text-xs text-slate-500 upload-hint">Image will be auto-compressed before upload.</p>
                         </div>
@@ -98,11 +98,21 @@
                     + Next product
                 </button>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="hidden items-center gap-4 sm:flex">
                 <button type="submit" class="rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500">
                     Save products
                 </button>
                 <a href="{{ route('products.index') }}" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Cancel</a>
+            </div>
+            <div class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur sm:hidden">
+                <div class="mx-auto flex max-w-4xl items-center gap-2">
+                    <a href="{{ route('products.index') }}" class="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700">
+                        Cancel
+                    </a>
+                    <button type="submit" class="inline-flex flex-1 items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white">
+                        Save products
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -139,7 +149,7 @@
             </div>
             <div class="mt-4">
                 <label class="text-sm font-medium text-slate-700">Image (optional)</label>
-                <input name="products[__INDEX__][image]" type="file" accept="image/*" data-product-image="true" class="mt-2 w-full rounded-xl border-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-emerald-700" />
+                <input name="products[__INDEX__][image]" type="file" accept="image/*" capture="environment" data-product-image="true" class="mt-2 w-full rounded-xl border-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-emerald-700" />
                 <p class="mt-1 text-xs text-slate-500 upload-hint">Image will be auto-compressed before upload.</p>
             </div>
             <div class="mt-4">

@@ -5,7 +5,7 @@
 
 @section('content')
     <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 pb-24 shadow-sm">
             <h2 class="text-lg font-semibold text-slate-900">Edit product</h2>
             <form class="mt-6 space-y-5" method="POST" action="{{ route('products.update', $product) }}" enctype="multipart/form-data">
             @csrf
@@ -39,7 +39,7 @@
             </div>
             <div>
                 <label class="text-sm font-medium text-slate-700">Image (optional)</label>
-                <input name="image" type="file" class="mt-2 w-full rounded-xl border-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-emerald-700" />
+                <input name="image" type="file" accept="image/*" capture="environment" class="mt-2 w-full rounded-xl border-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-emerald-700" />
                 @if($product->image_path)
                     <p class="mt-2 text-xs text-slate-500">Current image set.</p>
                 @endif
@@ -65,11 +65,21 @@
                 <input id="is_active" name="is_active" type="checkbox" value="1" {{ old('is_active', $product->is_active) ? 'checked' : '' }} class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
                 <label for="is_active" class="text-sm text-slate-600">Active</label>
             </div>
-                <div class="flex items-center gap-4">
+                <div class="hidden items-center gap-4 sm:flex">
                     <button type="submit" class="rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500">
                         Update product
                     </button>
                     <a href="{{ route('products.index') }}" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Cancel</a>
+                </div>
+                <div class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur sm:hidden">
+                    <div class="mx-auto flex max-w-4xl items-center gap-2">
+                        <a href="{{ route('products.index') }}" class="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700">
+                            Cancel
+                        </a>
+                        <button type="submit" class="inline-flex flex-1 items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white">
+                            Update product
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

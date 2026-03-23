@@ -348,6 +348,7 @@
             }
 
             var atCart = false;
+            var isRefreshing = false;
 
             function isCartInView() {
                 var rect = cart.getBoundingClientRect();
@@ -367,15 +368,236 @@
                 setMode(isCartInView());
             }
 
-            toggle.addEventListener('click', function (event) {
-                event.preventDefault();
-                var target = atCart ? shop : cart;
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                setTimeout(syncMode, 300);
-            });
+            function skeletonCardsMarkup(count) {
+                var cards = [];
+                for (var i = 0; i < count; i++) {
+                    cards.push(
+                        '<article class="animate-pulse overflow-hidden rounded-xl border border-slate-200 bg-white">'
+                        + '<div class="h-44 w-full bg-slate-200 sm:h-56"></div>'
+                        + '<div class="space-y-3 p-3">'
+                        + '<div class="h-3 w-3/4 rounded bg-slate-200"></div>'
+                        + '<div class="h-3 w-1/2 rounded bg-slate-200"></div>'
+                        + '<div class="h-8 w-full rounded-full bg-slate-200"></div>'
+                        + '</div>'
+                        + '</article>'
+                    );
+                }
+
+                return cards.join('');
+            }
+
+            function showShopSkeleton() {
+                var grid = shop.querySelector('div.mt-5.grid');
+                if (!grid) {
+                    return;
+                }
+
+                grid.setAttribute('aria-busy', 'true');
+                grid.innerHTML = skeletonCardsMarkup(6);
+            }
+
+            function refreshNodeRefs() {
+                toggle = document.getElementById('floating-cart-toggle');
+                cart = document.getElementById('cart-section');
+                shop = document.getElementById('shop-section');
+                label = document.getElementById('floating-cart-label');
+                cartIcon = document.getElementById('floating-icon-cart');
+                shopIcon = document.getElementById('floating-icon-shop');
+            }
+
+            async function refreshSectionsFromResponse(responseText, nextUrl) {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(responseText, 'text/html');
+                var nextShop = doc.getElementById('shop-section');
+                var nextCart = doc.getElementById('cart-section');
+                var nextToggle = doc.getElementById('floating-cart-toggle');
+
+                if (nextShop && shop) {
+                    shop.replaceWith(nextShop);
+                }
+                if (nextCart && cart) {
+                    cart.replaceWith(nextCart);
+                }
+                if (nextToggle && toggle) {
+                    toggle.replaceWith(nextToggle);
+                }
+
+                refreshNodeRefs();
+                bindInteractions();
+                bindFloatingToggle();
+                syncMode();
+
+                if (nextUrl) {
+                    window.history.pushState({}, '', nextUrl);
+                }
+            }
+
+            function trackTelemetry(eventName, payload, level) {
+                if (window.lpTelemetry && typeof window.lpTelemetry.track === 'function') {
+                    window.lpTelemetry.track(eventName, payload || {}, level || 'info');
+                }
+            }
+
+            async function asyncRequest(url, options, showSkeleton, pushUrl, telemetryMeta) {
+                if (isRefreshing) {
+                    return;
+                }
+                isRefreshing = true;
+                var startedAt = window.performance ? performance.now() : Date.now();
+
+                if (showSkeleton) {
+                    showShopSkeleton();
+                }
+
+                try {
+                    var response = await fetch(url, Object.assign({
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'text/html',
+                        },
+                        credentials: 'same-origin',
+                    }, options || {}));
+
+                    var html = await response.text();
+                    await refreshSectionsFromResponse(html, pushUrl || null);
+                    var endedAt = window.performance ? performance.now() : Date.now();
+                    if (telemetryMeta && telemetryMeta.action) {
+                        trackTelemetry('optimistic_action_success', {
+                            screen: window.location.pathname,
+                            action: telemetryMeta.action,
+                            metricMs: Math.round(endedAt - startedAt),
+                        });
+                    }
+                } catch (error) {
+                    var endedAt = window.performance ? performance.now() : Date.now();
+                    if (telemetryMeta && telemetryMeta.action) {
+                        trackTelemetry('optimistic_action_failed', {
+                            screen: window.location.pathname,
+                            action: telemetryMeta.action,
+                            metricMs: Math.round(endedAt - startedAt),
+                            rollback: true,
+                        }, 'warn');
+                    }
+                    window.location.reload();
+                } finally {
+                    isRefreshing = false;
+                }
+            }
+
+            function bindFilterTabs() {
+                if (!shop) {
+                    return;
+                }
+
+                shop.querySelectorAll('a[href*="status="]').forEach(function (link) {
+                    if (link.dataset.boundAsync === '1') {
+                        return;
+                    }
+                    link.dataset.boundAsync = '1';
+                    link.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        asyncRequest(link.href, { method: 'GET' }, true, link.href, { action: 'filter_products' });
+                    });
+                });
+            }
+
+            function bindAddToCartForms() {
+                if (!shop) {
+                    return;
+                }
+
+                shop.querySelectorAll('form[action*="/products/"][action*="/cart"]').forEach(function (form) {
+                    if (form.closest('#cart-section') || form.dataset.boundAsync === '1') {
+                        return;
+                    }
+                    form.dataset.boundAsync = '1';
+
+                    form.addEventListener('submit', function (event) {
+                        event.preventDefault();
+                        var submitter = event.submitter || form.querySelector('button[type="submit"]');
+                        if (!submitter) {
+                            return;
+                        }
+
+                        // Optimistic UI: make action feel instant.
+                        submitter.disabled = true;
+                        submitter.textContent = 'Added';
+                        submitter.classList.add('border-emerald-600', 'bg-emerald-50', 'font-bold', 'text-emerald-700');
+
+                        var payload = new FormData(form, submitter);
+                        asyncRequest(form.action, { method: 'POST', body: payload }, true, null, { action: 'add_to_cart' });
+                    });
+                });
+            }
+
+            function bindCartForm() {
+                if (!cart) {
+                    return;
+                }
+
+                var updateForm = cart.querySelector('form[action*="/cart"]');
+                if (!updateForm || updateForm.action.indexOf('/checkout') !== -1 || updateForm.dataset.boundAsync === '1') {
+                    return;
+                }
+                updateForm.dataset.boundAsync = '1';
+
+                updateForm.addEventListener('submit', function (event) {
+                    var submitter = event.submitter || updateForm.querySelector('button[type="submit"]');
+                    if (!submitter) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    var actionUrl = submitter.getAttribute('formaction') || updateForm.action;
+                    var payload = new FormData(updateForm, submitter);
+
+                    // Optimistic remove feedback.
+                    if ((submitter.value || '').toUpperCase() === 'DELETE') {
+                        var row = submitter.closest('div.grid');
+                        if (row) {
+                            row.style.opacity = '0.45';
+                        }
+                    } else {
+                        submitter.disabled = true;
+                        submitter.textContent = 'Updating...';
+                    }
+
+                    var actionType = ((submitter.value || '').toUpperCase() === 'DELETE') ? 'remove_from_cart' : 'update_cart';
+                    asyncRequest(actionUrl, { method: 'POST', body: payload }, false, null, { action: actionType });
+                });
+            }
+
+            function bindInteractions() {
+                bindFilterTabs();
+                bindAddToCartForms();
+                bindCartForm();
+            }
+
+            function bindFloatingToggle() {
+                if (!toggle || toggle.dataset.boundScroll === '1') {
+                    return;
+                }
+
+                toggle.dataset.boundScroll = '1';
+                toggle.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    var target = atCart ? shop : cart;
+                    if (!target) {
+                        return;
+                    }
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    setTimeout(syncMode, 300);
+                });
+            }
 
             window.addEventListener('scroll', syncMode, { passive: true });
             window.addEventListener('resize', syncMode);
+            window.addEventListener('popstate', function () {
+                asyncRequest(window.location.href, { method: 'GET' }, true, null, { action: 'history_navigation_refresh' });
+            });
+
+            bindInteractions();
+            bindFloatingToggle();
             syncMode();
         });
     </script>

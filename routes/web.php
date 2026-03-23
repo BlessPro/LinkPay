@@ -25,6 +25,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\TelemetryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index']);
@@ -64,6 +65,9 @@ Route::get('/p/{product_slug}', [PublicProductController::class, 'show'])->name(
 
 Route::post('/webhooks/paystack', [PaystackWebhookController::class, 'handle'])->name('webhooks.paystack');
 Route::post('/webhooks/twilio/status', [TwilioWebhookController::class, 'status'])->name('webhooks.twilio.status');
+Route::post('/telemetry/client', TelemetryController::class)
+    ->middleware('throttle:120,1')
+    ->name('telemetry.client');
 
 Route::middleware('auth')->group(function () {
     Route::get('/billing', [BillingController::class, 'show'])->name('billing.show');

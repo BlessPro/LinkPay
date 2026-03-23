@@ -8,6 +8,24 @@ All notable changes to this project will be documented here.
 - Add new entries under `Unreleased` with clear impact-focused notes.
 - Move `Unreleased` items into a versioned section during release cut.
 
+### Planned (Mobile App Feel Phases) - 23/03/2026
+- Phase 1: Perceived speed foundation.
+- Add skeleton loaders for dashboard/product/order lists.
+- Add optimistic UI updates for quick actions (`add/remove cart`, lightweight product status toggles).
+- Reduce full-page reload feeling with partial section refresh for high-frequency interactions.
+- Phase 2: PWA installability.
+- Add web app manifest, app icons, and standalone display settings.
+- Add service worker for shell asset caching and offline fallback page.
+- Add install prompt flow (`Add to Home Screen`) for supported browsers.
+- Phase 3: Mobile-native UX polish.
+- Camera-first product image inputs (`accept=\"image/*\"`, capture-first UX).
+- Sticky save bars on long forms (product create/edit, checkout-related forms).
+- Convert heavy mobile filters/sort/edit interactions to bottom sheets where applicable.
+- Phase 4: Reliability and telemetry for mobile UX.
+- Track and alert on PWA/service worker errors and offline fallback hits.
+- Track optimistic-action failure rate and rollback events.
+- Add UX telemetry for mobile flow timings (open page -> first action -> completion).
+
 ### Added
 - WhatsApp OTP login via Twilio Verify.
 - Seller and customer WhatsApp notifications via Twilio Messaging.
@@ -104,6 +122,17 @@ All notable changes to this project will be documented here.
 - Added explicit handling/logging for `413 Content Too Large` (`PostTooLargeException`) with request metadata for operations monitoring.
 - Added upload scaling runbook and policy doc: `docs/UPLOAD_POLICY.md`.
 - Login OTP switched to Hubtel SMS (send/verify via app OTP cache) with auth UI/validation copy updated for SMS wording.
+- Public listing now uses optimistic add/remove cart interactions with partial async section refresh to reduce full-page reload feel.
+- Added skeleton product-card placeholders while listing/cart async refresh runs.
+- Public listing status filters now refresh asynchronously with history updates to improve perceived speed.
+- Added PWA foundation: web manifest, service worker registration, install prompt flow, and offline fallback page with shell caching.
+- Added mobile app metadata (`theme-color`, manifest links, mobile-web-app tags) across shared layouts for installability.
+- Product create/edit image inputs now use camera-first mobile capture hints (`accept=\"image/*\"`, `capture=\"environment\"`).
+- Added sticky mobile save bars on product create/edit forms for one-thumb action access.
+- Added mobile bottom-sheet product filter picker on dashboard products page (stock status filters).
+- Added client telemetry ingestion endpoint (`/telemetry/client`) with throttling and structured server logging.
+- Added PWA/mobile telemetry signals: service worker registration failures, install prompt shown/accepted/dismissed, offline fallback hits, and mobile page timing beacons.
+- Added optimistic-action telemetry on public listing/cart async UX (`success`, `failed`, `rollback` intent) with action-level timing.
 - Replaced Quick Action standalone page navigation with in-layout offcanvas interaction.
 - Paystack service expanded to fetch transactions by date range for reconciliation workflows.
 - Admin layout navigation updated with dedicated `Reconciliation` entry.
