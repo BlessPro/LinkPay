@@ -280,6 +280,16 @@
                                     >
                                         Manage
                                     </button>
+                                    <form method="POST" action="{{ route('products.destroy', $product) }}" onsubmit="return confirm('Delete this product? This action cannot be undone.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button
+                                            type="submit"
+                                            class="px-4 py-2 text-xs font-semibold border rounded-full border-rose-200 text-rose-700 hover:border-rose-300 hover:bg-rose-50"
+                                        >
+                                            Delete
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </summary>
