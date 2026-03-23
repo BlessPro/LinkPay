@@ -329,7 +329,12 @@
                     .replaceAll('__NUMBER__', String(index + 1));
                 const wrapper = document.createElement('div');
                 wrapper.innerHTML = html.trim();
-                list.appendChild(wrapper.firstElementChild);
+                const node = wrapper.firstElementChild;
+                const activeCheckbox = node.querySelector(`input[name="products[${index}][is_active]"][type="checkbox"]`);
+                if (activeCheckbox) {
+                    activeCheckbox.checked = true;
+                }
+                list.appendChild(node);
                 renumber();
                 updateSummary();
             });

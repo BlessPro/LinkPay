@@ -274,34 +274,35 @@
                                         </p>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-3">
-                                    <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $product->statusBadgeClass() }}">
+                                <div class="-mx-1 overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
+                                    <div class="flex w-max items-center gap-2 sm:w-auto sm:flex-wrap sm:justify-end sm:gap-3">
+                                    <span class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold {{ $product->statusBadgeClass() }}">
                                         {{ $product->statusLabel() }}
                                     </span>
-                                    <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $product->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
+                                    <span class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold {{ $product->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
                                         {{ $product->is_active ? 'Active' : 'Inactive' }}
                                     </span>
-                                    <span class="px-4 py-2 text-xs font-semibold border rounded-full cursor-pointer border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                                    <span class="shrink-0 px-3 py-1.5 text-xs font-semibold border rounded-full cursor-pointer border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700 sm:px-4 sm:py-2">
                                         Quick edit
                                     </span>
                                     <a
                                         href="https://api.whatsapp.com/send?text={{ rawurlencode($waText) }}"
                                         target="_blank"
                                         rel="noreferrer noopener"
-                                        class="px-4 py-2 text-xs font-semibold border rounded-full border-slate-200 text-emerald-700 hover:border-emerald-300 hover:text-emerald-600"
+                                        class="shrink-0 px-3 py-1.5 text-xs font-semibold border rounded-full border-slate-200 text-emerald-700 hover:border-emerald-300 hover:text-emerald-600 sm:px-4 sm:py-2"
                                     >
                                         Share to WhatsApp
                                     </a>
                                     <button
                                         type="button"
-                                        class="px-4 py-2 text-xs font-semibold border rounded-full border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700 product-copy-link"
+                                        class="shrink-0 px-3 py-1.5 text-xs font-semibold border rounded-full border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700 product-copy-link sm:px-4 sm:py-2"
                                         data-copy-link="{{ $publicUrl }}"
                                     >
                                         Copy link
                                     </button>
                                     <button
                                         type="button"
-                                        class="px-4 py-2 text-xs font-semibold border rounded-full border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700 product-action-trigger"
+                                        class="shrink-0 px-3 py-1.5 text-xs font-semibold border rounded-full border-slate-200 text-slate-700 hover:border-emerald-200 hover:text-emerald-700 product-action-trigger sm:px-4 sm:py-2"
                                         data-product-name="{{ $product->name }}"
                                         data-product-id="{{ $product->id }}"
                                         data-product-slug="{{ $product->slug }}"
@@ -309,16 +310,17 @@
                                     >
                                         Manage
                                     </button>
-                                    <form method="POST" action="{{ route('products.destroy', $product) }}" onsubmit="return confirm('Delete this product? This action cannot be undone.');">
+                                    <form method="POST" action="{{ route('products.destroy', $product) }}" onsubmit="return confirm('Delete this product? This action cannot be undone.');" class="shrink-0">
                                         @csrf
                                         @method('DELETE')
                                         <button
                                             type="submit"
-                                            class="px-4 py-2 text-xs font-semibold border rounded-full border-rose-200 text-rose-700 hover:border-rose-300 hover:bg-rose-50"
+                                            class="shrink-0 px-3 py-1.5 text-xs font-semibold border rounded-full border-rose-200 text-rose-700 hover:border-rose-300 hover:bg-rose-50 sm:px-4 sm:py-2"
                                         >
                                             Delete
                                         </button>
                                     </form>
+                                    </div>
                                 </div>
                             </div>
                         </summary>

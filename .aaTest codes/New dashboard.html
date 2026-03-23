@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linkpay — Sell with a Link</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef6ff',
+              100: '#d9ebff',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af',
+              900: '#0f172a'
+            }
+          },
+          boxShadow: {
+            soft: '0 10px 30px rgba(15, 23, 42, 0.08)',
+            card: '0 14px 40px rgba(15, 23, 42, 0.10)'
+          },
+          borderRadius: {
+            '4xl': '2rem'
+          },
+          backgroundImage: {
+            'hero-glow': 'radial-gradient(circle at top right, rgba(37,99,235,0.12), transparent 28%), radial-gradient(circle at bottom left, rgba(14,165,233,0.10), transparent 28%)'
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+  <style>
+    .grid-overlay {
+      background-image:
+        linear-gradient(rgba(148, 163, 184, 0.10) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.10) 1px, transparent 1px);
+      background-size: 26px 26px;
+    }
+    .text-balance { text-wrap: balance; }
+  </style>
+</head>
+<body class="font-sans bg-slate-200 text-slate-900">
+  <main class="mx-auto min-h-screen max-w-[1500px] p-4 md:p-6">
+    <div class="overflow-hidden rounded-[2.5rem] bg-[#f7f7f8] shadow-card">
+      <!-- Hero / Header -->
+      <section class="relative overflow-hidden bg-gradient-to-br from-white via-[#f8f5f1] to-[#f5ecf7] bg-hero-glow">
+        <div class="absolute inset-0 grid-overlay opacity-40"></div>
+
+        <header class="relative z-20 flex items-center justify-between px-5 py-5 md:px-8 lg:px-12">
+          <a href="#" class="flex items-center gap-3">
+            <div class="flex items-center justify-center text-lg font-extrabold text-white h-11 w-11 rounded-2xl bg-slate-950">L</div>
+            <div>
+              <p class="text-lg font-semibold leading-none">Linkpay</p>
+              <p class="text-xs text-slate-500">Sell with a link</p>
+            </div>
+          </a>
+
+          <nav class="hidden px-2 py-2 rounded-full bg-white/90 shadow-soft backdrop-blur md:flex md:items-center md:gap-1">
+            <a class="px-4 py-2 text-sm font-medium rounded-full text-slate-700 hover:bg-slate-100" href="#">Home</a>
+            <a class="px-4 py-2 text-sm font-medium rounded-full text-slate-700 hover:bg-slate-100" href="#featured-sellers">Sellers</a>
+            <a class="px-4 py-2 text-sm font-medium rounded-full text-slate-700 hover:bg-slate-100" href="#products">Products</a>
+            <a class="px-4 py-2 text-sm font-medium rounded-full text-slate-700 hover:bg-slate-100" href="#how-it-works">How it Works</a>
+            <a class="px-4 py-2 text-sm font-medium rounded-full text-slate-700 hover:bg-slate-100" href="#faq">FAQ</a>
+          </nav>
+
+          <div class="flex items-center gap-2 md:gap-3">
+            <a href="#contact" class="hidden rounded-full bg-white px-5 py-3 text-sm font-medium shadow-soft transition hover:-translate-y-0.5 hover:shadow-card sm:inline-flex">Contact Us</a>
+            <button class="flex items-center justify-center bg-white rounded-full h-11 w-11 shadow-soft hover:shadow-md" aria-label="Sign in">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0"/></svg>
+            </button>
+            <button class="flex items-center justify-center bg-white rounded-full h-11 w-11 shadow-soft hover:shadow-md" aria-label="Menu">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="relative z-10 px-5 pt-4 pb-12 md:px-8 lg:px-12 lg:pb-20">
+          <div class="max-w-4xl mx-auto text-center">
+            <div class="inline-flex items-center gap-2 px-4 py-2 mb-5 text-xs font-medium border rounded-full border-white/60 bg-white/80 text-slate-600 shadow-soft backdrop-blur">
+              <span class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+              Powering modern seller storefronts across Ghana
+            </div>
+            <h1 class="text-4xl font-semibold tracking-tight text-balance text-slate-950 md:text-6xl lg:text-7xl">Sell products with a simple link. Get orders, insights, and growth.</h1>
+            <p class="max-w-2xl mx-auto mt-5 text-sm leading-7 text-slate-600 md:text-base">Linkpay helps sellers upload products, share store links, receive orders instantly, and grow with clear customer and sales insights.</p>
+            <div class="flex flex-col items-center justify-center gap-3 mt-8 sm:flex-row">
+              <a href="#signup" class="inline-flex items-center justify-center rounded-full bg-slate-950 px-7 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800">Start Selling</a>
+              <a href="#featured-sellers" class="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-7 py-3.5 text-sm font-semibold text-slate-800 transition hover:-translate-y-0.5 hover:shadow-soft">Browse Sellers</a>
+            </div>
+          </div>
+
+          <div class="relative mt-14 grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+            <div class="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#eef4ff] via-white to-[#f9f0ff] p-6 shadow-soft md:p-8">
+              <div class="absolute w-32 h-32 rounded-full -left-12 top-10 bg-blue-200/40 blur-2xl"></div>
+              <div class="absolute top-0 right-0 rounded-full h-44 w-44 bg-pink-200/40 blur-3xl"></div>
+
+              <div class="relative grid min-h-[430px] items-end gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+                <div class="self-start pt-2 md:pt-6">
+                  <span class="inline-flex px-4 py-2 text-xs font-medium bg-white rounded-full text-slate-600 shadow-soft">Featured Storefront</span>
+                  <h2 class="max-w-md mt-4 text-3xl font-semibold leading-tight md:text-4xl">Your products deserve more than just a WhatsApp photo.</h2>
+                  <p class="max-w-lg mt-4 text-sm leading-7 text-slate-600">Give every seller a clean public store, a direct product page, and a branded link they can share anywhere.</p>
+                </div>
+
+                <div class="relative flex h-[320px] items-end justify-center md:h-[380px]">
+                  <div class="absolute left-0 bottom-0 h-44 w-32 rounded-t-[2rem] bg-white/80 shadow-soft md:h-52 md:w-40"></div>
+                  <div class="absolute left-24 bottom-0 h-56 w-40 rounded-t-[2rem] bg-white shadow-soft md:left-28 md:h-64 md:w-48"></div>
+                  <div class="absolute left-1/2 bottom-0 z-10 h-72 w-52 -translate-x-1/2 rounded-t-[2.5rem] bg-white shadow-card md:h-[20rem] md:w-60"></div>
+                  <div class="absolute right-8 bottom-0 h-40 w-28 rounded-t-[2rem] bg-white/80 shadow-soft md:h-48 md:w-36"></div>
+
+                  <div class="absolute left-4 bottom-20 rounded-3xl bg-[#eaf6eb] p-4 shadow-soft md:left-8 md:bottom-20">
+                    <div class="h-28 w-28 rounded-[1.5rem] bg-gradient-to-br from-[#b5d6bc] to-[#86b095]"></div>
+                  </div>
+                  <div class="absolute left-1/2 bottom-28 z-20 -translate-x-1/2 rounded-[2rem] bg-[#dbe6db] p-4 shadow-soft md:bottom-32">
+                    <div class="h-24 w-36 rounded-[1.5rem] bg-gradient-to-br from-[#8ca394] to-[#667d71]"></div>
+                  </div>
+                  <div class="absolute left-[56%] bottom-20 z-30 flex -translate-x-1/2 items-center gap-3 rounded-[2rem] bg-slate-950 px-5 py-4 text-white shadow-card md:bottom-24">
+                    <div class="grid gap-2">
+                      <div class="w-16 h-10 rounded-2xl bg-slate-700"></div>
+                      <div class="w-12 h-8 rounded-xl bg-slate-800"></div>
+                    </div>
+                    <div class="grid gap-2">
+                      <div class="w-8 h-8 rounded-full bg-slate-700"></div>
+                      <div class="w-8 h-8 rounded-full bg-slate-700"></div>
+                    </div>
+                  </div>
+                  <div class="absolute right-2 top-10 rounded-[1.5rem] bg-white p-3 shadow-soft md:right-6 md:top-16">
+                    <p class="text-[10px] text-slate-400">Top product</p>
+                    <p class="mt-1 text-sm font-semibold">GHS 159.99</p>
+                    <div class="flex items-center gap-2 mt-2">
+                      <button class="flex items-center justify-center border rounded-full h-9 w-9 border-slate-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.837l.383 1.437m0 0L6.75 11.25m-1.644-5.976h13.28c.747 0 1.267.74 1.016 1.444l-1.273 3.819a1.125 1.125 0 0 1-1.067.769H8.25m-1.5 8.25a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm10.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z"/></svg>
+                      </button>
+                      <div class="h-14 w-14 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-400"></div>
+                    </div>
+                  </div>
+                  <div class="absolute z-30 flex items-center gap-3 px-4 py-3 -translate-x-1/2 bg-white rounded-full left-1/2 bottom-8 shadow-soft">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15 15 6 6m-11-4.5A6.5 6.5 0 1 1 10 3a6.5 6.5 0 0 1 0 13Z"/></svg>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium">Interactive storefront view</p>
+                      <p class="text-xs underline text-slate-500">Open preview</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid gap-4">
+              <div class="rounded-[2rem] bg-white p-6 shadow-soft">
+                <p class="text-sm font-semibold text-slate-900">Live overview</p>
+                <div class="mt-6 space-y-5">
+                  <div>
+                    <div class="flex items-center justify-between mb-2 text-sm">
+                      <span class="text-slate-500">This month orders</span>
+                      <span class="font-semibold">184</span>
+                    </div>
+                    <div class="h-3 rounded-full bg-slate-100"><div class="h-3 w-[74%] rounded-full bg-slate-950"></div></div>
+                  </div>
+                  <div>
+                    <div class="flex items-center justify-between mb-2 text-sm">
+                      <span class="text-slate-500">Returning customers</span>
+                      <span class="font-semibold">62%</span>
+                    </div>
+                    <div class="h-3 rounded-full bg-slate-100"><div class="h-3 w-[62%] rounded-full bg-blue-500"></div></div>
+                  </div>
+                  <div>
+                    <div class="flex items-center justify-between mb-2 text-sm">
+                      <span class="text-slate-500">Top link conversion</span>
+                      <span class="font-semibold">18.4%</span>
+                    </div>
+                    <div class="h-3 rounded-full bg-slate-100"><div class="h-3 w-[54%] rounded-full bg-emerald-500"></div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="rounded-[2rem] bg-slate-950 p-6 text-white shadow-soft">
+                <p class="text-sm text-slate-300">Built for modern sellers</p>
+                <h3 class="mt-3 text-2xl font-semibold leading-tight">Showcase products, share links, and turn clicks into customers.</h3>
+                <a href="#signup" class="inline-flex px-5 py-3 mt-6 text-sm font-semibold bg-white rounded-full text-slate-950">Create Store</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Featured Sellers -->
+      <section id="featured-sellers" class="rounded-t-[3rem] bg-white px-5 py-16 md:px-8 lg:px-12 lg:py-20">
+        <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+          <div>
+            <span class="inline-flex px-4 py-2 text-xs font-medium border rounded-full border-slate-200 text-slate-500">Featured sellers</span>
+            <h2 class="mt-5 text-3xl font-semibold tracking-tight md:text-5xl">Discover trusted sellers customers already love.</h2>
+          </div>
+          <a href="#" class="inline-flex px-5 py-3 text-sm font-semibold border rounded-full border-slate-200 text-slate-800 hover:bg-slate-50">View all sellers</a>
+        </div>
+
+        <div class="grid gap-6 mt-10 md:grid-cols-2 xl:grid-cols-4">
+          <article class="group overflow-hidden rounded-[2rem] bg-[#f5ebe8] p-4 shadow-soft transition hover:-translate-y-1 hover:shadow-card">
+            <div class="flex h-64 items-end rounded-[1.5rem] bg-gradient-to-br from-[#8a5237] to-[#2d1d17] p-4 text-white">
+              <div class="w-full px-4 py-2 text-sm rounded-full bg-white/15 backdrop-blur">Apex Gadgets</div>
+            </div>
+            <div class="flex items-center justify-between mt-4">
+              <div>
+                <p class="font-semibold">Electronics</p>
+                <p class="text-sm text-slate-500">24 products · 4.8 rating</p>
+              </div>
+              <button class="px-4 py-2 text-sm font-medium bg-white rounded-full shadow-soft">Open</button>
+            </div>
+          </article>
+
+          <article class="group overflow-hidden rounded-[2rem] bg-[#f5eef4] p-4 shadow-soft transition hover:-translate-y-1 hover:shadow-card">
+            <div class="flex h-64 items-end rounded-[1.5rem] bg-gradient-to-br from-[#d6bead] to-[#ad8d7a] p-4 text-white">
+              <div class="w-full px-4 py-2 text-sm rounded-full bg-white/20 backdrop-blur">Nubia Beauty</div>
+            </div>
+            <div class="flex items-center justify-between mt-4">
+              <div>
+                <p class="font-semibold">Beauty & Care</p>
+                <p class="text-sm text-slate-500">31 products · 4.9 rating</p>
+              </div>
+              <button class="px-4 py-2 text-sm font-medium bg-white rounded-full shadow-soft">Open</button>
+            </div>
+          </article>
+
+          <article class="group overflow-hidden rounded-[2rem] bg-[#eef5f8] p-4 shadow-soft transition hover:-translate-y-1 hover:shadow-card">
+            <div class="flex h-64 items-end rounded-[1.5rem] bg-gradient-to-br from-[#d7dfe7] to-[#8996a7] p-4 text-slate-900">
+              <div class="w-full px-4 py-2 text-sm rounded-full bg-white/60 backdrop-blur">Kasa Home</div>
+            </div>
+            <div class="flex items-center justify-between mt-4">
+              <div>
+                <p class="font-semibold">Home Essentials</p>
+                <p class="text-sm text-slate-500">18 products · 4.7 rating</p>
+              </div>
+              <button class="px-4 py-2 text-sm font-medium bg-white rounded-full shadow-soft">Open</button>
+            </div>
+          </article>
+
+          <article class="group overflow-hidden rounded-[2rem] bg-[#edf4f1] p-4 shadow-soft transition hover:-translate-y-1 hover:shadow-card">
+            <div class="flex h-64 items-end rounded-[1.5rem] bg-gradient-to-br from-[#111827] to-[#475569] p-4 text-white">
+              <div class="w-full px-4 py-2 text-sm rounded-full bg-white/20 backdrop-blur">Moda Lane</div>
+            </div>
+            <div class="flex items-center justify-between mt-4">
+              <div>
+                <p class="font-semibold">Fashion</p>
+                <p class="text-sm text-slate-500">42 products · 4.9 rating</p>
+              </div>
+              <button class="px-4 py-2 text-sm font-medium bg-white rounded-full shadow-soft">Open</button>
+            </div>
+          </article>
+        </div>
+
+        <div class="flex items-center gap-3 mt-10">
+          <div class="h-1.5 w-32 rounded-full bg-slate-950"></div>
+          <div class="w-64 h-1 rounded-full bg-slate-200"></div>
+          <div class="flex items-center gap-2 ml-auto">
+            <button class="flex items-center justify-center w-10 h-10 bg-white border rounded-full seller-prev border-slate-200">←</button>
+            <button class="flex items-center justify-center w-10 h-10 text-white rounded-full seller-next bg-slate-950">→</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Value Props -->
+      <section id="how-it-works" class="px-5 py-6 bg-white md:px-8 lg:px-12 lg:py-10">
+        <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <div class="rounded-[2rem] bg-[#f6efec] p-6 shadow-soft">
+            <div class="flex items-center justify-center bg-white border h-11 w-11 rounded-2xl border-slate-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6.75 6.75 0 1 0 0-13.5 6.75 6.75 0 0 0 0 13.5Zm0 0v2.25m0-18V5.25m6.364 11.114 1.591 1.591M4.045 4.045l1.591 1.591m12.728 0 1.591-1.591M4.045 19.955l1.591-1.591"/></svg>
+            </div>
+            <h3 class="mt-5 text-lg font-semibold">Faster product selling</h3>
+            <p class="mt-3 text-sm leading-7 text-slate-600">Upload products once, share your seller link anywhere, and let customers browse a proper store instead of scattered chat images.</p>
+          </div>
+          <div class="rounded-[2rem] bg-[#edf5fb] p-6 shadow-soft">
+            <div class="flex items-center justify-center bg-white border h-11 w-11 rounded-2xl border-slate-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h9m-9 4.5h6m-7.5 9h12a2.25 2.25 0 0 0 2.25-2.25V5.25A2.25 2.25 0 0 0 18 3H6A2.25 2.25 0 0 0 3.75 5.25v13.5A2.25 2.25 0 0 0 6 21Z"/></svg>
+            </div>
+            <h3 class="mt-5 text-lg font-semibold">Clear seller insights</h3>
+            <p class="mt-3 text-sm leading-7 text-slate-600">Track top products, customer activity, conversion performance, and monthly momentum so sellers can make better business decisions.</p>
+          </div>
+          <div class="rounded-[2rem] bg-[#f8f1f4] p-6 shadow-soft">
+            <div class="flex items-center justify-center bg-white border h-11 w-11 rounded-2xl border-slate-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6.75V6a4.5 4.5 0 1 0-9 0v.75M6 20.25h12A2.25 2.25 0 0 0 20.25 18V9A2.25 2.25 0 0 0 18 6.75H6A2.25 2.25 0 0 0 3.75 9v9A2.25 2.25 0 0 0 6 20.25Z"/></svg>
+            </div>
+            <h3 class="mt-5 text-lg font-semibold">Trusted checkout experience</h3>
+            <p class="mt-3 text-sm leading-7 text-slate-600">Customers get a neat product page, a secure purchase flow, and a smoother buying process that feels more professional and trustworthy.</p>
+          </div>
+          <div class="rounded-[2rem] bg-[#eef6f6] p-6 shadow-soft">
+            <div class="flex items-center justify-center bg-white border h-11 w-11 rounded-2xl border-slate-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 15.75V8.25A2.25 2.25 0 0 1 6 6h12a2.25 2.25 0 0 1 2.25 2.25v7.5M3.75 15.75A2.25 2.25 0 0 0 6 18h12a2.25 2.25 0 0 0 2.25-2.25M3.75 15.75l3.75-3.75 3 3 4.5-4.5 5.25 5.25"/></svg>
+            </div>
+            <h3 class="mt-5 text-lg font-semibold">Marketplace discovery</h3>
+            <p class="mt-3 text-sm leading-7 text-slate-600">Feature top sellers and strong-performing products publicly so customers can discover stores directly from the Linkpay platform.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Banner -->
+      <section class="px-5 py-12 bg-white md:px-8 lg:px-12 lg:py-16">
+        <div class="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-[#8b7667] via-[#54463b] to-[#2c251f] p-8 text-white shadow-card md:p-12">
+          <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_25%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.12),transparent_25%)]"></div>
+          <div class="relative grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+            <div>
+              <h2 class="max-w-sm text-4xl font-semibold leading-tight md:text-5xl">Sell smarter with a public store that works 24/7.</h2>
+            </div>
+            <div class="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
+              <p class="max-w-md text-sm leading-7 text-white/80 md:text-base">Linkpay gives every seller a professional digital storefront, lets customers discover products faster, and helps businesses grow without needing a full ecommerce website.</p>
+              <a href="#signup" class="inline-flex h-fit rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-slate-950 transition hover:-translate-y-0.5">Discover More</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Products -->
+      <section id="products" class="rounded-t-[3rem] bg-white px-5 py-16 md:px-8 lg:px-12 lg:py-20">
+        <div class="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+          <div>
+            <span class="inline-flex px-4 py-2 text-xs font-medium border rounded-full border-slate-200 text-slate-500">Top marketplace products</span>
+            <h2 class="mt-5 text-3xl font-semibold tracking-tight md:text-5xl">One winning product from each seller, all in one place.</h2>
+            <p class="max-w-xl mt-5 text-sm leading-7 text-slate-600 md:text-base">We highlight standout products from selected vendors so customers can discover quality items fast while every seller gets fair exposure.</p>
+
+            <div class="mt-8 rounded-[2rem] bg-[#f8f3f0] p-6 shadow-soft">
+              <div class="flex items-center justify-between gap-4">
+                <div>
+                  <p class="text-sm text-slate-500">Highlighted product</p>
+                  <h3 class="mt-1 text-2xl font-semibold">Apex Pods Pro</h3>
+                  <p class="mt-2 text-sm text-slate-600">by Apex Gadgets</p>
+                </div>
+                <button class="px-5 py-3 text-sm font-semibold text-white rounded-full bg-slate-950">View Product</button>
+              </div>
+              <div class="grid grid-cols-4 gap-3 mt-6">
+                <div class="h-20 rounded-2xl bg-gradient-to-br from-slate-300 to-slate-500"></div>
+                <div class="h-20 rounded-2xl bg-gradient-to-br from-rose-100 to-rose-300"></div>
+                <div class="h-20 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-300"></div>
+                <div class="h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-300"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid gap-5 sm:grid-cols-2">
+            <article class="rounded-[2rem] bg-[#f7f1f5] p-5 shadow-soft">
+              <div class="h-56 rounded-[1.5rem] bg-gradient-to-br from-[#e8d9e7] to-[#b8a0b6]"></div>
+              <div class="flex items-start justify-between gap-4 mt-4">
+                <div>
+                  <h3 class="font-semibold">Premium Hair Set</h3>
+                  <p class="mt-1 text-sm text-slate-500">Nubia Beauty</p>
+                </div>
+                <p class="font-semibold">GHS 320</p>
+              </div>
+            </article>
+            <article class="rounded-[2rem] bg-[#eff5f8] p-5 shadow-soft">
+              <div class="h-56 rounded-[1.5rem] bg-gradient-to-br from-[#dce8ee] to-[#9aaebb]"></div>
+              <div class="flex items-start justify-between gap-4 mt-4">
+                <div>
+                  <h3 class="font-semibold">Ceramic Vase Duo</h3>
+                  <p class="mt-1 text-sm text-slate-500">Kasa Home</p>
+                </div>
+                <p class="font-semibold">GHS 210</p>
+              </div>
+            </article>
+            <article class="rounded-[2rem] bg-[#f7f3ee] p-5 shadow-soft">
+              <div class="h-56 rounded-[1.5rem] bg-gradient-to-br from-[#dfceb7] to-[#8f6841]"></div>
+              <div class="flex items-start justify-between gap-4 mt-4">
+                <div>
+                  <h3 class="font-semibold">Minimal Leather Bag</h3>
+                  <p class="mt-1 text-sm text-slate-500">Moda Lane</p>
+                </div>
+                <p class="font-semibold">GHS 450</p>
+              </div>
+            </article>
+            <article class="rounded-[2rem] bg-[#eef6f3] p-5 shadow-soft">
+              <div class="h-56 rounded-[1.5rem] bg-gradient-to-br from-[#c9ddd5] to-[#739585]"></div>
+              <div class="flex items-start justify-between gap-4 mt-4">
+                <div>
+                  <h3 class="font-semibold">Apex Pods Lite</h3>
+                  <p class="mt-1 text-sm text-slate-500">Apex Gadgets</p>
+                </div>
+                <p class="font-semibold">GHS 139</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Testimonials -->
+      <section class="rounded-t-[3rem] bg-white px-5 py-16 md:px-8 lg:px-12 lg:py-20">
+        <div class="grid gap-8 lg:grid-cols-[1fr_0.92fr]">
+          <div>
+            <span class="inline-flex px-4 py-2 text-xs font-medium border rounded-full border-slate-200 text-slate-500">Testimonials</span>
+            <h2 class="mt-5 text-3xl font-semibold tracking-tight md:text-5xl">What sellers are saying about Linkpay.</h2>
+
+            <div class="swiper testimonial-swiper mt-10 max-w-2xl overflow-hidden rounded-[2rem] bg-[#f7efef] p-6 shadow-soft md:p-8">
+              <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                      <div class="rounded-full h-14 w-14 bg-gradient-to-br from-slate-300 to-slate-500"></div>
+                      <div>
+                        <p class="font-semibold">Ama L.</p>
+                        <p class="text-sm text-slate-500">Beauty Seller</p>
+                      </div>
+                    </div>
+                    <span class="text-6xl leading-none text-slate-300">“</span>
+                  </div>
+                  <p class="max-w-xl mt-8 text-base leading-8 text-slate-700">Linkpay made my products look more professional instantly. Instead of sending many pictures in chat, I now send one clean seller link and customers order faster.</p>
+                </div>
+                <div class="swiper-slide">
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                      <div class="rounded-full h-14 w-14 bg-gradient-to-br from-rose-200 to-rose-400"></div>
+                      <div>
+                        <p class="font-semibold">Kofi B.</p>
+                        <p class="text-sm text-slate-500">Gadget Seller</p>
+                      </div>
+                    </div>
+                    <span class="text-6xl leading-none text-slate-300">“</span>
+                  </div>
+                  <p class="max-w-xl mt-8 text-base leading-8 text-slate-700">The best part for me is the product insights. I can see what customers are buying most and which products are getting attention but not converting.</p>
+                </div>
+              </div>
+              <div class="flex items-center justify-between mt-8">
+                <div class="text-sm text-slate-500">Trusted by growing sellers</div>
+                <div class="flex items-center gap-2">
+                  <button class="flex items-center justify-center w-10 h-10 text-white rounded-full testimonial-prev bg-slate-950">←</button>
+                  <button class="flex items-center justify-center w-10 h-10 bg-white border rounded-full testimonial-next border-slate-200">→</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-stretch">
+            <div class="relative min-h-[400px] w-full overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#f4e5e2] via-[#f7f1f0] to-[#dde4df] shadow-soft">
+              <div class="absolute left-8 top-10 h-28 w-40 rounded-[1.75rem] bg-gradient-to-br from-[#d8c3be] to-[#9f7f78]"></div>
+              <div class="absolute right-8 top-20 h-40 w-40 rounded-[2rem] bg-gradient-to-br from-[#d6d9d1] to-[#7c8778]"></div>
+              <div class="absolute bottom-8 left-10 h-48 w-44 rounded-[2rem] bg-gradient-to-br from-[#3b414b] to-[#111827]"></div>
+              <div class="absolute bottom-10 right-10 h-32 w-48 rounded-[2rem] bg-gradient-to-br from-[#1f2937] to-[#5b6679]"></div>
+              <button class="absolute flex items-center justify-center w-16 h-16 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full left-1/2 top-1/2 text-slate-950 shadow-card">
+                <svg class="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA / Signup -->
+      <section id="signup" class="bg-[#eef4f7] px-5 py-16 md:px-8 lg:px-12 lg:py-20">
+        <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <span class="inline-flex px-4 py-2 text-xs font-medium bg-white border rounded-full border-slate-200 text-slate-500">Start selling</span>
+            <h2 class="mt-5 text-3xl font-semibold tracking-tight md:text-5xl">Build your Linkpay store and start selling in minutes.</h2>
+            <p class="max-w-xl mt-5 text-sm leading-7 text-slate-600 md:text-base">Join sellers using Linkpay to showcase products, share one clean link, and manage customer orders with a more professional experience.</p>
+          </div>
+
+          <div class="rounded-[2rem] bg-white p-6 shadow-card md:p-8">
+            <div class="grid gap-5 md:grid-cols-2">
+              <div>
+                <label class="block mb-2 text-sm font-medium text-slate-700">Business name</label>
+                <input class="w-full px-4 py-3 transition border outline-none rounded-2xl border-slate-200 focus:border-slate-400" type="text" placeholder="Apex Gadgets" />
+              </div>
+              <div>
+                <label class="block mb-2 text-sm font-medium text-slate-700">Category</label>
+                <select class="w-full px-4 py-3 transition border outline-none rounded-2xl border-slate-200 focus:border-slate-400">
+                  <option>Electronics</option>
+                  <option>Fashion</option>
+                  <option>Beauty</option>
+                  <option>Home</option>
+                </select>
+              </div>
+              <div>
+                <label class="block mb-2 text-sm font-medium text-slate-700">Email</label>
+                <input class="w-full px-4 py-3 transition border outline-none rounded-2xl border-slate-200 focus:border-slate-400" type="email" placeholder="hello@business.com" />
+              </div>
+              <div>
+                <label class="block mb-2 text-sm font-medium text-slate-700">Phone</label>
+                <input class="w-full px-4 py-3 transition border outline-none rounded-2xl border-slate-200 focus:border-slate-400" type="tel" placeholder="+233 XX XXX XXXX" />
+              </div>
+            </div>
+            <button class="w-full px-6 py-4 mt-6 text-sm font-semibold text-white transition rounded-full bg-slate-950 hover:bg-slate-800">Create Seller Account</button>
+            <p class="mt-4 text-xs text-center text-slate-500">By continuing, you agree to Linkpay’s Terms and Privacy Policy.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer id="contact" class="bg-[#eaf1f4] px-5 pb-8 pt-12 md:px-8 lg:px-12">
+        <div class="grid gap-10 lg:grid-cols-[1.1fr_0.7fr_0.8fr_1.2fr]">
+          <div>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center text-lg font-extrabold text-white h-11 w-11 rounded-2xl bg-slate-950">L</div>
+              <div>
+                <p class="text-lg font-semibold leading-none">Linkpay</p>
+                <p class="text-xs text-slate-500">Sell with a link</p>
+              </div>
+            </div>
+            <div class="mt-6 space-y-1 text-sm text-slate-600">
+              <p>Accra, Ghana</p>
+              <p>support@linkpay.com</p>
+              <p>+233 000 000 000</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold">Menu</h3>
+            <ul class="mt-5 space-y-3 text-sm text-slate-600">
+              <li><a href="#" class="hover:text-slate-950">Home</a></li>
+              <li><a href="#featured-sellers" class="hover:text-slate-950">Sellers</a></li>
+              <li><a href="#products" class="hover:text-slate-950">Products</a></li>
+              <li><a href="#faq" class="hover:text-slate-950">FAQ</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold">Operational</h3>
+            <ul class="mt-5 space-y-3 text-sm text-slate-600">
+              <li>Every day: 9:00 – 22:00</li>
+              <li>Seller support available</li>
+              <li>Marketplace discovery active</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="text-3xl font-semibold tracking-tight">Subscribe to our newsletter</h3>
+            <form class="flex flex-col gap-3 mt-6 sm:flex-row">
+              <input class="w-full rounded-full border border-slate-300 bg-white px-5 py-3.5 text-sm outline-none" type="email" placeholder="Email" />
+              <button class="rounded-full bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white">Subscribe</button>
+            </form>
+            <p class="mt-4 text-xs text-slate-500">Subscribe to receive product updates, seller stories, and marketplace news.</p>
+          </div>
+        </div>
+
+        <div class="pt-6 mt-10 text-xs border-t border-slate-300/70 text-slate-500 md:flex md:items-center md:justify-between">
+          <p>Copyright © Linkpay. All rights reserved.</p>
+          <div class="flex items-center gap-2 mt-4 md:mt-0">
+            <span class="px-2 py-1 bg-white rounded shadow-soft">Visa</span>
+            <span class="px-2 py-1 bg-white rounded shadow-soft">Mastercard</span>
+            <span class="px-2 py-1 bg-white rounded shadow-soft">MoMo</span>
+            <span class="px-2 py-1 bg-white rounded shadow-soft">Paystack</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+  <script>
+    new Swiper('.testimonial-swiper', {
+      slidesPerView: 1,
+      spaceBetween: 24,
+      loop: true,
+      navigation: {
+        nextEl: '.testimonial-next',
+        prevEl: '.testimonial-prev',
+      },
+      autoplay: {
+        delay: 4500,
+        disableOnInteraction: false,
+      },
+    });
+  </script>
+</body>
+</html>
