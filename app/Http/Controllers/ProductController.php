@@ -392,7 +392,53 @@ class ProductController extends Controller
     public function store(CreateProductRequest $request)
     {
         $data = $request->validated();
-        $data['user_id'] = $request->user()->id;
+        $user = $request->user();
+
+        if (isset($data['products']) && is_array($data['products'])) {
+            $createdProducts = collect();
+            foreach ($data['products'] as $index => $item) {
+                $productData = [
+                    'user_id' => $user->id,
+                    'name' => (string) $item['name'],
+                    'description' => $item['description'] ?? null,
+                    'price' => $item['price'],
+                    'is_active' => (bool) ($item['is_active'] ?? false),
+                    'status' => $item['status'] ?? Product::STATUS_IN_STOCK,
+                    'stock_quantity' => max(0, (int) ($item['stock_quantity'] ?? 0)),
+                    'low_stock_threshold' => max(0, (int) ($item['low_stock_threshold'] ?? 5)),
+                ];
+                $productData['slug'] = $this->generateProductSlug($productData['name']);
+
+                if ($request->hasFile("products.$index.image")) {
+                    $productData['image_path'] = $request->file("products.$index.image")->store('products', 'public');
+                }
+
+                $product = Product::create($productData);
+                app(InventoryService::class)->syncStatusAndAlert($product, $user, false);
+                $createdProducts->push($product);
+
+                try {
+                    app(OgImageService::class)->generateProduct($product);
+                } catch (\Throwable $e) {
+                    // Ignore OG failures.
+                }
+            }
+
+            try {
+                $profile = $user->sellerProfile;
+                if ($profile) {
+                    app(OgImageService::class)->generateSeller($profile);
+                }
+            } catch (\Throwable $e) {
+                // Ignore OG failures.
+            }
+
+            return redirect()->route('products.index')
+                ->with('status', 'products-created')
+                ->with('products_created_count', $createdProducts->count());
+        }
+
+        $data['user_id'] = $user->id;
         $data['is_active'] = $request->boolean('is_active');
         $data['status'] = $request->input('status', Product::STATUS_IN_STOCK);
         $data['stock_quantity'] = max(0, (int) $request->input('stock_quantity', 0));
@@ -404,7 +450,7 @@ class ProductController extends Controller
         }
 
         $product = Product::create($data);
-        app(InventoryService::class)->syncStatusAndAlert($product, $request->user(), false);
+        app(InventoryService::class)->syncStatusAndAlert($product, $user, false);
 
         // Pre-render a large OG image for WhatsApp previews.
         try {

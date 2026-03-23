@@ -75,7 +75,7 @@
                             $sellerPhone = $profile->phone ?: ($profile->user?->phone);
                             $sellerPhone = $sellerPhone ? \App\Support\Phone::normalize($sellerPhone, '+233') : null;
                             $productUrl = route('public.product', ['product_slug' => $product->slug]);
-                            $chatMessage = "Hi there, I am interested in {$product->name}. Is it available? Please tell me more.\nLink: {$productUrl}";
+                            $chatMessage = "Hi, I am interested in {$product->name}.\nLink: {$productUrl}";
                             $chatUrl = $sellerPhone ? \App\Support\WhatsApp::chatUrl($sellerPhone, $chatMessage) : null;
                         @endphp
                         <div class="sm:col-span-3 flex flex-wrap items-center gap-3">
@@ -102,12 +102,11 @@
                                     rel="noreferrer noopener"
                                     aria-label="Chat on WhatsApp"
                                     title="Chat on WhatsApp"
-                                    class="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                                    class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true">
                                         <path d="M20.5 3.5A11 11 0 0 0 3.54 17.14L2 22l4.99-1.5A11 11 0 1 0 20.5 3.5Zm-8.52 17a9.08 9.08 0 0 1-4.63-1.27l-.33-.19-2.97.89.9-2.9-.22-.35a9.09 9.09 0 1 1 7.25 3.82Zm4.98-6.84c-.27-.14-1.62-.8-1.87-.89-.25-.09-.43-.14-.61.14-.18.27-.7.88-.86 1.06-.16.18-.31.2-.58.07a7.46 7.46 0 0 1-2.19-1.35 8.24 8.24 0 0 1-1.52-1.9c-.16-.27-.02-.42.12-.56.12-.12.27-.31.41-.47.14-.16.18-.27.27-.45.09-.18.05-.34-.02-.47-.07-.14-.61-1.48-.84-2.03-.22-.53-.45-.46-.61-.47h-.52c-.18 0-.47.07-.72.34s-.95.93-.95 2.27.98 2.63 1.11 2.81c.14.18 1.92 2.93 4.66 4.11.65.28 1.16.45 1.55.58.65.21 1.24.18 1.71.11.52-.08 1.62-.66 1.85-1.3.23-.64.23-1.18.16-1.3-.07-.12-.25-.2-.52-.34Z"/>
                                     </svg>
-                                    <span>WhatsApp</span>
                                 </a>
                             @endif
                         </div>
@@ -150,7 +149,7 @@
                     $sellerPhone = $profile->phone ?: ($profile->user?->phone);
                     $sellerPhone = $sellerPhone ? \App\Support\Phone::normalize($sellerPhone, '+233') : null;
                     $productUrl = route('public.product', ['product_slug' => $product->slug]);
-                    $chatMessage = "Hi there, I am interested in {$product->name}. Is it available? Please tell me more.\nLink: {$productUrl}";
+                    $chatMessage = "Hi, I am interested in {$product->name}.\nLink: {$productUrl}";
                     $chatUrl = $sellerPhone ? \App\Support\WhatsApp::chatUrl($sellerPhone, $chatMessage) : null;
                     $statusDot = match ($product->status) {
                         \App\Models\Product::STATUS_LOW_STOCK => 'bg-amber-500',
@@ -215,15 +214,18 @@
                                     rel="noreferrer noopener"
                                     aria-label="Chat on WhatsApp"
                                     title="Chat on WhatsApp"
-                                    class="inline-flex w-full items-center justify-center gap-1 rounded-full border border-emerald-200 px-2.5 py-1 font-semibold text-emerald-700 hover:bg-emerald-50 md:w-auto"
+                                    class="inline-flex w-full items-center justify-center rounded-full border border-emerald-200 px-2.5 py-1 font-semibold text-emerald-700 hover:bg-emerald-50 md:h-8 md:w-8 md:p-0"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
                                         <path d="M20.5 3.5A11 11 0 0 0 3.54 17.14L2 22l4.99-1.5A11 11 0 1 0 20.5 3.5Zm-8.52 17a9.08 9.08 0 0 1-4.63-1.27l-.33-.19-2.97.89.9-2.9-.22-.35a9.09 9.09 0 1 1 7.25 3.82Zm4.98-6.84c-.27-.14-1.62-.8-1.87-.89-.25-.09-.43-.14-.61.14-.18.27-.7.88-.86 1.06-.16.18-.31.2-.58.07a7.46 7.46 0 0 1-2.19-1.35 8.24 8.24 0 0 1-1.52-1.9c-.16-.27-.02-.42.12-.56.12-.12.27-.31.41-.47.14-.16.18-.27.27-.45.09-.18.05-.34-.02-.47-.07-.14-.61-1.48-.84-2.03-.22-.53-.45-.46-.61-.47h-.52c-.18 0-.47.07-.72.34s-.95.93-.95 2.27.98 2.63 1.11 2.81c.14.18 1.92 2.93 4.66 4.11.65.28 1.16.45 1.55.58.65.21 1.24.18 1.71.11.52-.08 1.62-.66 1.85-1.3.23-.64.23-1.18.16-1.3-.07-.12-.25-.2-.52-.34Z"/>
                                     </svg>
-                                    <span>WhatsApp</span>
                                 </a>
                             @else
-                                <span class="inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-2.5 py-1 font-semibold text-slate-400">WhatsApp</span>
+                                <span class="inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-2.5 py-1 text-slate-400 md:h-8 md:w-8 md:p-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                                        <path d="M20.5 3.5A11 11 0 0 0 3.54 17.14L2 22l4.99-1.5A11 11 0 1 0 20.5 3.5Zm-8.52 17a9.08 9.08 0 0 1-4.63-1.27l-.33-.19-2.97.89.9-2.9-.22-.35a9.09 9.09 0 1 1 7.25 3.82Zm4.98-6.84c-.27-.14-1.62-.8-1.87-.89-.25-.09-.43-.14-.61.14-.18.27-.7.88-.86 1.06-.16.18-.31.2-.58.07a7.46 7.46 0 0 1-2.19-1.35 8.24 8.24 0 0 1-1.52-1.9c-.16-.27-.02-.42.12-.56.12-.12.27-.31.41-.47.14-.16.18-.27.27-.45.09-.18.05-.34-.02-.47-.07-.14-.61-1.48-.84-2.03-.22-.53-.45-.46-.61-.47h-.52c-.18 0-.47.07-.72.34s-.95.93-.95 2.27.98 2.63 1.11 2.81c.14.18 1.92 2.93 4.66 4.11.65.28 1.16.45 1.55.58.65.21 1.24.18 1.71.11.52-.08 1.62-.66 1.85-1.3.23-.64.23-1.18.16-1.3-.07-.12-.25-.2-.52-.34Z"/>
+                                    </svg>
+                                </span>
                             @endif
                         </div>
                     </div>

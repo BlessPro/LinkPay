@@ -97,6 +97,11 @@ All notable changes to this project will be documented here.
 - Product OG cache/version key bumped to `v3` to force fresh previews after deployment.
 - Product OG preview no longer renders product price text; preview is now image-first with title/seller only.
 - Product OG cache/version key bumped to `v4` for immediate preview refresh.
+- Product create flow now supports multi-item upload in one submission with a `+ Next product` repeater and per-item image/status/stock fields.
+- Product create now includes client-side upload size summary, automatic image compression, and external compression fallback guidance (TinyPNG link).
+- Product image validation limit increased from `2MB` to `6MB` per file for multi-upload workflows.
+- Added explicit handling/logging for `413 Content Too Large` (`PostTooLargeException`) with request metadata for operations monitoring.
+- Added upload scaling runbook and policy doc: `docs/UPLOAD_POLICY.md`.
 - Replaced Quick Action standalone page navigation with in-layout offcanvas interaction.
 - Paystack service expanded to fetch transactions by date range for reconciliation workflows.
 - Admin layout navigation updated with dedicated `Reconciliation` entry.
