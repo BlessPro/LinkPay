@@ -26,9 +26,24 @@ use App\Http\Controllers\CouponController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\TelemetryController;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index']);
+Route::get('/version.json', function () {
+    $manifestPath = public_path('build/manifest.json');
+    $manifestHash = File::exists($manifestPath)
+        ? md5_file($manifestPath)
+        : null;
+
+    return response()->json([
+        'version' => config('app.version')
+            ?? env('APP_VERSION')
+            ?? $manifestHash
+            ?? app()->version(),
+        'generated_at' => now()->toIso8601String(),
+    ]);
+})->name('app.version');
 Route::get('/sellers', [LandingController::class, 'sellers'])->name('marketplace.sellers');
 Route::get('/privacy', [LegalController::class, 'privacy'])->name('legal.privacy');
 Route::get('/terms', [LegalController::class, 'terms'])->name('legal.terms');

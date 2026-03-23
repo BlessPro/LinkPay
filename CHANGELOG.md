@@ -99,6 +99,22 @@ All notable changes to this project will be documented here.
 - Added idempotency test to verify stock and coupon side effects run once even if `markSuccess` is called twice.
 
 ### Changed
+- Phase 4 runtime health self-heal flow added:
+- Added runtime health watcher for repeated same-origin API/network failures, `window.error`, and `unhandledrejection` spikes.
+- App now shows a non-blocking `Refresh app` suggestion when health degradation is detected.
+- Added runtime health telemetry events for prompt shown, refresh click, dismiss, offline, and online recovery.
+- Phase 3 iPhone/cache-staleness hardening added:
+- Added `SetWebCacheHeaders` middleware to enforce fresh HTML/app-shell responses and no-cache for update-sensitive endpoints (`sw.js`, `manifest.webmanifest`, `version.json`, `offline.html`).
+- Added `/version.json` endpoint with deploy/build-derived version hash for client freshness checks.
+- App now performs periodic version-drift checks and shows a refresh suggestion when runtime version changes but UI may still be stale.
+- Phase 2 update flow for PWA added:
+- Service worker now waits for explicit activation and supports `SKIP_WAITING` messaging for controlled updates.
+- App now detects waiting/new service workers and shows a `New version available` refresh banner.
+- Added one-tap `Refresh now` update path with telemetry for update availability and refresh actions.
+- Phase 1 install onboarding improved for PWA:
+- Android install now uses a richer in-app banner (`Install` / `Later`) with smart re-prompt suppression.
+- iPhone Safari now shows an explicit `Add to Home Screen` helper banner with `Got it` / `Later`.
+- Install helper interactions are now tracked with telemetry events (`shown`, `acknowledged`, `dismissed`, `later`).
 - Refined dashboard UI and analytics layout for products.
 - Rebranded public-facing UI language to `8Kommerce` and reused brand lockup.
 - Reworked public landing header/menu and full-page visual structure.
@@ -128,6 +144,7 @@ All notable changes to this project will be documented here.
 - Added PWA foundation: web manifest, service worker registration, install prompt flow, and offline fallback page with shell caching.
 - Added mobile app metadata (`theme-color`, manifest links, mobile-web-app tags) across shared layouts for installability.
 - Product create/edit image inputs now use camera-first mobile capture hints (`accept=\"image/*\"`, `capture=\"environment\"`).
+- Product create/edit image pickers now allow either camera capture or gallery/file upload on mobile (capture is no longer forced).
 - Added sticky mobile save bars on product create/edit forms for one-thumb action access.
 - Added mobile bottom-sheet product filter picker on dashboard products page (stock status filters).
 - Added client telemetry ingestion endpoint (`/telemetry/client`) with throttling and structured server logging.

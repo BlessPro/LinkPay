@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'payments_plan' => \App\Http\Middleware\EnsurePaymentsPlan::class,
             'promotion_access' => \App\Http\Middleware\EnsurePromotionAccess::class,
         ]);
+
+        $middleware->web(append: [
+            \App\Http\Middleware\SetWebCacheHeaders::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (PostTooLargeException $exception, $request) {
