@@ -24,22 +24,13 @@ class PhoneOtpController extends Controller
 
         $country = $data['phone_country'] ?? '+233';
         $normalized = Phone::normalize($data['phone_number'], $country);
-        if (! $normalized || ! Phone::isValidGh($data['phone_number'])) {
+        if (! $normalized || ! Phone::isValidGh($normalized)) {
             throw ValidationException::withMessages([
                 'phone_number' => 'Enter a valid phone number.',
             ]);
         }
 
-        $user = User::where('phone', $normalized)->first();
-        if (! $user) {
-            $profile = SellerProfile::where('phone', $normalized)->first();
-            $user = $profile?->user;
-            if ($user) {
-                $user->phone = $normalized;
-                $user->phone_verified_at = null;
-                $user->save();
-            }
-        }
+        $user = $this->resolveUserByPhone($normalized, $data['phone_number'] ?? null);
 
         if (! $user) {
             throw ValidationException::withMessages([
@@ -84,7 +75,7 @@ class PhoneOtpController extends Controller
         $country = $data['phone_country'] ?? (session('phone_login_pending_country', '+233'));
         $pendingPhone = session('phone_login_pending_phone');
         $normalized = Phone::normalize($data['phone_number'], $country) ?: $pendingPhone;
-        if (! $normalized || ! Phone::isValidGh($data['phone_number'])) {
+        if (! $normalized || ! Phone::isValidGh($normalized)) {
             if ($pendingPhone && Phone::isValidGh($pendingPhone)) {
                 $normalized = $pendingPhone;
             } else {
@@ -100,7 +91,7 @@ class PhoneOtpController extends Controller
             ]);
         }
 
-        $user = User::where('phone', $normalized)->first();
+        $user = $this->resolveUserByPhone($normalized, $data['phone_number'] ?? null);
         if (! $user) {
             throw ValidationException::withMessages([
                 'phone_number' => 'Account not found. Use email to sign in.',
@@ -143,5 +134,74 @@ class PhoneOtpController extends Controller
         $visible = substr($digits, -4);
 
         return '+***'.$visible;
+    }
+
+    private function resolveUserByPhone(string $normalized, ?string $rawPhone = null): ?User
+    {
+        $candidates = $this->buildPhoneCandidates($normalized, $rawPhone);
+
+        $user = User::query()
+            ->whereIn('phone', $candidates)
+            ->first();
+
+        if ($user) {
+            if ($user->phone !== $normalized) {
+                $user->phone = $normalized;
+                $user->phone_verified_at = null;
+                $user->save();
+            }
+
+            return $user;
+        }
+
+        $profile = SellerProfile::query()
+            ->whereIn('phone', $candidates)
+            ->first();
+        $user = $profile?->user;
+
+        if (! $user) {
+            return null;
+        }
+
+        if ($profile && $profile->phone !== $normalized) {
+            $profile->phone = $normalized;
+            $profile->save();
+        }
+
+        if ($user->phone !== $normalized) {
+            $user->phone = $normalized;
+            $user->phone_verified_at = null;
+            $user->save();
+        }
+
+        return $user;
+    }
+
+    private function buildPhoneCandidates(string $normalized, ?string $rawPhone = null): array
+    {
+        $candidates = [$normalized];
+        $digits = preg_replace('/\D+/', '', $normalized);
+
+        if ($digits && strlen($digits) >= 9) {
+            $local = substr($digits, -9);
+            $candidates[] = $local;
+            $candidates[] = '0'.$local;
+            $candidates[] = '+233'.$local;
+            $candidates[] = '233'.$local;
+        }
+
+        if ($rawPhone) {
+            $rawDigits = preg_replace('/\D+/', '', $rawPhone);
+            if ($rawDigits) {
+                $candidates[] = $rawDigits;
+                if (strlen($rawDigits) >= 9) {
+                    $localFromRaw = substr($rawDigits, -9);
+                    $candidates[] = $localFromRaw;
+                    $candidates[] = '0'.$localFromRaw;
+                }
+            }
+        }
+
+        return array_values(array_unique(array_filter($candidates)));
     }
 }

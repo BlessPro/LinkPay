@@ -35,6 +35,18 @@ class HubtelSmsService
         }
 
         $json = $response->json();
+        if ($this->isProviderFailure($json)) {
+            $this->log(array_merge($context, [
+                'to' => $normalizedTo,
+                'status' => 'failed',
+                'error_code' => (string) ($json['code'] ?? $json['statusCode'] ?? $json['ResponseCode'] ?? 'provider_failure'),
+                'error_message' => (string) ($json['message'] ?? $json['Message'] ?? 'Hubtel provider rejected message'),
+                'payload' => ['body' => $message, 'response' => $json],
+            ]));
+
+            throw new \RuntimeException('Hubtel SMS provider rejected message.');
+        }
+
         $providerId = is_array($json)
             ? ($json['MessageId'] ?? $json['messageId'] ?? $json['id'] ?? null)
             : null;
@@ -79,5 +91,28 @@ class HubtelSmsService
         $normalized = Phone::normalize($phone, '+233') ?: $phone;
         return ltrim($normalized, '+');
     }
-}
 
+    private function isProviderFailure($json): bool
+    {
+        if (! is_array($json)) {
+            return false;
+        }
+
+        $status = strtolower((string) ($json['status'] ?? $json['Status'] ?? ''));
+        if (in_array($status, ['error', 'failed', 'fail', 'rejected'], true)) {
+            return true;
+        }
+
+        $responseCode = (string) ($json['ResponseCode'] ?? $json['responseCode'] ?? '');
+        if ($responseCode !== '' && ! in_array($responseCode, ['0', '00', '0000'], true)) {
+            return true;
+        }
+
+        $code = (string) ($json['code'] ?? $json['statusCode'] ?? '');
+        if ($code !== '' && ! in_array($code, ['0', '200', '202'], true)) {
+            return true;
+        }
+
+        return false;
+    }
+}

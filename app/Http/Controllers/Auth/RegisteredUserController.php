@@ -49,7 +49,7 @@ class RegisteredUserController extends Controller
 
             if ($request->filled('phone_number')) {
                 $normalized = Phone::normalize($request->input('phone_number'), $request->input('phone_country', '+233'));
-                if (! $normalized || ! Phone::isValidGh($request->input('phone_number'))) {
+                if (! $normalized || ! Phone::isValidGh($normalized)) {
                     $validator->errors()->add('phone_number', 'Enter a valid phone number.');
                 } elseif (User::where('phone', $normalized)->exists()) {
                     $validator->errors()->add('phone_number', 'This phone number is already in use.');
