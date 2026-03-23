@@ -12,7 +12,7 @@ class OgImageService
 {
     public const WIDTH = 1200;
     public const HEIGHT = 630;
-    private const PRODUCT_OG_VERSION = 'v4';
+    private const PRODUCT_OG_VERSION = 'v5';
 
     public function generateSeller(SellerProfile $profile): void
     {
@@ -206,9 +206,9 @@ class OgImageService
 
     /**
      * Product-focused OG layout:
-     * - large product image area
-     * - title
-     * - no price text (image-first preview)
+     * - image-only (no price/text overlays)
+     * - portrait-first framing for stronger product visibility
+     * - adaptive landscape fallback when source is wide
      */
     private function renderProductJpeg(string $title, string $subtitle, ?string $price, ?string $photoPath): ?string
     {
@@ -221,14 +221,8 @@ class OgImageService
             return null;
         }
 
-        $titleColor = imagecolorallocate($img, 255, 255, 255);
-        $muted = imagecolorallocate($img, 226, 232, 240);
-        $chipBg = imagecolorallocatealpha($img, 16, 185, 129, 24);
-        $chipText = imagecolorallocate($img, 209, 250, 229);
-        $font = $this->fontPath();
-
         // Base background.
-        $bg = imagecolorallocate($img, 18, 23, 36);
+        $bg = imagecolorallocate($img, 10, 14, 26);
         imagefilledrectangle($img, 0, 0, self::WIDTH, self::HEIGHT, $bg);
 
         if ($photoPath) {
@@ -236,32 +230,40 @@ class OgImageService
             if ($photo) {
                 // Background fill from the same image (cover) to avoid empty side bars.
                 $this->drawImageCover($img, $photo, 0, 0, self::WIDTH, self::HEIGHT);
-                // Foreground image keeps full image visible (contain), larger and centered.
-                $this->drawImageContain($img, $photo, 40, 24, 1120, 470);
+
+                // Dim background for better foreground contrast.
+                $bgOverlay = imagecolorallocatealpha($img, 2, 6, 23, 55);
+                imagefilledrectangle($img, 0, 0, self::WIDTH, self::HEIGHT, $bgOverlay);
+
+                $srcW = imagesx($photo);
+                $srcH = imagesy($photo);
+                $ratio = ($srcH > 0) ? ($srcW / $srcH) : 1.0;
+
+                // Portrait-first frame. Wide images get a wider adaptive frame.
+                if ($ratio >= 1.2) {
+                    // Landscape source: keep it large and readable.
+                    $frameW = 1060;
+                    $frameH = 560;
+                } else {
+                    // Portrait/square source: emphasize vertical hero.
+                    $frameW = 560;
+                    $frameH = 598;
+                }
+
+                $frameX = (int) floor((self::WIDTH - $frameW) / 2);
+                $frameY = (int) floor((self::HEIGHT - $frameH) / 2);
+
+                // Soft frame background.
+                $frameBg = imagecolorallocatealpha($img, 255, 255, 255, 10);
+                imagefilledrectangle($img, $frameX, $frameY, $frameX + $frameW, $frameY + $frameH, $frameBg);
+
+                // Main product image (full image visible, no crop).
+                $this->drawImageContain($img, $photo, $frameX + 10, $frameY + 10, $frameW - 20, $frameH - 20);
                 imagedestroy($photo);
             }
-        }
-
-        // Dark overlay band for readable text.
-        $overlay = imagecolorallocatealpha($img, 2, 6, 23, 35);
-        imagefilledrectangle($img, 0, 500, self::WIDTH, self::HEIGHT, $overlay);
-
-        imagefilledrectangle($img, 60, 518, 250, 556, $chipBg);
-        $this->drawText($img, '8Kommerce', 76, 545, 18, $chipText);
-
-        $title = trim($title);
-        $subtitle = trim($subtitle);
-        if ($font) {
-            $titleLines = $this->wrapTtf($title, $font, 40, 1080);
-            $y = 590;
-            foreach (array_slice($titleLines, 0, 1) as $line) {
-                imagettftext($img, 40, 0, 60, $y, $titleColor, $font, $line);
-            }
-
-            imagettftext($img, 18, 0, 760, 618, $muted, $font, $this->truncate($subtitle, 34));
         } else {
-            imagestring($img, 5, 60, 560, $this->truncate($title, 44), $titleColor);
-            imagestring($img, 3, 760, 590, $this->truncate($subtitle, 34), $muted);
+            $fallback = imagecolorallocate($img, 148, 163, 184);
+            imagestring($img, 5, 460, 306, 'Product image unavailable', $fallback);
         }
 
         ob_start();

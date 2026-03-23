@@ -97,6 +97,7 @@ All notable changes to this project will be documented here.
 - Product OG cache/version key bumped to `v3` to force fresh previews after deployment.
 - Product OG preview no longer renders product price text; preview is now image-first with title/seller only.
 - Product OG cache/version key bumped to `v4` for immediate preview refresh.
+- Product OG was redesigned to image-only, portrait-first composition (`v5`) with adaptive landscape framing to maximize visible product area in WhatsApp previews.
 - Product create flow now supports multi-item upload in one submission with a `+ Next product` repeater and per-item image/status/stock fields.
 - Product create now includes client-side upload size summary, automatic image compression, and external compression fallback guidance (TinyPNG link).
 - Product image validation limit increased from `2MB` to `6MB` per file for multi-upload workflows.
