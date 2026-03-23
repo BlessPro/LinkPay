@@ -61,7 +61,7 @@ class PublicProductController extends Controller
             'paymentsEnabled' => $product->user?->canUsePaymentsFeature() ?? false,
             'smallDescription' => $shortDescription,
             'ogTitle' => "{$product->name} - {$sellerName}",
-            'ogDescription' => "{$shortDescription} Price: {$currency} ".number_format((float) $product->price, 2, '.', ','),
+            'ogDescription' => $shortDescription,
             'ogImage' => $ogImage,
             'ogImageWidth' => '1200',
             'ogImageHeight' => '630',

@@ -95,6 +95,8 @@ All notable changes to this project will be documented here.
 - Product page OG metadata now points directly to the original uploaded product image (with source dimensions + cache-busting version) for full-image social previews.
 - Product OG strategy for WhatsApp was tuned again: generated 1200x630 social card now uses image-backed fill + full-image contain foreground for larger, clearer product visibility.
 - Product OG cache/version key bumped to `v3` to force fresh previews after deployment.
+- Product OG preview no longer renders product price text; preview is now image-first with title/seller only.
+- Product OG cache/version key bumped to `v4` for immediate preview refresh.
 - Replaced Quick Action standalone page navigation with in-layout offcanvas interaction.
 - Paystack service expanded to fetch transactions by date range for reconciliation workflows.
 - Admin layout navigation updated with dedicated `Reconciliation` entry.

@@ -12,7 +12,7 @@ class OgImageService
 {
     public const WIDTH = 1200;
     public const HEIGHT = 630;
-    private const PRODUCT_OG_VERSION = 'v3';
+    private const PRODUCT_OG_VERSION = 'v4';
 
     public function generateSeller(SellerProfile $profile): void
     {
@@ -40,7 +40,7 @@ class OgImageService
         $sellerName = $product->user?->sellerProfile?->business_name ?: ($product->user?->name ?: 'Seller');
         $title = $product->name ?: 'Product';
         $subtitle = $sellerName;
-        $price = (string) $product->price;
+        $price = null;
 
         $imagePath = $product->image_path ? $this->publicDiskAbsolutePath($product->image_path) : null;
         $jpg = $this->renderProductJpeg($title, $subtitle, $price, $imagePath);
@@ -208,7 +208,7 @@ class OgImageService
      * Product-focused OG layout:
      * - large product image area
      * - title
-     * - prominent price directly under title
+     * - no price text (image-first preview)
      */
     private function renderProductJpeg(string $title, string $subtitle, ?string $price, ?string $photoPath): ?string
     {
@@ -223,7 +223,6 @@ class OgImageService
 
         $titleColor = imagecolorallocate($img, 255, 255, 255);
         $muted = imagecolorallocate($img, 226, 232, 240);
-        $accent = imagecolorallocate($img, 74, 222, 128);
         $chipBg = imagecolorallocatealpha($img, 16, 185, 129, 24);
         $chipText = imagecolorallocate($img, 209, 250, 229);
         $font = $this->fontPath();
@@ -259,18 +258,10 @@ class OgImageService
                 imagettftext($img, 40, 0, 60, $y, $titleColor, $font, $line);
             }
 
-            if ($price !== null && $price !== '') {
-                $currency = (string) config('services.paystack.currency', 'GHS');
-                imagettftext($img, 32, 0, 60, 625, $accent, $font, $currency.' '.number_format((float) $price, 2, '.', ','));
-            }
-
-            imagettftext($img, 18, 0, 760, 624, $muted, $font, $this->truncate($subtitle, 34));
+            imagettftext($img, 18, 0, 760, 618, $muted, $font, $this->truncate($subtitle, 34));
         } else {
             imagestring($img, 5, 60, 560, $this->truncate($title, 44), $titleColor);
-            if ($price !== null && $price !== '') {
-                imagestring($img, 5, 60, 595, ((string) config('services.paystack.currency', 'GHS')).' '.number_format((float) $price, 2, '.', ','), $accent);
-            }
-            imagestring($img, 3, 760, 598, $this->truncate($subtitle, 34), $muted);
+            imagestring($img, 3, 760, 590, $this->truncate($subtitle, 34), $muted);
         }
 
         ob_start();
