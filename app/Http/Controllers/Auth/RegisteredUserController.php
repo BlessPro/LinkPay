@@ -43,16 +43,16 @@ class RegisteredUserController extends Controller
 
         $validator->after(function ($validator) use ($request) {
             if (! $request->filled('email') && ! $request->filled('phone_number')) {
-                $validator->errors()->add('email', 'Email or WhatsApp number is required.');
-                $validator->errors()->add('phone_number', 'WhatsApp number or email is required.');
+                $validator->errors()->add('email', 'Email or phone number is required.');
+                $validator->errors()->add('phone_number', 'Phone number or email is required.');
             }
 
             if ($request->filled('phone_number')) {
                 $normalized = Phone::normalize($request->input('phone_number'), $request->input('phone_country', '+233'));
                 if (! $normalized || ! Phone::isValidGh($request->input('phone_number'))) {
-                    $validator->errors()->add('phone_number', 'Enter a valid WhatsApp number.');
+                    $validator->errors()->add('phone_number', 'Enter a valid phone number.');
                 } elseif (User::where('phone', $normalized)->exists()) {
-                    $validator->errors()->add('phone_number', 'This WhatsApp number is already in use.');
+                    $validator->errors()->add('phone_number', 'This phone number is already in use.');
                 }
             }
         });

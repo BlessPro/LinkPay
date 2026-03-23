@@ -14,7 +14,7 @@
 
     <div class="mt-6 inline-flex rounded-full border border-slate-200 bg-white/80 p-1 text-sm">
         <button type="button" class="login-tab rounded-full px-4 py-2 font-semibold text-emerald-700" data-target="login-email">Email</button>
-        <button type="button" class="login-tab rounded-full px-4 py-2 font-semibold text-slate-500" data-target="login-whatsapp">WhatsApp</button>
+        <button type="button" class="login-tab rounded-full px-4 py-2 font-semibold text-slate-500" data-target="login-sms">SMS</button>
     </div>
 
     <div id="login-email" class="mt-6">
@@ -68,24 +68,24 @@
         </form>
     </div>
 
-    <div id="login-whatsapp" class="mt-6 hidden">
+    <div id="login-sms" class="mt-6 hidden">
         @if (session('otp_status') === 'sent')
             <div class="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                OTP sent to {{ session('otp_phone_masked', 'your WhatsApp number') }}.
+                OTP sent to {{ session('otp_phone_masked', 'your phone number') }}.
             </div>
         @endif
 
         <form class="space-y-4" method="POST" action="{{ route('login.phone.send') }}">
             @csrf
             <div>
-                <label class="text-xs uppercase tracking-[0.3em] text-slate-400">WhatsApp number</label>
+                <label class="text-xs uppercase tracking-[0.3em] text-slate-400">Phone number</label>
                 <div class="mt-2 flex gap-2">
                     <select name="phone_country" class="rounded-xl border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
                         <option value="+233">+233</option>
                     </select>
                     <input name="phone_number" value="{{ old('phone_number', session('phone_login_pending_phone')) }}" class="w-full rounded-xl border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="0541900229" inputmode="numeric" pattern="[0-9]*" autocomplete="tel" data-strip-leading-zero="true" />
                 </div>
-                <p class="mt-2 text-xs text-slate-500">We will send an OTP to your WhatsApp number.</p>
+                <p class="mt-2 text-xs text-slate-500">We will send an OTP to your phone number via SMS.</p>
                 <x-input-error :messages="$errors->get('phone_number')" class="mt-2" />
             </div>
             <button type="submit" class="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
@@ -116,7 +116,7 @@
         const tabButtons = document.querySelectorAll('.login-tab');
         const panels = {
             'login-email': document.getElementById('login-email'),
-            'login-whatsapp': document.getElementById('login-whatsapp'),
+            'login-sms': document.getElementById('login-sms'),
         };
 
         const setActiveTab = (target) => {
@@ -138,7 +138,7 @@
             button.addEventListener('click', () => setActiveTab(button.dataset.target));
         });
 
-        const defaultTab = @json((session('otp_status') || $errors->has('phone_number') || $errors->has('otp')) ? 'login-whatsapp' : 'login-email');
+        const defaultTab = @json((session('otp_status') || $errors->has('phone_number') || $errors->has('otp')) ? 'login-sms' : 'login-email');
         setActiveTab(defaultTab);
 
         const passwordInput = document.getElementById('password');

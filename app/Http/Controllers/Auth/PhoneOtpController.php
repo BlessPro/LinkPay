@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\SellerProfile;
 use App\Models\User;
-use App\Services\TwilioVerifyService;
+use App\Services\SmsOtpService;
 use App\Support\Phone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 
 class PhoneOtpController extends Controller
 {
-    public function send(Request $request, TwilioVerifyService $twilio): RedirectResponse
+    public function send(Request $request, SmsOtpService $smsOtp): RedirectResponse
     {
         $data = $request->validate([
             'phone_number' => ['required', 'string'],
@@ -26,7 +26,7 @@ class PhoneOtpController extends Controller
         $normalized = Phone::normalize($data['phone_number'], $country);
         if (! $normalized || ! Phone::isValidGh($data['phone_number'])) {
             throw ValidationException::withMessages([
-                'phone_number' => 'Enter a valid WhatsApp number.',
+                'phone_number' => 'Enter a valid phone number.',
             ]);
         }
 
@@ -48,12 +48,12 @@ class PhoneOtpController extends Controller
         }
 
         try {
-            $ok = $twilio->sendOtp($normalized, 'whatsapp');
+            $ok = $smsOtp->sendOtp($normalized);
             if (! $ok) {
                 throw new \RuntimeException('OTP delivery failed.');
             }
         } catch (\Throwable $exception) {
-            Log::error('Twilio OTP send failed', [
+            Log::error('SMS OTP send failed', [
                 'phone' => $normalized,
                 'message' => $exception->getMessage(),
             ]);
@@ -73,7 +73,7 @@ class PhoneOtpController extends Controller
             ->withInput();
     }
 
-    public function verify(Request $request, TwilioVerifyService $twilio): RedirectResponse
+    public function verify(Request $request, SmsOtpService $smsOtp): RedirectResponse
     {
         $data = $request->validate([
             'phone_number' => ['required', 'string'],
@@ -89,14 +89,14 @@ class PhoneOtpController extends Controller
                 $normalized = $pendingPhone;
             } else {
                 throw ValidationException::withMessages([
-                    'phone_number' => 'Enter a valid WhatsApp number.',
+                    'phone_number' => 'Enter a valid phone number.',
                 ]);
             }
         }
 
         if (! $normalized) {
             throw ValidationException::withMessages([
-                'phone_number' => 'Enter a valid WhatsApp number.',
+                'phone_number' => 'Enter a valid phone number.',
             ]);
         }
 
@@ -107,17 +107,17 @@ class PhoneOtpController extends Controller
             ]);
         }
 
-        $twilioApproved = false;
+        $approved = false;
         try {
-            $twilioApproved = $twilio->checkOtp($normalized, $data['otp']);
+            $approved = $smsOtp->verifyOtp($normalized, $data['otp']);
         } catch (\Throwable $exception) {
-            Log::error('Twilio OTP verify failed', [
+            Log::error('SMS OTP verify failed', [
                 'phone' => $normalized,
                 'message' => $exception->getMessage(),
             ]);
-            $twilioApproved = false;
+            $approved = false;
         }
-        if (! $twilioApproved) {
+        if (! $approved) {
             throw ValidationException::withMessages([
                 'otp' => 'Invalid or expired OTP.',
             ]);

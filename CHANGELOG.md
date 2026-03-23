@@ -103,6 +103,7 @@ All notable changes to this project will be documented here.
 - Product image validation limit increased from `2MB` to `6MB` per file for multi-upload workflows.
 - Added explicit handling/logging for `413 Content Too Large` (`PostTooLargeException`) with request metadata for operations monitoring.
 - Added upload scaling runbook and policy doc: `docs/UPLOAD_POLICY.md`.
+- Login OTP switched to Hubtel SMS (send/verify via app OTP cache) with auth UI/validation copy updated for SMS wording.
 - Replaced Quick Action standalone page navigation with in-layout offcanvas interaction.
 - Paystack service expanded to fetch transactions by date range for reconciliation workflows.
 - Admin layout navigation updated with dedicated `Reconciliation` entry.
