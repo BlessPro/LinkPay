@@ -13,6 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Render and similar platforms terminate TLS at a proxy/load balancer.
+        // Trusting proxy headers keeps scheme/cookie/CSRF behavior consistent.
+        $middleware->trustProxies(at: '*');
+
         $middleware->validateCsrfTokens(except: [
             'webhooks/paystack',
             'webhooks/twilio/status',

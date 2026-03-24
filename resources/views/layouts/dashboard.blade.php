@@ -46,18 +46,74 @@
             html.theme-dark .bg-slate-50\/70 {
                 background-color: #0f172a !important;
             }
+            html.theme-dark .bg-emerald-50,
+            html.theme-dark .bg-emerald-50\/60,
+            html.theme-dark .bg-emerald-50\/70 {
+                background-color: rgba(16, 185, 129, 0.16) !important;
+            }
+            html.theme-dark .bg-blue-50,
+            html.theme-dark .bg-blue-50\/60,
+            html.theme-dark .bg-blue-50\/70 {
+                background-color: rgba(59, 130, 246, 0.16) !important;
+            }
+            html.theme-dark .bg-indigo-50,
+            html.theme-dark .bg-indigo-50\/60,
+            html.theme-dark .bg-indigo-50\/70 {
+                background-color: rgba(99, 102, 241, 0.18) !important;
+            }
+            html.theme-dark .bg-amber-50,
+            html.theme-dark .bg-amber-50\/60,
+            html.theme-dark .bg-amber-50\/70 {
+                background-color: rgba(245, 158, 11, 0.18) !important;
+            }
+            html.theme-dark .bg-fuchsia-50,
+            html.theme-dark .bg-fuchsia-50\/60,
+            html.theme-dark .bg-fuchsia-50\/70 {
+                background-color: rgba(217, 70, 239, 0.16) !important;
+            }
             html.theme-dark .border-slate-200,
             html.theme-dark .border-slate-100,
             html.theme-dark .border-slate-300\/70,
             html.theme-dark .border-slate-700\/70 {
                 border-color: #334155 !important;
             }
+            html.theme-dark .border-emerald-200,
+            html.theme-dark .border-emerald-100 { border-color: rgba(16, 185, 129, 0.45) !important; }
+            html.theme-dark .border-blue-200,
+            html.theme-dark .border-blue-100 { border-color: rgba(59, 130, 246, 0.45) !important; }
+            html.theme-dark .border-indigo-200,
+            html.theme-dark .border-indigo-100 { border-color: rgba(99, 102, 241, 0.45) !important; }
+            html.theme-dark .border-amber-200,
+            html.theme-dark .border-amber-100 { border-color: rgba(245, 158, 11, 0.45) !important; }
+            html.theme-dark .border-fuchsia-200,
+            html.theme-dark .border-fuchsia-100 { border-color: rgba(217, 70, 239, 0.45) !important; }
             html.theme-dark .text-slate-900 { color: #f8fafc !important; }
             html.theme-dark .text-slate-800 { color: #e2e8f0 !important; }
             html.theme-dark .text-slate-700 { color: #cbd5e1 !important; }
             html.theme-dark .text-slate-600 { color: #94a3b8 !important; }
             html.theme-dark .text-slate-500,
             html.theme-dark .text-slate-400 { color: #94a3b8 !important; }
+            html.theme-dark .text-emerald-500,
+            html.theme-dark .text-emerald-600,
+            html.theme-dark .text-emerald-700,
+            html.theme-dark .text-emerald-800 { color: #6ee7b7 !important; }
+            html.theme-dark .text-blue-500,
+            html.theme-dark .text-blue-600,
+            html.theme-dark .text-blue-700,
+            html.theme-dark .text-blue-800 { color: #93c5fd !important; }
+            html.theme-dark .text-indigo-500,
+            html.theme-dark .text-indigo-600,
+            html.theme-dark .text-indigo-700,
+            html.theme-dark .text-indigo-800 { color: #a5b4fc !important; }
+            html.theme-dark .text-amber-500,
+            html.theme-dark .text-amber-600,
+            html.theme-dark .text-amber-700,
+            html.theme-dark .text-amber-800,
+            html.theme-dark .text-amber-900 { color: #fcd34d !important; }
+            html.theme-dark .text-fuchsia-500,
+            html.theme-dark .text-fuchsia-600,
+            html.theme-dark .text-fuchsia-700,
+            html.theme-dark .text-fuchsia-800 { color: #f0abfc !important; }
             html.theme-dark .js-mobile-menu-panel a,
             html.theme-dark aside a,
             html.theme-dark aside button {
@@ -395,6 +451,10 @@
                 const mobileMenuOpenButtons = document.querySelectorAll('.js-mobile-menu-open');
                 const mobileMenuCloseButtons = document.querySelectorAll('.js-mobile-menu-close');
                 const root = document.documentElement;
+                let quickActionsOpen = false;
+                let quickDragStartY = 0;
+                let quickDragCurrentY = 0;
+                let quickDragging = false;
                 const applyTheme = (mode) => {
                     const dark = mode === 'dark';
                     root.classList.toggle('theme-dark', dark);
@@ -432,7 +492,12 @@
                         return;
                     }
 
+                    quickActionsOpen = open;
                     panel.classList.toggle('translate-y-full', !open);
+                    if (!open) {
+                        panel.style.transform = '';
+                        panel.style.transition = '';
+                    }
                     backdrop.classList.toggle('opacity-0', !open);
                     backdrop.classList.toggle('pointer-events-none', !open);
                     syncBodyLock();
@@ -475,6 +540,68 @@
                         setMobileMenu(false);
                     }
                 });
+
+                // Mobile touch drag to dismiss quick actions panel.
+                if (panel) {
+                    panel.addEventListener('touchstart', (event) => {
+                        if (!quickActionsOpen || event.touches.length !== 1) {
+                            return;
+                        }
+                        quickDragging = true;
+                        quickDragStartY = event.touches[0].clientY;
+                        quickDragCurrentY = quickDragStartY;
+                        panel.style.transition = 'none';
+                    }, { passive: true });
+
+                    panel.addEventListener('touchmove', (event) => {
+                        if (!quickDragging || event.touches.length !== 1) {
+                            return;
+                        }
+                        quickDragCurrentY = event.touches[0].clientY;
+                        const delta = Math.max(0, quickDragCurrentY - quickDragStartY);
+                        panel.style.transform = `translateY(${delta}px)`;
+                        if (delta > 0) {
+                            event.preventDefault();
+                        }
+                    }, { passive: false });
+
+                    panel.addEventListener('touchend', () => {
+                        if (!quickDragging) {
+                            return;
+                        }
+                        quickDragging = false;
+                        const delta = Math.max(0, quickDragCurrentY - quickDragStartY);
+                        panel.style.transition = 'transform 220ms ease';
+                        if (delta > 90) {
+                            setQuickActions(false);
+                            return;
+                        }
+                        panel.style.transform = 'translateY(0)';
+                        window.setTimeout(() => {
+                            if (quickActionsOpen) {
+                                panel.style.transform = '';
+                                panel.style.transition = '';
+                            }
+                        }, 230);
+                    });
+
+                    panel.addEventListener('touchcancel', () => {
+                        quickDragging = false;
+                        if (!quickActionsOpen) {
+                            panel.style.transform = '';
+                            panel.style.transition = '';
+                            return;
+                        }
+                        panel.style.transition = 'transform 220ms ease';
+                        panel.style.transform = 'translateY(0)';
+                        window.setTimeout(() => {
+                            if (quickActionsOpen) {
+                                panel.style.transform = '';
+                                panel.style.transition = '';
+                            }
+                        }, 230);
+                    });
+                }
             });
         </script>
     </body>

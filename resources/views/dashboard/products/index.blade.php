@@ -42,7 +42,7 @@
         @endforeach
     </div>
 
-    <div id="stock-filter-sheet" class="fixed inset-0 z-40 hidden bg-slate-900/35 sm:hidden">
+    <div id="stock-filter-sheet" class="fixed inset-0 z-[65] hidden bg-slate-900/35 sm:hidden">
         <div id="stock-filter-backdrop" class="absolute inset-0"></div>
         <div class="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-slate-200 bg-white p-5 shadow-2xl">
             <div class="mb-4 flex items-center justify-between">
