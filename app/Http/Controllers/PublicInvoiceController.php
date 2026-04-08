@@ -82,6 +82,8 @@ class PublicInvoiceController extends Controller
                 },
             ],
             'phone_country' => ['nullable', 'string', 'max:8'],
+            'location' => ['nullable', 'string', 'max:160'],
+            'note' => ['nullable', 'string', 'max:500'],
             'idempotency_key' => ['required', 'string', 'min:16', 'max:120'],
         ], [
             'phone_number.required' => 'A phone number is required so the seller can reach you.',
@@ -119,6 +121,8 @@ class PublicInvoiceController extends Controller
         $phoneParts = array_filter(array_map('trim', explode(',', (string) $phoneInput)));
         $primaryPhone = $phoneParts[0] ?? $phoneInput;
         $phone = Phone::normalize($primaryPhone, $validated['phone_country'] ?? '+233');
+        $location = trim((string) ($validated['location'] ?? ''));
+        $note = trim((string) ($validated['note'] ?? ''));
         if (! $phone) {
             return back()->withErrors(['phone_number' => 'Please enter a valid phone number.'])->withInput();
         }
@@ -149,6 +153,8 @@ class PublicInvoiceController extends Controller
                 'customer' => [
                     'email' => $email,
                     'phone' => $phone,
+                    'location' => $location !== '' ? $location : null,
+                    'note' => $note !== '' ? $note : null,
                 ],
             ],
         ]);
@@ -168,6 +174,8 @@ class PublicInvoiceController extends Controller
                     'customer' => [
                         'email' => $email,
                         'phone' => $phone,
+                        'location' => $location !== '' ? $location : null,
+                        'note' => $note !== '' ? $note : null,
                     ],
                 ],
                 $seller->paystack_subaccount_code,

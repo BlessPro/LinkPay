@@ -59,6 +59,7 @@ class PaymentService
                 $customerName = (string) (data_get($payment->raw_payload, 'customer.name') ?? data_get($verifiedData, 'metadata.customer.name') ?? 'Customer');
                 $customerPhone = (string) (data_get($payment->raw_payload, 'customer.phone') ?? data_get($verifiedData, 'metadata.customer.phone') ?? '');
                 $customerLocation = (string) (data_get($payment->raw_payload, 'customer.location') ?? data_get($verifiedData, 'metadata.customer.location') ?? '');
+                $customerNote = (string) (data_get($payment->raw_payload, 'customer.note') ?? data_get($verifiedData, 'metadata.customer.note') ?? '');
                 $itemLabel = $payment->invoice?->title ?? $payment->product?->name ?? 'payment';
                 $amountLabel = Money::format((string) $payment->amount, config('services.paystack.currency', 'GHS'));
 
@@ -80,6 +81,7 @@ class PaymentService
                         'customer_name' => $customerName,
                         'customer_phone' => $customerPhone,
                         'customer_location' => $customerLocation,
+                        'customer_note' => $customerNote,
                         'matched_lead_id' => $leadMatch?->id,
                     ]
                 );
@@ -175,7 +177,17 @@ class PaymentService
                         $sellerPhone = $user->sellerProfile?->phone ?? $user->phone;
                         if ($sellerPhone) {
                             $orderLink = route('products.orders', ['order' => $order->reference]);
-                            $sellerMessage = "New paid order {$order->reference}.\nAmount: ".Money::format((string) $order->total, config('services.paystack.currency', 'GHS'))."\nOpen: {$orderLink}";
+                            $sellerMessage = "New paid order {$order->reference}.\nAmount: ".Money::format((string) $order->total, config('services.paystack.currency', 'GHS'));
+                            if ($order->customer_phone) {
+                                $sellerMessage .= "\nPhone: {$order->customer_phone}";
+                            }
+                            if ($order->customer_location) {
+                                $sellerMessage .= "\nLocation: {$order->customer_location}";
+                            }
+                            if ($order->delivery_note) {
+                                $sellerMessage .= "\nNote: {$order->delivery_note}";
+                            }
+                            $sellerMessage .= "\nOpen: {$orderLink}";
                             try {
                                 app(HubtelSmsService::class)->send($sellerPhone, $sellerMessage, [
                                     'user_id' => $user->id,

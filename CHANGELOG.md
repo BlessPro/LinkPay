@@ -217,6 +217,11 @@ All notable changes to this project will be documented here.
 - Added idempotency test to verify stock and coupon side effects run once even if `markSuccess` is called twice.
 
 ### Changed
+- Public checkout/contact capture updated:
+- Restored optional `location` and `notes` fields on public product, listing/cart, and invoice payment forms.
+- Public product "Pay now" now creates a linked pending order + order item so seller order history includes direct product checkouts.
+- Cart checkout now persists `customer_location` and `delivery_note` from public form inputs.
+- Seller new-paid-order SMS now includes customer phone, location, and notes when provided.
 - Seller/customer order SMS lifecycle expanded:
 - Sellers now receive SMS when a new paid order is created (with direct order link).
 - Customers now receive SMS on order acceptance with secure delivery confirmation link.

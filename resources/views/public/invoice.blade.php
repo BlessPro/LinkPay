@@ -94,6 +94,24 @@
                     />
                     @error('phone_number') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>
+                <div>
+                    <input
+                        name="location"
+                        value="{{ old('location') }}"
+                        placeholder="Location (optional)"
+                        class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('location') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror"
+                    />
+                    @error('location') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <textarea
+                        name="note"
+                        rows="2"
+                        placeholder="Notes for seller (optional)"
+                        class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('note') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror"
+                    >{{ old('note') }}</textarea>
+                    @error('note') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
                 <input type="hidden" name="phone_country" value="+233" />
                 <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}" />
                 <button type="submit" class="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500" {{ $invoice->status === \App\Models\Invoice::STATUS_PAID || ! $seller?->paystack_subaccount_code || ! ($paymentsEnabled ?? true) ? 'disabled' : '' }}>

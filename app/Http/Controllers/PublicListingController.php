@@ -196,6 +196,8 @@ class PublicListingController extends Controller
         $phoneParts = array_filter(array_map('trim', explode(',', (string) $phoneInput)));
         $primaryPhone = $phoneParts[0] ?? $phoneInput;
         $phone = Phone::normalize($primaryPhone, $validated['phone_country'] ?? '+233');
+        $location = trim((string) ($validated['location'] ?? ''));
+        $note = trim((string) ($validated['note'] ?? ''));
         if (! $phone) {
             return back()->withErrors(['phone_number' => 'Please enter a valid phone number.'])->withInput();
         }
@@ -223,9 +225,36 @@ class PublicListingController extends Controller
             (string) $product->id
         );
 
+        $order = Order::create([
+            'user_id' => $profile->user_id,
+            'reference' => $reference,
+            'status' => Order::STATUS_PENDING_PAYMENT,
+            'payment_status' => Payment::STATUS_PENDING,
+            'customer_name' => null,
+            'customer_phone' => $phone,
+            'customer_location' => $location !== '' ? $location : null,
+            'delivery_required' => false,
+            'delivery_note' => $note !== '' ? $note : null,
+            'subtotal' => (string) $product->price,
+            'coupon_code' => null,
+            'discount_amount' => '0.00',
+            'total' => (string) $product->price,
+            'currency' => config('services.paystack.currency', 'GHS'),
+        ]);
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'unit_price' => (string) $product->price,
+            'quantity' => 1,
+            'line_total' => (string) $product->price,
+        ]);
+
         $payment = Payment::create([
             'user_id' => $profile->user_id,
             'product_id' => $product->id,
+            'order_id' => $order->id,
             'reference' => $reference,
             'amount' => (string) $product->price,
             'status' => Payment::STATUS_PENDING,
@@ -233,6 +262,20 @@ class PublicListingController extends Controller
                 'customer' => [
                     'email' => $email,
                     'phone' => $phone,
+                    'location' => $location !== '' ? $location : null,
+                    'note' => $note !== '' ? $note : null,
+                ],
+                'order' => [
+                    'id' => $order->id,
+                    'delivery_required' => false,
+                    'delivery_note' => $note !== '' ? $note : null,
+                    'items' => [[
+                        'product_id' => $product->id,
+                        'name' => $product->name,
+                        'qty' => 1,
+                        'unit_price' => (string) $product->price,
+                        'line_total' => (string) $product->price,
+                    ]],
                 ],
             ],
         ]);
@@ -252,6 +295,8 @@ class PublicListingController extends Controller
                     'customer' => [
                         'email' => $email,
                         'phone' => $phone,
+                        'location' => $location !== '' ? $location : null,
+                        'note' => $note !== '' ? $note : null,
                     ],
                 ],
                 $profile->paystack_subaccount_code,
@@ -264,6 +309,9 @@ class PublicListingController extends Controller
                 'initialize_error' => $exception->getMessage(),
             ]);
             $payment->save();
+            $order->status = Order::STATUS_CANNOT_FULFILL;
+            $order->payment_status = Payment::STATUS_FAILED;
+            $order->save();
 
             return back()->withErrors([
                 'paystack' => 'Could not initialize payment. Please confirm seller Paystack connection and try again.',
@@ -401,6 +449,8 @@ class PublicListingController extends Controller
         $phoneParts = array_filter(array_map('trim', explode(',', (string) $phoneInput)));
         $primaryPhone = $phoneParts[0] ?? $phoneInput;
         $phone = Phone::normalize($primaryPhone, $validated['phone_country'] ?? '+233');
+        $location = trim((string) ($validated['location'] ?? ''));
+        $note = trim((string) ($validated['note'] ?? ''));
         if (! $phone) {
             return back()->withErrors(['phone_number' => 'Please enter a valid phone number.'])->withInput();
         }
@@ -435,9 +485,9 @@ class PublicListingController extends Controller
             'payment_status' => Payment::STATUS_PENDING,
             'customer_name' => null,
             'customer_phone' => $phone,
-            'customer_location' => null,
+            'customer_location' => $location !== '' ? $location : null,
             'delivery_required' => false,
-            'delivery_note' => null,
+            'delivery_note' => $note !== '' ? $note : null,
             'subtotal' => $subtotal,
             'coupon_code' => $couponCode,
             'discount_amount' => $discountAmount,
@@ -466,6 +516,8 @@ class PublicListingController extends Controller
                 'customer' => [
                     'email' => $email,
                     'phone' => $phone,
+                    'location' => $location !== '' ? $location : null,
+                    'note' => $note !== '' ? $note : null,
                     'ip_address' => $request->ip(),
                 ],
                 'order' => [
@@ -473,7 +525,7 @@ class PublicListingController extends Controller
                     'coupon_code' => $couponCode,
                     'discount_amount' => $discountAmount,
                     'delivery_required' => false,
-                    'delivery_note' => null,
+                    'delivery_note' => $note !== '' ? $note : null,
                     'items' => $cart['items']->map(function (array $row) {
                         return [
                             'product_id' => $row['product']->id,
@@ -502,6 +554,8 @@ class PublicListingController extends Controller
                     'customer' => [
                         'email' => $email,
                         'phone' => $phone,
+                        'location' => $location !== '' ? $location : null,
+                        'note' => $note !== '' ? $note : null,
                     ],
                 ],
                 $profile->paystack_subaccount_code,
@@ -689,6 +743,8 @@ class PublicListingController extends Controller
                 },
             ],
             'phone_country' => ['nullable', 'string', 'max:8'],
+            'location' => ['nullable', 'string', 'max:160'],
+            'note' => ['nullable', 'string', 'max:500'],
             'idempotency_key' => ['required', 'string', 'min:16', 'max:120'],
         ];
 

@@ -76,6 +76,20 @@
                         required
                     />
                     @error('phone_number') <p class="sm:col-span-3 -mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    <input
+                        name="location"
+                        value="{{ old('location') }}"
+                        placeholder="Location (optional)"
+                        class="sm:col-span-3 w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('location') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror"
+                    />
+                    @error('location') <p class="sm:col-span-3 -mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    <textarea
+                        name="note"
+                        rows="2"
+                        placeholder="Notes for seller (optional)"
+                        class="sm:col-span-3 w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('note') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror"
+                    >{{ old('note') }}</textarea>
+                    @error('note') <p class="sm:col-span-3 -mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                     <input type="hidden" name="phone_country" value="+233" />
                     <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}" />
                     <div class="sm:col-span-3 flex flex-wrap gap-3">
