@@ -8,6 +8,56 @@ All notable changes to this project will be documented here.
 - Add new entries under `Unreleased` with clear impact-focused notes.
 - Move `Unreleased` items into a versioned section during release cut.
 
+### In Progress (Phone-First OTP + PIN Auth) - 08/04/2026
+- Phase 0 complete:
+- Added roadmap: `docs/AUTH_PHONE_PIN_ROADMAP.md`.
+- Added test plan: `docs/AUTH_PHONE_PIN_TEST_PLAN.md`.
+- Defined product direction:
+  - phone OTP is default signup/signin path
+  - 4-digit PIN becomes default recurring login credential after OTP verification
+  - forgot PIN uses phone OTP reset only
+  - email/password stays as fallback path
+- Phase 1 complete:
+- Added `users.pin_hash` migration foundation for upcoming PIN auth.
+- Added `config/auth_phone.php` for OTP/PIN policy settings.
+- Added OTP env defaults in `.env.example` (`TTL`, resend cooldown, max attempts, lockout, OTP length, PIN length).
+- Updated `SmsOtpService` to use config-driven OTP policy (TTL/cooldown/attempts/lockout).
+- Reviewed normalized phone uniqueness baseline (`users.phone` unique on normalized values).
+- Phase 2 complete:
+- Added phone-first signup controller flow:
+  - `register/phone/send` (OTP send)
+  - `register/phone/complete` (OTP verify + PIN set + account creation)
+- Updated register UI to make phone signup default and email/password signup secondary.
+- Added PIN capture (4 digits) during phone signup completion.
+- Phase 3 complete:
+- Added phone + PIN login endpoint `login/phone/pin` and auth controller.
+- Updated login UI to make Phone PIN the default sign-in tab.
+- Kept OTP and email/password login as fallback tabs.
+- Phase 4 complete:
+- Added forgot PIN routes for phone OTP reset:
+  - `login/phone/pin/reset/send`
+  - `login/phone/pin/reset/complete`
+- Added phone-based PIN reset controller flow with OTP verification and PIN update.
+- Updated login UI with a dedicated `Reset PIN` tab and end-to-end reset form.
+- Added structured PIN reset audit logs (`user_id`, `phone`, `ip`, `user_agent`) on successful resets.
+- Phase 5 complete:
+- Added onboarding completion middleware (`profile_onboarding_complete`) for authenticated app routes.
+- App now redirects incomplete accounts to profile completion before dashboard/products/payments/insights access.
+- Added `User::hasCompletedProfileOnboarding()` business-rule check (email + seller business name + seller phone).
+- Updated profile page with onboarding completion notice and required business phone input.
+- Phase 6 complete:
+- Added configurable PIN login guardrails (`PIN_MAX_LOGIN_ATTEMPTS`, `PIN_LOCKOUT_SECONDS`) with precise remaining lockout timing.
+- Added weak-PIN denylist controls (`PIN_ENFORCE_WEAK_DENYLIST`, `PIN_WEAK_VALUES`) and enforcement in signup/PIN reset flows.
+- Expanded auth abuse telemetry logs for phone OTP login, phone signup, PIN reset, and PIN login failure/lockout events.
+- Phase 7 complete:
+- Added rollout feature flag `AUTH_PHONE_PIN_ENABLED` with route middleware gate for phone-auth endpoints.
+- Added UI fallback behavior in login/register screens when phone auth is disabled (email-first view).
+- Added feature coverage for:
+  - phone signup + PIN login success path
+  - phone OTP PIN reset flow
+  - disabled-flag route/UI fallback behavior
+- Phone-first OTP+PIN roadmap phases 0-7 are now implemented.
+
 ### Planned (Mobile App Feel Phases) - 23/03/2026
 - Phase 1: Perceived speed foundation.
 - Add skeleton loaders for dashboard/product/order lists.

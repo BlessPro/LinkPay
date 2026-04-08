@@ -9,11 +9,11 @@ use App\Services\SmsOtpService;
 use App\Support\Phone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
-class PhoneOtpController extends Controller
+class PhonePinResetController extends Controller
 {
     public function send(Request $request, SmsOtpService $smsOtp): RedirectResponse
     {
@@ -26,15 +26,14 @@ class PhoneOtpController extends Controller
         $normalized = Phone::normalize($data['phone_number'], $country);
         if (! $normalized || ! Phone::isValidGh($normalized)) {
             throw ValidationException::withMessages([
-                'phone_number' => 'Enter a valid phone number.',
+                'reset_phone_number' => 'Enter a valid phone number.',
             ]);
         }
 
         $user = $this->resolveUserByPhone($normalized, $data['phone_number'] ?? null);
-
         if (! $user) {
             throw ValidationException::withMessages([
-                'phone_number' => 'Account not found. Use email to sign in.',
+                'reset_phone_number' => 'Account not found for this phone number.',
             ]);
         }
 
@@ -44,63 +43,68 @@ class PhoneOtpController extends Controller
                 throw new \RuntimeException('OTP delivery failed.');
             }
 
-            Log::info('SMS OTP login send success', [
+            Log::info('PIN reset OTP send success', [
                 'phone' => $normalized,
                 'ip' => $request->ip(),
                 'user_agent' => (string) $request->userAgent(),
             ]);
         } catch (\Throwable $exception) {
-            Log::error('SMS OTP send failed', [
+            Log::error('PIN reset OTP send failed', [
                 'phone' => $normalized,
                 'message' => $exception->getMessage(),
             ]);
             throw ValidationException::withMessages([
-                'phone_number' => 'Unable to send OTP. Please try again shortly.',
+                'reset_phone_number' => 'Unable to send OTP. Please try again shortly.',
             ]);
         }
 
         session([
-            'phone_login_pending_phone' => $normalized,
-            'phone_login_pending_country' => $country,
+            'pin_reset_pending_phone' => $normalized,
+            'pin_reset_pending_country' => $country,
         ]);
 
         return back()
-            ->with('otp_status', 'sent')
-            ->with('otp_phone_masked', $this->maskPhone($normalized))
+            ->with('pin_reset_status', 'sent')
+            ->with('pin_reset_phone_masked', $this->maskPhone($normalized))
             ->withInput();
     }
 
-    public function verify(Request $request, SmsOtpService $smsOtp): RedirectResponse
+    public function complete(Request $request, SmsOtpService $smsOtp): RedirectResponse
     {
+        $pinLength = max(4, min(8, (int) config('auth_phone.pin.length', 4)));
         $data = $request->validate([
             'phone_number' => ['required', 'string'],
             'phone_country' => ['nullable', 'string'],
             'otp' => ['required', 'string', 'min:4', 'max:8'],
+            'reset_pin' => ['required', 'digits:'.$pinLength, 'confirmed'],
         ]);
 
-        $country = $data['phone_country'] ?? (session('phone_login_pending_country', '+233'));
-        $pendingPhone = session('phone_login_pending_phone');
-        $normalized = Phone::normalize($data['phone_number'], $country) ?: $pendingPhone;
-        if (! $normalized || ! Phone::isValidGh($normalized)) {
-            if ($pendingPhone && Phone::isValidGh($pendingPhone)) {
-                $normalized = $pendingPhone;
-            } else {
-                throw ValidationException::withMessages([
-                    'phone_number' => 'Enter a valid phone number.',
-                ]);
-            }
+        if ($this->isWeakPin((string) $data['reset_pin'])) {
+            throw ValidationException::withMessages([
+                'reset_pin' => 'Choose a less predictable PIN.',
+            ]);
         }
 
-        if (! $normalized) {
+        $country = $data['phone_country'] ?? (session('pin_reset_pending_country', '+233'));
+        $pendingPhone = session('pin_reset_pending_phone');
+        $normalized = Phone::normalize($data['phone_number'], $country) ?: $pendingPhone;
+
+        if (! $normalized || ! Phone::isValidGh($normalized)) {
             throw ValidationException::withMessages([
-                'phone_number' => 'Enter a valid phone number.',
+                'reset_phone_number' => 'Enter a valid phone number.',
+            ]);
+        }
+
+        if ($pendingPhone && $normalized !== $pendingPhone) {
+            throw ValidationException::withMessages([
+                'reset_phone_number' => 'Phone number changed. Request a new OTP.',
             ]);
         }
 
         $user = $this->resolveUserByPhone($normalized, $data['phone_number'] ?? null);
         if (! $user) {
             throw ValidationException::withMessages([
-                'phone_number' => 'Account not found. Use email to sign in.',
+                'reset_phone_number' => 'Account not found for this phone number.',
             ]);
         }
 
@@ -108,37 +112,39 @@ class PhoneOtpController extends Controller
         try {
             $approved = $smsOtp->verifyOtp($normalized, $data['otp']);
         } catch (\Throwable $exception) {
-            Log::error('SMS OTP verify failed', [
+            Log::error('PIN reset OTP verify failed', [
                 'phone' => $normalized,
                 'message' => $exception->getMessage(),
             ]);
-            $approved = false;
         }
+
         if (! $approved) {
-            Log::warning('SMS OTP login verify rejected', [
+            Log::warning('PIN reset OTP verify rejected', [
                 'phone' => $normalized,
                 'ip' => $request->ip(),
                 'user_agent' => (string) $request->userAgent(),
             ]);
             throw ValidationException::withMessages([
-                'otp' => 'Invalid or expired OTP.',
+                'reset_otp' => 'Invalid or expired OTP.',
             ]);
         }
 
+        $user->pin_hash = Hash::make($data['reset_pin']);
         $user->phone_verified_at = $user->phone_verified_at ?? now();
         $user->save();
 
-        Auth::login($user);
-        $request->session()->regenerate();
-        $request->session()->forget(['phone_login_pending_phone', 'phone_login_pending_country']);
-
-        Log::info('SMS OTP login success', [
+        Log::info('PIN reset completed', [
             'user_id' => $user->id,
             'phone' => $normalized,
             'ip' => $request->ip(),
+            'user_agent' => (string) $request->userAgent(),
         ]);
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $request->session()->forget(['pin_reset_pending_phone', 'pin_reset_pending_country']);
+
+        return redirect()
+            ->route('login')
+            ->with('status', 'PIN reset successful. Sign in with your new PIN.');
     }
 
     private function maskPhone(string $phone): string
@@ -148,9 +154,7 @@ class PhoneOtpController extends Controller
             return $phone;
         }
 
-        $visible = substr($digits, -4);
-
-        return '+***'.$visible;
+        return '+***'.substr($digits, -4);
     }
 
     private function resolveUserByPhone(string $normalized, ?string $rawPhone = null): ?User
@@ -164,7 +168,6 @@ class PhoneOtpController extends Controller
         if ($user) {
             if ($user->phone !== $normalized) {
                 $user->phone = $normalized;
-                $user->phone_verified_at = null;
                 $user->save();
             }
 
@@ -187,7 +190,6 @@ class PhoneOtpController extends Controller
 
         if ($user->phone !== $normalized) {
             $user->phone = $normalized;
-            $user->phone_verified_at = null;
             $user->save();
         }
 
@@ -220,5 +222,16 @@ class PhoneOtpController extends Controller
         }
 
         return array_values(array_unique(array_filter($candidates)));
+    }
+
+    private function isWeakPin(string $pin): bool
+    {
+        if (! (bool) config('auth_phone.pin.enforce_weak_denylist', true)) {
+            return false;
+        }
+
+        $weakValues = config('auth_phone.pin.weak_values', []);
+
+        return in_array($pin, $weakValues, true);
     }
 }

@@ -91,8 +91,6 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'active_access'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -102,30 +100,34 @@ Route::middleware(['auth', 'active_access'])->group(function () {
     Route::put('/profile/seller', [SellerProfileController::class, 'update'])->name('profile.seller.update');
     Route::post('/profile/seller/test-connection', [SellerProfileController::class, 'testConnection'])->name('profile.seller.test');
 
-    Route::middleware('promotion_access')->group(function () {
-        Route::get('/products/orders', [ProductController::class, 'orders'])->name('products.orders');
-        Route::resource('products', ProductController::class)->except(['show']);
-        Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
-        Route::post('/products/export-pdf', [ProductController::class, 'exportPdf'])->name('products.exportPdf');
-        Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
-        Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
-        Route::get('/coupons', [CouponController::class, 'index'])->name('coupons.index');
-        Route::post('/coupons', [CouponController::class, 'store'])->name('coupons.store');
-        Route::patch('/coupons/{coupon}', [CouponController::class, 'update'])->name('coupons.update');
-        Route::get('/public-preview', [SellerPublicPreviewController::class, 'show'])->name('public.preview');
-    });
+    Route::middleware('profile_onboarding_complete')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::middleware('payments_plan')->group(function () {
-        Route::resource('invoices', InvoiceController::class)->only(['index', 'create', 'store', 'show']);
-        Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
-        Route::get('/payments/export', [PaymentController::class, 'export'])->name('payments.export');
-    });
+        Route::middleware('promotion_access')->group(function () {
+            Route::get('/products/orders', [ProductController::class, 'orders'])->name('products.orders');
+            Route::resource('products', ProductController::class)->except(['show']);
+            Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
+            Route::post('/products/export-pdf', [ProductController::class, 'exportPdf'])->name('products.exportPdf');
+            Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+            Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+            Route::get('/coupons', [CouponController::class, 'index'])->name('coupons.index');
+            Route::post('/coupons', [CouponController::class, 'store'])->name('coupons.store');
+            Route::patch('/coupons/{coupon}', [CouponController::class, 'update'])->name('coupons.update');
+            Route::get('/public-preview', [SellerPublicPreviewController::class, 'show'])->name('public.preview');
+        });
 
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/orders/{order}/accept', [NotificationController::class, 'acceptOrder'])->name('notifications.orders.accept');
-    Route::post('/notifications/orders/{order}/reject', [NotificationController::class, 'rejectOrder'])->name('notifications.orders.reject');
-    Route::get('/goals-target', [GoalsTargetController::class, 'index'])->name('goals.index');
-    Route::get('/insights', [InsightsController::class, 'index'])->name('insights.index');
+        Route::middleware('payments_plan')->group(function () {
+            Route::resource('invoices', InvoiceController::class)->only(['index', 'create', 'store', 'show']);
+            Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+            Route::get('/payments/export', [PaymentController::class, 'export'])->name('payments.export');
+        });
+
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications/orders/{order}/accept', [NotificationController::class, 'acceptOrder'])->name('notifications.orders.accept');
+        Route::post('/notifications/orders/{order}/reject', [NotificationController::class, 'rejectOrder'])->name('notifications.orders.reject');
+        Route::get('/goals-target', [GoalsTargetController::class, 'index'])->name('goals.index');
+        Route::get('/insights', [InsightsController::class, 'index'])->name('insights.index');
+    });
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {

@@ -18,7 +18,7 @@ class UpdateProfileRequest extends FormRequest
         return [
             'business_name' => ['required', 'string', 'max:160'],
             'phone_country' => ['nullable', 'string', Rule::in(['+233'])],
-            'phone_number' => ['nullable', 'string', 'max:20'],
+            'phone_number' => ['required', 'string', 'max:20'],
             'payout_method' => ['nullable', 'string', Rule::in(['MOMO', 'BANK'])],
             'settlement_bank_code' => ['nullable', 'string', 'max:20', 'required_with:account_number,account_name'],
             'account_number' => ['nullable', 'string', 'max:20', 'required_with:settlement_bank_code,account_name'],

@@ -13,6 +13,12 @@
 @extends('layouts.dashboard')
 
 @section('content')
+    @if(request()->query('onboarding') === 'profile' || session('onboarding_required'))
+        <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+            <p class="font-semibold">Complete onboarding first</p>
+            <p class="mt-1">Add your business name, phone, and email before continuing to products, payments, and insights.</p>
+        </div>
+    @endif
     <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div class="space-y-6">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

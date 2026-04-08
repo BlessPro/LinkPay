@@ -27,6 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'active_access' => \App\Http\Middleware\EnsureActiveAccess::class,
             'payments_plan' => \App\Http\Middleware\EnsurePaymentsPlan::class,
             'promotion_access' => \App\Http\Middleware\EnsurePromotionAccess::class,
+            'profile_onboarding_complete' => \App\Http\Middleware\EnsureProfileOnboardingComplete::class,
+            'phone_auth_enabled' => \App\Http\Middleware\EnsurePhoneAuthEnabled::class,
         ]);
 
         $middleware->web(append: [

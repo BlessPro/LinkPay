@@ -27,6 +27,7 @@ class User extends Authenticatable
         'email',
         'phone',
         'password',
+        'pin_hash',
         'is_admin',
     ];
 
@@ -37,6 +38,7 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
+        'pin_hash',
         'remember_token',
     ];
 
@@ -51,6 +53,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
             'password' => 'hashed',
+            'pin_hash' => 'hashed',
             'is_admin' => 'boolean',
             'trial_started_at' => 'datetime',
             'trial_ends_at' => 'datetime',
@@ -118,6 +121,15 @@ class User extends Authenticatable
     public function canUsePromotionFeatures(): bool
     {
         return $this->isOnTrial() || $this->hasActivePlan();
+    }
+
+    public function hasCompletedProfileOnboarding(): bool
+    {
+        $profile = $this->sellerProfile;
+
+        return filled($this->email)
+            && filled($profile?->business_name)
+            && filled($profile?->phone);
     }
 
     public function sellerProfile()
