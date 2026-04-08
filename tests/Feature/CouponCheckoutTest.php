@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
@@ -18,7 +17,7 @@ class CouponCheckoutTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_cart_checkout_applies_coupon_discount_to_order_and_payment(): void
+    public function test_cart_checkout_uses_phone_only_and_ignores_coupon_field(): void
     {
         $seller = User::factory()->create([
             'plan_type' => User::PLAN_FREE_TRIAL,
@@ -41,22 +40,14 @@ class CouponCheckoutTest extends TestCase
             'low_stock_threshold' => 5,
         ]);
 
-        Coupon::create([
-            'user_id' => $seller->id,
-            'code' => 'SAVE10',
-            'discount_type' => Coupon::TYPE_PERCENT,
-            'discount_value' => '10.00',
-            'is_active' => true,
-        ]);
-
         $paystackMock = Mockery::mock(PaystackService::class);
         $paystackMock->shouldReceive('platformChargeFor')
             ->once()
-            ->with('90.00')
+            ->with('100.00')
             ->andReturn('0.00');
         $paystackMock->shouldReceive('initializeTransaction')
             ->once()
-            ->with('90.00', Mockery::type('string'), Mockery::type('array'), 'ACCT_test_sub', '0.00')
+            ->with('100.00', Mockery::type('string'), Mockery::type('array'), 'ACCT_test_sub', '0.00')
             ->andReturn([
                 'authorization_url' => 'https://paystack.test/checkout',
             ]);
@@ -70,10 +61,10 @@ class CouponCheckoutTest extends TestCase
         ]);
 
         $response = $this->post(route('public.cart.checkout', $profile->public_slug), [
-            'name' => 'Coupon Buyer',
             'phone_number' => '0541900229',
             'phone_country' => '+233',
             'coupon_code' => 'SAVE10',
+            'idempotency_key' => (string) \Illuminate\Support\Str::uuid(),
         ]);
 
         $response->assertRedirect('https://paystack.test/checkout');
@@ -81,12 +72,16 @@ class CouponCheckoutTest extends TestCase
         $order = Order::query()->first();
         $this->assertNotNull($order);
         $this->assertSame('100.00', (string) $order->subtotal);
-        $this->assertSame('10.00', (string) $order->discount_amount);
-        $this->assertSame('90.00', (string) $order->total);
-        $this->assertSame('SAVE10', $order->coupon_code);
+        $this->assertSame('0.00', (string) $order->discount_amount);
+        $this->assertSame('100.00', (string) $order->total);
+        $this->assertNull($order->coupon_code);
+        $this->assertNull($order->customer_name);
+        $this->assertNull($order->customer_location);
+        $this->assertFalse((bool) $order->delivery_required);
+        $this->assertNull($order->delivery_note);
 
         $payment = Payment::query()->first();
         $this->assertNotNull($payment);
-        $this->assertSame('90.00', (string) $payment->amount);
+        $this->assertSame('100.00', (string) $payment->amount);
     }
 }

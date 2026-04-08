@@ -65,7 +65,15 @@ class PublicOrderTrackingController extends Controller
         ]);
 
         $successPayment = $order->payments->firstWhere('status', Payment::STATUS_SUCCESS);
-        if ($successPayment || in_array($order->status, [Order::STATUS_PAID, Order::STATUS_ACCEPTED, Order::STATUS_CANNOT_FULFILL], true)) {
+        if ($successPayment || in_array($order->status, [
+            Order::STATUS_PAID,
+            Order::STATUS_ACCEPTED,
+            Order::STATUS_CANNOT_FULFILL,
+            Order::STATUS_COMPLETED,
+            Order::STATUS_DISPUTED_PENDING_ADMIN,
+            Order::STATUS_REFUNDED,
+            Order::STATUS_COMPLAINT_REJECTED,
+        ], true)) {
             $timeline->push([
                 'title' => 'Payment confirmed',
                 'body' => 'Payment was received successfully.',
@@ -87,6 +95,34 @@ class PublicOrderTrackingController extends Controller
                 'body' => 'Seller confirmed they can fulfill this order.',
                 'time' => $decisionNotification?->created_at ?? $order->updated_at,
                 'state' => 'done',
+            ]);
+        } elseif ($order->status === Order::STATUS_COMPLETED) {
+            $timeline->push([
+                'title' => 'Delivered confirmed',
+                'body' => 'Customer confirmed delivery and completed this order.',
+                'time' => $order->updated_at,
+                'state' => 'done',
+            ]);
+        } elseif ($order->status === Order::STATUS_DISPUTED_PENDING_ADMIN) {
+            $timeline->push([
+                'title' => 'Issue under review',
+                'body' => 'Customer reported an issue. Admin review is in progress.',
+                'time' => $order->updated_at,
+                'state' => 'pending',
+            ]);
+        } elseif ($order->status === Order::STATUS_REFUNDED) {
+            $timeline->push([
+                'title' => 'Refund approved',
+                'body' => 'Admin approved complaint and initiated refund.',
+                'time' => $order->updated_at,
+                'state' => 'done',
+            ]);
+        } elseif ($order->status === Order::STATUS_COMPLAINT_REJECTED) {
+            $timeline->push([
+                'title' => 'Complaint rejected',
+                'body' => 'Admin reviewed and rejected this complaint.',
+                'time' => $order->updated_at,
+                'state' => 'failed',
             ]);
         } elseif ($order->status === Order::STATUS_CANNOT_FULFILL) {
             $timeline->push([
@@ -114,4 +150,3 @@ class PublicOrderTrackingController extends Controller
         return $timeline;
     }
 }
-

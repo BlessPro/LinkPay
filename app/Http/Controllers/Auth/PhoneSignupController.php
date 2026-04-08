@@ -75,21 +75,11 @@ class PhoneSignupController extends Controller
 
     public function complete(Request $request, SmsOtpService $smsOtp): RedirectResponse
     {
-        $pinLength = max(4, min(8, (int) config('auth_phone.pin.length', 4)));
         $data = $request->validate([
             'phone_number' => ['required', 'string', 'max:20'],
             'phone_country' => ['nullable', 'string', Rule::in(['+233'])],
             'otp' => ['required', 'string', 'min:4', 'max:8'],
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'pin' => ['required', 'digits:'.$pinLength, 'confirmed'],
         ]);
-
-        if ($this->isWeakPin((string) $data['pin'])) {
-            throw ValidationException::withMessages([
-                'pin' => 'Choose a less predictable PIN.',
-            ]);
-        }
 
         $country = $data['phone_country'] ?? (session('register_phone_pending_country', '+233'));
         $pendingPhone = session('register_phone_pending_phone');
@@ -136,16 +126,16 @@ class PhoneSignupController extends Controller
         }
 
         $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'] ?: null,
+            'name' => $this->defaultNameFromPhone($normalized),
+            'email' => null,
             'phone' => $normalized,
             // Keep password non-null for legacy/email fallback internals.
             'password' => Hash::make(Str::random(32)),
-            'pin_hash' => $data['pin'],
+            'pin_hash' => null,
         ]);
         $user->phone_verified_at = now();
 
-        $days = (int) config('plans.trial_days', 7);
+        $days = (int) config('plans.trial_days', 9);
         $user->plan_type = User::PLAN_FREE_TRIAL;
         $user->trial_started_at = now();
         $user->trial_ends_at = now()->addDays($days);
@@ -170,7 +160,7 @@ class PhoneSignupController extends Controller
             'ip' => $request->ip(),
         ]);
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->route('pin.setup.show');
     }
 
     private function maskPhone(string $phone): string
@@ -183,14 +173,11 @@ class PhoneSignupController extends Controller
         return '+***'.substr($digits, -4);
     }
 
-    private function isWeakPin(string $pin): bool
+    private function defaultNameFromPhone(string $phone): string
     {
-        if (! (bool) config('auth_phone.pin.enforce_weak_denylist', true)) {
-            return false;
-        }
+        $digits = preg_replace('/\D+/', '', $phone) ?: '';
+        $suffix = substr($digits, -4);
 
-        $weakValues = config('auth_phone.pin.weak_values', []);
-
-        return in_array($pin, $weakValues, true);
+        return 'Seller '.$suffix;
     }
 }

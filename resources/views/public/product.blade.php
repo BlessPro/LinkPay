@@ -65,11 +65,19 @@
 
                 <form method="POST" action="{{ route('public.products.pay', [$profile->public_slug, $product]) }}" class="mt-6 grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-[1.2fr_1fr_1fr]">
                     @csrf
-                    <input name="name" placeholder="Customer name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-                    <input name="phone_number" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" data-strip-leading-zero="true" />
-                    <input name="location" placeholder="Location (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-                    <textarea name="note" rows="2" placeholder="Note (optional)" class="sm:col-span-3 w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500"></textarea>
+                    <input
+                        name="phone_number"
+                        value="{{ old('phone_number') }}"
+                        placeholder="Phone number"
+                        class="sm:col-span-3 w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('phone_number') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror"
+                        data-strip-leading-zero="true"
+                        inputmode="numeric"
+                        autocomplete="tel"
+                        required
+                    />
+                    @error('phone_number') <p class="sm:col-span-3 -mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                     <input type="hidden" name="phone_country" value="+233" />
+                    <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}" />
                     <div class="sm:col-span-3 flex flex-wrap gap-3">
                         <button
                             type="submit"

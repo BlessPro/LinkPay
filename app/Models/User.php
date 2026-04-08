@@ -13,9 +13,13 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     public const PLAN_FREE_TRIAL = 'FREE_TRIAL';
+    public const PLAN_STARTER = 'STARTER';
+    public const PLAN_GROWTH = 'GROWTH';
+    public const PLAN_ENTERPRISE = 'ENTERPRISE';
+
+    // Legacy plans (kept for backward compatibility with existing rows).
     public const PLAN_PROMOTION = 'PROMOTION';
     public const PLAN_PAYMENTS = 'PAYMENTS';
-    public const PLAN_ENTERPRISE = 'ENTERPRISE';
 
     /**
      * The attributes that are mass assignable.
@@ -29,6 +33,7 @@ class User extends Authenticatable
         'password',
         'pin_hash',
         'is_admin',
+        'onboarding_state',
     ];
 
     /**
@@ -60,6 +65,7 @@ class User extends Authenticatable
             'plan_started_at' => 'datetime',
             'plan_ends_at' => 'datetime',
             'suspended_at' => 'datetime',
+            'onboarding_state' => 'array',
         ];
     }
 
@@ -74,7 +80,7 @@ class User extends Authenticatable
             return;
         }
 
-        $days = (int) config('plans.trial_days', 7);
+        $days = (int) config('plans.trial_days', 9);
         $this->plan_type = self::PLAN_FREE_TRIAL;
         $this->trial_started_at = now();
         $this->trial_ends_at = now()->addDays($days);
@@ -97,7 +103,13 @@ class User extends Authenticatable
 
     public function hasActivePlan(): bool
     {
-        if (! in_array($this->plan_type, [self::PLAN_PROMOTION, self::PLAN_PAYMENTS], true)) {
+        if (! in_array($this->plan_type, [
+            self::PLAN_STARTER,
+            self::PLAN_GROWTH,
+            self::PLAN_ENTERPRISE,
+            self::PLAN_PROMOTION,
+            self::PLAN_PAYMENTS,
+        ], true)) {
             return false;
         }
 
@@ -115,12 +127,60 @@ class User extends Authenticatable
 
     public function canUsePaymentsFeature(): bool
     {
-        return $this->isOnTrial() || ($this->hasActivePlan() && $this->plan_type === self::PLAN_PAYMENTS);
+        // New pricing model: all active paid plans include payments.
+        return $this->isOnTrial() || $this->hasActivePlan();
     }
 
     public function canUsePromotionFeatures(): bool
     {
         return $this->isOnTrial() || $this->hasActivePlan();
+    }
+
+    public function normalizedPlanType(): string
+    {
+        return match ($this->plan_type) {
+            self::PLAN_PROMOTION => self::PLAN_STARTER,
+            self::PLAN_PAYMENTS => self::PLAN_GROWTH,
+            default => (string) ($this->plan_type ?: self::PLAN_FREE_TRIAL),
+        };
+    }
+
+    public function productLimit(): ?int
+    {
+        if ($this->isOnTrial()) {
+            return null;
+        }
+
+        return match ($this->normalizedPlanType()) {
+            self::PLAN_STARTER => 100,
+            self::PLAN_GROWTH => 300,
+            self::PLAN_ENTERPRISE => null,
+            default => 100,
+        };
+    }
+
+    public function adminSeatLimit(): ?int
+    {
+        if ($this->isOnTrial()) {
+            return null;
+        }
+
+        return match ($this->normalizedPlanType()) {
+            self::PLAN_STARTER => 1,
+            self::PLAN_GROWTH => 1,
+            self::PLAN_ENTERPRISE => 10,
+            default => 1,
+        };
+    }
+
+    public function planDisplayName(): string
+    {
+        $plan = $this->normalizedPlanType();
+        if ($plan === self::PLAN_FREE_TRIAL) {
+            return 'Free Trial';
+        }
+
+        return ucwords(strtolower(str_replace('_', ' ', $plan)));
     }
 
     public function hasCompletedProfileOnboarding(): bool

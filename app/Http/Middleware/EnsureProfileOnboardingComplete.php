@@ -16,6 +16,7 @@ class EnsureProfileOnboardingComplete
         }
 
         if ($request->routeIs(
+            'onboarding.*',
             'profile.*',
             'logout',
             'verification.*',
@@ -29,9 +30,23 @@ class EnsureProfileOnboardingComplete
             return $next($request);
         }
 
-        return redirect()
-            ->route('profile.edit', ['onboarding' => 'profile'])
-            ->with('onboarding_required', 'Complete your business profile to continue.');
+        if ($this->isMobile($request)) {
+            return redirect()
+                ->route('onboarding.index')
+                ->with('onboarding_required', 'Complete onboarding to continue.');
+        }
+
+        // Desktop stays non-blocking; onboarding is guided through popup and checklist.
+        return $next($request);
+    }
+
+    private function isMobile(Request $request): bool
+    {
+        $userAgent = strtolower((string) $request->userAgent());
+
+        return str_contains($userAgent, 'mobile')
+            || str_contains($userAgent, 'android')
+            || str_contains($userAgent, 'iphone')
+            || str_contains($userAgent, 'ipad');
     }
 }
-

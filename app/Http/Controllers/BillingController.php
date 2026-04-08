@@ -36,9 +36,9 @@ class BillingController extends Controller
         $user->startTrialIfMissing();
 
         $plan = strtoupper(trim($plan));
-        abort_unless(in_array($plan, [User::PLAN_PROMOTION, User::PLAN_PAYMENTS], true), 404);
+        abort_unless(in_array($plan, [User::PLAN_STARTER, User::PLAN_GROWTH, User::PLAN_ENTERPRISE], true), 404);
 
-        // MVP: simulate subscription activation. Later: replace with Paystack subscription.
+        // Temporary activation flow: replace with MoMo subscription billing lifecycle.
         $user->plan_type = $plan;
         $user->plan_started_at = now();
         $user->plan_ends_at = now()->addDays(30);
@@ -49,4 +49,3 @@ class BillingController extends Controller
             ->with('status', 'plan-activated');
     }
 }
-

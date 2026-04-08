@@ -12,6 +12,7 @@ class Product extends Model
     public const STATUS_IN_STOCK = 'in_stock';
     public const STATUS_SOLD_OUT = 'sold_out';
     public const STATUS_UNAVAILABLE = 'unavailable';
+    public const STATUS_TRASHED = 'trashed';
     public const STATUS_LOW_STOCK = 'low_stock';
     public const STATUS_PRE_ORDER = 'pre_order';
 
@@ -56,6 +57,10 @@ class Product extends Model
     {
         $status = $this->status ?: self::STATUS_IN_STOCK;
 
+        if ($status === self::STATUS_TRASHED) {
+            return 'Trashed';
+        }
+
         return self::statusOptions()[$status] ?? 'In stock';
     }
 
@@ -69,6 +74,7 @@ class Product extends Model
             self::STATUS_PRE_ORDER => 'bg-indigo-50 text-indigo-700',
             self::STATUS_SOLD_OUT => 'bg-rose-50 text-rose-700',
             self::STATUS_UNAVAILABLE => 'bg-slate-100 text-slate-600',
+            self::STATUS_TRASHED => 'bg-slate-200 text-slate-700',
         ];
 
         return $styles[$status] ?? 'bg-emerald-50 text-emerald-700';

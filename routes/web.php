@@ -14,6 +14,7 @@ use App\Http\Controllers\PublicProductController;
 use App\Http\Controllers\SellerProfileController;
 use App\Http\Controllers\InsightsController;
 use App\Http\Controllers\GoalsTargetController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\TwilioWebhookController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminInvoiceController;
@@ -21,10 +22,12 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\PricingController;
 use App\Http\Controllers\SellerPublicPreviewController;
 use App\Http\Controllers\Admin\AdminOtpAuthController;
+use App\Http\Controllers\Admin\AdminOrderFeedbackController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\PublicOrderFeedbackController;
 use App\Http\Controllers\TelemetryController;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -52,7 +55,7 @@ Route::get('/pricing', [PricingController::class, 'index'])->name('pricing');
 
 Route::get('/s/{public_slug}', [PublicListingController::class, 'show'])->name('public.listing');
 Route::post('/s/{public_slug}/products/{product}/pay', [PublicListingController::class, 'pay'])
-    ->middleware('throttle:12,1')
+    ->middleware('throttle:public-pay')
     ->name('public.products.pay');
 Route::post('/s/{public_slug}/products/{product}/interest', [PublicListingController::class, 'interest'])
     ->middleware('throttle:20,1')
@@ -67,14 +70,21 @@ Route::delete('/s/{public_slug}/products/{product}/cart', [PublicListingControll
     ->middleware('throttle:40,1')
     ->name('public.products.cart.remove');
 Route::post('/s/{public_slug}/cart/checkout', [PublicListingController::class, 'checkoutCart'])
-    ->middleware('throttle:10,1')
+    ->middleware('throttle:public-checkout')
     ->name('public.cart.checkout');
 Route::get('/orders/track', [PublicOrderTrackingController::class, 'show'])->name('public.orders.track');
+Route::get('/order-feedback/{token}', [PublicOrderFeedbackController::class, 'show'])->name('public.order.feedback.show');
+Route::post('/order-feedback/{token}/received', [PublicOrderFeedbackController::class, 'received'])
+    ->middleware('throttle:8,1')
+    ->name('public.order.feedback.received');
+Route::post('/order-feedback/{token}/report', [PublicOrderFeedbackController::class, 'report'])
+    ->middleware('throttle:8,1')
+    ->name('public.order.feedback.report');
 
 Route::get('/pay/success', [PublicInvoiceController::class, 'success'])->name('pay.success');
 Route::get('/pay/{token}', [PublicInvoiceController::class, 'show'])->name('public.invoice');
 Route::post('/pay/{token}', [PublicInvoiceController::class, 'pay'])
-    ->middleware('throttle:10,1')
+    ->middleware('throttle:public-pay')
     ->name('public.invoice.pay');
 Route::get('/p/{product_slug}', [PublicProductController::class, 'show'])->name('public.product');
 
@@ -91,6 +101,11 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'active_access'])->group(function () {
+    Route::get('/onboarding', [OnboardingController::class, 'index'])->name('onboarding.index');
+    Route::post('/onboarding/state', [OnboardingController::class, 'updateState'])
+        ->middleware('throttle:60,1')
+        ->name('onboarding.state');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -120,6 +135,9 @@ Route::middleware(['auth', 'active_access'])->group(function () {
             Route::resource('invoices', InvoiceController::class)->only(['index', 'create', 'store', 'show']);
             Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
             Route::get('/payments/export', [PaymentController::class, 'export'])->name('payments.export');
+            Route::post('/payments/{payment}/refund-request', [PaymentController::class, 'requestRefund'])
+                ->middleware('throttle:20,1')
+                ->name('payments.refund.request');
         });
 
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -184,6 +202,13 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         ->name('payments.mark-failed');
     Route::get('/invoices', [AdminInvoiceController::class, 'index'])->name('invoices.index');
     Route::get('/invoices/{invoice}', [AdminInvoiceController::class, 'show'])->name('invoices.show');
+    Route::get('/order-feedback', [AdminOrderFeedbackController::class, 'index'])->name('order-feedback.index');
+    Route::post('/order-feedback/{feedback}/refund', [AdminOrderFeedbackController::class, 'approveRefund'])
+        ->middleware('throttle:20,1')
+        ->name('order-feedback.refund');
+    Route::post('/order-feedback/{feedback}/ignore', [AdminOrderFeedbackController::class, 'ignore'])
+        ->middleware('throttle:20,1')
+        ->name('order-feedback.ignore');
 });
 
 require __DIR__.'/auth.php';

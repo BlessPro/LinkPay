@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -26,9 +28,11 @@ class LoginRequest extends FormRequest
      */
     public function rules(): array
     {
+        $pinLength = max(4, min(8, (int) config('auth_phone.pin.length', 4)));
+
         return [
             'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string'],
+            'pin' => ['required', 'digits:'.$pinLength],
         ];
     }
 
@@ -41,14 +45,19 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $user = User::query()
+            ->where('email', (string) $this->string('email'))
+            ->first();
+
+        if (! $user || ! $user->pin_hash || ! Hash::check((string) $this->string('pin'), (string) $user->pin_hash)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'pin' => 'Invalid email or PIN.',
             ]);
         }
 
+        Auth::login($user, $this->boolean('remember'));
         RateLimiter::clear($this->throttleKey());
     }
 

@@ -95,6 +95,24 @@ class PaystackService
             ->json();
     }
 
+    public function createRefund(string $reference, ?string $amount = null): array
+    {
+        $payload = [
+            'transaction' => $reference,
+        ];
+
+        if ($amount !== null) {
+            $payload['amount'] = Money::toMinor($amount);
+        }
+
+        $response = $this->client()
+            ->post('/refund', $payload)
+            ->throw()
+            ->json();
+
+        return $response['data'] ?? $response;
+    }
+
     /**
      * @return array{data: array<int, array<string, mixed>>, meta: array<string, mixed>}
      */

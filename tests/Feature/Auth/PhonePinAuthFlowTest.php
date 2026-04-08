@@ -31,17 +31,23 @@ class PhonePinAuthFlowTest extends TestCase
             'phone_country' => '+233',
             'phone_number' => '+233541900229',
             'otp' => '123456',
-            'name' => 'Phone Seller',
-            'email' => 'phone-seller@example.com',
-            'pin' => '2486',
-            'pin_confirmation' => '2486',
         ]);
 
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('pin.setup.show'));
         $this->assertAuthenticated();
 
-        $user = User::where('email', 'phone-seller@example.com')->firstOrFail();
-        $this->assertNotNull($user->pin_hash);
+        $user = User::where('phone', '+233541900229')->firstOrFail();
+        $this->assertNull($user->email);
+        $this->assertNull($user->pin_hash);
+        $this->get(route('dashboard'))->assertRedirect(route('pin.setup.show'));
+
+        $this->post(route('pin.setup.store'), [
+            'pin' => '2486',
+            'pin_confirmation' => '2486',
+        ])->assertRedirect(route('dashboard'));
+
+        $user->refresh();
+        $this->assertTrue(Hash::check('2486', (string) $user->pin_hash));
 
         auth()->logout();
 
@@ -110,12 +116,10 @@ class PhonePinAuthFlowTest extends TestCase
         $this->get(route('login'))
             ->assertStatus(200)
             ->assertDontSee('Phone PIN')
-            ->assertSee('Sign in with email');
+            ->assertSee('either Email or PIN');
 
         $this->get(route('register'))
             ->assertStatus(200)
-            ->assertDontSee('Phone signup is faster')
-            ->assertSee('Create your account with email');
+            ->assertSee('Phone signup is currently unavailable');
     }
 }
-

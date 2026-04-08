@@ -310,11 +310,19 @@
                                     >
                                         Manage
                                     </button>
-                                    <form method="POST" action="{{ route('products.destroy', $product) }}" onsubmit="return confirm('Delete this product? This action cannot be undone.');" class="shrink-0">
+                                    <form method="POST" action="{{ route('products.destroy', $product) }}" class="shrink-0">
                                         @csrf
                                         @method('DELETE')
+                                        @php
+                                            $relatedOrderTotal = (int) (($productOrderTotals[$product->id] ?? 0) + ($productOrderCounts[$product->id] ?? 0));
+                                            $trashWarning = $relatedOrderTotal > 0
+                                                ? "Move this product to trash? Related orders ({$relatedOrderTotal}) will also be moved to trash."
+                                                : "Move this product to trash?";
+                                        @endphp
+                                        <input type="hidden" name="confirm_trash" value="1">
                                         <button
                                             type="submit"
+                                            onclick="return confirm('{{ $trashWarning }}')"
                                             class="shrink-0 px-3 py-1.5 text-xs font-semibold border rounded-full border-rose-200 text-rose-700 hover:border-rose-300 hover:bg-rose-50 sm:px-4 sm:py-2"
                                         >
                                             Delete

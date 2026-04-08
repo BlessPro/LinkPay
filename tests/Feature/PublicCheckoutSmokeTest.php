@@ -61,12 +61,9 @@ class PublicCheckoutSmokeTest extends TestCase
         ]);
 
         $response = $this->post(route('public.cart.checkout', $profile->public_slug), [
-            'name' => 'Checkout Buyer',
             'phone_number' => '0541900229',
             'phone_country' => '+233',
-            'location' => 'Accra',
-            'delivery_required' => true,
-            'delivery_note' => 'Please call before delivery',
+            'idempotency_key' => (string) \Illuminate\Support\Str::uuid(),
         ]);
 
         $response->assertRedirect('https://paystack.test/checkout');

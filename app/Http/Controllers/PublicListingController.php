@@ -6,8 +6,6 @@ use App\Models\Payment;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\Coupon;
-use App\Models\CouponRedemption;
 use App\Models\SellerProfile;
 use App\Models\Lead;
 use App\Models\PublicCartSession;
@@ -21,6 +19,7 @@ use App\Support\Phone;
 use App\Support\WhatsApp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Client\RequestException;
@@ -162,7 +161,7 @@ class PublicListingController extends Controller
         AnalyticsService $analytics
     )
     {
-        $validated = $this->validateCheckoutContact($request, withDeliveryFields: false);
+        $validated = $this->validateCheckoutContact($request);
 
         $profile = SellerProfile::where('public_slug', $public_slug)->firstOrFail();
 
@@ -200,10 +199,15 @@ class PublicListingController extends Controller
         if (! $phone) {
             return back()->withErrors(['phone_number' => 'Please enter a valid phone number.'])->withInput();
         }
+        $idempotencyKey = (string) $validated['idempotency_key'];
+        $idempotencyScope = 'public_product_pay:'.$public_slug.':'.$product->id;
+        if (! $this->acquireIdempotencyKey($request, $idempotencyScope, $idempotencyKey)) {
+            return back()->withErrors([
+                'paystack' => 'This payment request is already being processed. Please wait a moment.',
+            ])->withInput();
+        }
 
         $email = Email::placeholder($reference);
-        $location = trim((string) ($validated['location'] ?? ''));
-
         $analytics->trackEvent(
             $request,
             $profile->user_id,
@@ -227,10 +231,8 @@ class PublicListingController extends Controller
             'status' => Payment::STATUS_PENDING,
             'raw_payload' => [
                 'customer' => [
-                    'name' => $validated['name'] ?? null,
                     'email' => $email,
                     'phone' => $phone,
-                    'location' => $location,
                 ],
             ],
         ]);
@@ -248,16 +250,15 @@ class PublicListingController extends Controller
                     'purpose' => 'product',
                     'platform_fee' => $platformFee,
                     'customer' => [
-                        'name' => $validated['name'] ?? null,
                         'email' => $email,
                         'phone' => $phone,
-                        'location' => $location,
                     ],
                 ],
                 $profile->paystack_subaccount_code,
                 $platformFee
             );
         } catch (RequestException $exception) {
+            $this->releaseIdempotencyKey($request, $idempotencyScope, $idempotencyKey);
             $payment->status = Payment::STATUS_FAILED;
             $payment->raw_payload = array_merge($payment->raw_payload ?? [], [
                 'initialize_error' => $exception->getMessage(),
@@ -361,7 +362,7 @@ class PublicListingController extends Controller
 
     public function checkoutCart(Request $request, string $public_slug, PaystackService $paystack, AnalyticsService $analytics)
     {
-        $validated = $this->validateCheckoutContact($request, withDeliveryFields: true);
+        $validated = $this->validateCheckoutContact($request);
 
         $profile = SellerProfile::where('public_slug', $public_slug)
             ->with(['user.products' => function ($query) {
@@ -403,55 +404,18 @@ class PublicListingController extends Controller
         if (! $phone) {
             return back()->withErrors(['phone_number' => 'Please enter a valid phone number.'])->withInput();
         }
+        $idempotencyKey = (string) $validated['idempotency_key'];
+        $idempotencyScope = 'public_cart_checkout:'.$public_slug;
+        if (! $this->acquireIdempotencyKey($request, $idempotencyScope, $idempotencyKey)) {
+            return back()->withErrors([
+                'paystack' => 'This checkout is already being processed. Please wait a moment.',
+            ])->withInput();
+        }
 
         $subtotal = (string) $cart['total'];
         $discountAmount = '0.00';
         $couponCode = null;
-        $couponInput = trim((string) ($validated['coupon_code'] ?? ''));
-        if ($couponInput !== '') {
-            $coupon = Coupon::query()
-                ->where('user_id', $profile->user_id)
-                ->where('code', strtoupper($couponInput))
-                ->first();
-            if (! $coupon || ! $coupon->isUsableNow($subtotal)) {
-                return back()->withErrors([
-                    'coupon_code' => 'Coupon code is invalid or not active for this cart total.',
-                ])->withInput();
-            }
-
-            $customerFingerprint = Coupon::customerFingerprint($phone);
-            $alreadyUsedByCustomer = CouponRedemption::query()
-                ->where('coupon_id', $coupon->id)
-                ->where('customer_fingerprint', $customerFingerprint)
-                ->exists();
-            if ($alreadyUsedByCustomer) {
-                return back()->withErrors([
-                    'coupon_code' => 'This coupon has already been used by this customer.',
-                ])->withInput();
-            }
-
-            $ipAddress = $request->ip();
-            $ipReuseBlockHours = max(0, (int) config('coupons.ip_reuse_block_hours', 24));
-            if ($ipAddress && $ipReuseBlockHours > 0) {
-                $alreadyUsedFromIp = CouponRedemption::query()
-                    ->where('coupon_id', $coupon->id)
-                    ->where('ip_address', $ipAddress)
-                    ->where('used_at', '>=', now()->subHours($ipReuseBlockHours))
-                    ->exists();
-                if ($alreadyUsedFromIp) {
-                    return back()->withErrors([
-                        'coupon_code' => 'This coupon was already used recently from this network. Please try another coupon.',
-                    ])->withInput();
-                }
-            }
-
-            $discountAmount = $coupon->computeDiscount($subtotal);
-            $couponCode = $coupon->code;
-        }
-        $total = Money::subtract($subtotal, $discountAmount);
-        if (Money::compare($total, '0.00') === -1) {
-            $total = '0.00';
-        }
+        $total = $subtotal;
 
         $analytics->trackEvent(
             $request,
@@ -463,20 +427,17 @@ class PublicListingController extends Controller
 
         $reference = (string) \Illuminate\Support\Str::uuid();
         $email = Email::placeholder($reference);
-        $location = trim((string) ($validated['location'] ?? ''));
-        $deliveryRequired = (bool) ($validated['delivery_required'] ?? false);
-        $deliveryNote = trim((string) ($validated['delivery_note'] ?? ''));
 
         $order = Order::create([
             'user_id' => $profile->user_id,
             'reference' => $reference,
             'status' => Order::STATUS_PENDING_PAYMENT,
             'payment_status' => Payment::STATUS_PENDING,
-            'customer_name' => $validated['name'] ?? null,
+            'customer_name' => null,
             'customer_phone' => $phone,
-            'customer_location' => $location !== '' ? $location : null,
-            'delivery_required' => $deliveryRequired,
-            'delivery_note' => $deliveryNote !== '' ? $deliveryNote : null,
+            'customer_location' => null,
+            'delivery_required' => false,
+            'delivery_note' => null,
             'subtotal' => $subtotal,
             'coupon_code' => $couponCode,
             'discount_amount' => $discountAmount,
@@ -503,18 +464,16 @@ class PublicListingController extends Controller
             'status' => Payment::STATUS_PENDING,
             'raw_payload' => [
                 'customer' => [
-                    'name' => $validated['name'] ?? null,
                     'email' => $email,
                     'phone' => $phone,
-                    'location' => $location,
                     'ip_address' => $request->ip(),
                 ],
                 'order' => [
                     'id' => $order->id,
                     'coupon_code' => $couponCode,
                     'discount_amount' => $discountAmount,
-                    'delivery_required' => $deliveryRequired,
-                    'delivery_note' => $deliveryNote,
+                    'delivery_required' => false,
+                    'delivery_note' => null,
                     'items' => $cart['items']->map(function (array $row) {
                         return [
                             'product_id' => $row['product']->id,
@@ -541,16 +500,15 @@ class PublicListingController extends Controller
                     'purpose' => 'order',
                     'platform_fee' => $platformFee,
                     'customer' => [
-                        'name' => $validated['name'] ?? null,
                         'email' => $email,
                         'phone' => $phone,
-                        'location' => $location,
                     ],
                 ],
                 $profile->paystack_subaccount_code,
                 $platformFee
             );
         } catch (RequestException $exception) {
+            $this->releaseIdempotencyKey($request, $idempotencyScope, $idempotencyKey);
             $payment->status = Payment::STATUS_FAILED;
             $payment->raw_payload = array_merge($payment->raw_payload ?? [], [
                 'initialize_error' => $exception->getMessage(),
@@ -715,11 +673,9 @@ class PublicListingController extends Controller
         ];
     }
 
-    private function validateCheckoutContact(Request $request, bool $withDeliveryFields): array
+    private function validateCheckoutContact(Request $request): array
     {
         $rules = [
-            'name' => ['nullable', 'string', 'max:120'],
-            'location' => ['nullable', 'string', 'max:160'],
             'phone_number' => [
                 'required',
                 'string',
@@ -733,19 +689,27 @@ class PublicListingController extends Controller
                 },
             ],
             'phone_country' => ['nullable', 'string', 'max:8'],
-            'coupon_code' => ['nullable', 'string', 'max:40'],
+            'idempotency_key' => ['required', 'string', 'min:16', 'max:120'],
         ];
-
-        if ($withDeliveryFields) {
-            $rules['delivery_required'] = ['nullable', 'boolean'];
-            $rules['delivery_note'] = ['nullable', 'string', 'max:500'];
-        }
 
         return $request->validate($rules, [
             'phone_number.required' => 'A phone number is required so the seller can reach you.',
-            'location.max' => 'Location must be 160 characters or less.',
-            'delivery_note.max' => 'Delivery note must be 500 characters or less.',
         ]);
+    }
+
+    private function acquireIdempotencyKey(Request $request, string $scope, string $key): bool
+    {
+        return Cache::add($this->idempotencyCacheKey($request, $scope, $key), now()->toIso8601String(), now()->addMinutes(15));
+    }
+
+    private function releaseIdempotencyKey(Request $request, string $scope, string $key): void
+    {
+        Cache::forget($this->idempotencyCacheKey($request, $scope, $key));
+    }
+
+    private function idempotencyCacheKey(Request $request, string $scope, string $key): string
+    {
+        return 'idem:'.sha1($scope.'|'.$request->ip().'|'.$key);
     }
 
     private function readCartRaw(Request $request, string $publicSlug): array

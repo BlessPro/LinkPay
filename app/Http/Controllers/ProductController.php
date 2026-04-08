@@ -41,6 +41,7 @@ class ProductController extends Controller
         }
 
         $products = $user->products()
+            ->where('status', '!=', Product::STATUS_TRASHED)
             ->when($stockFilter !== 'all', fn ($query) => $query->where('status', $stockFilter))
             ->latest()
             ->paginate(10)
@@ -73,12 +74,14 @@ class ProductController extends Controller
         })->filter();
         $orderCustomerKeys = $user->orders()
             ->where('payment_status', Payment::STATUS_SUCCESS)
+            ->where('status', '!=', Order::STATUS_TRASHED)
             ->get()
             ->map(fn (Order $order) => $order->customer_phone ?: $order->customer_name)
             ->filter();
-        $customerKeys = $customerKeys->merge($orderCustomerKeys)->unique();
+        $customerKeys = collect($customerKeys)->merge($orderCustomerKeys)->unique();
 
         $statusCounts = $user->products()
+            ->where('status', '!=', Product::STATUS_TRASHED)
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status')
@@ -103,7 +106,10 @@ class ProductController extends Controller
                 'total' => Money::add((string) $current['total'], (string) ($sale->total ?? '0.00')),
             ]);
         }
-        $productLookup = $user->products()->get(['id', 'name'])->keyBy('id');
+        $productLookup = $user->products()
+            ->where('status', '!=', Product::STATUS_TRASHED)
+            ->get(['id', 'name'])
+            ->keyBy('id');
         $topList = collect($topProducts)->sortByDesc('total')->take(4);
         $maxTopTotal = max(1, (float) ($topList->map(fn ($row) => (float) $row['total'])->max() ?? 0));
 
@@ -143,7 +149,10 @@ class ProductController extends Controller
             'series' => $series,
             'chartRange' => $chartRange,
             'totalRevenue' => $totalRevenue,
-            'totalOrders' => $directPayments->count() + (int) $user->orders()->where('payment_status', Payment::STATUS_SUCCESS)->count(),
+            'totalOrders' => $directPayments->count() + (int) $user->orders()
+                ->where('payment_status', Payment::STATUS_SUCCESS)
+                ->where('status', '!=', Order::STATUS_TRASHED)
+                ->count(),
             'totalCustomers' => $customerKeys->count(),
             'statusCounts' => $statusCounts,
             'topProducts' => $topProducts,
@@ -152,6 +161,7 @@ class ProductController extends Controller
             'maxTopTotal' => $maxTopTotal,
             'ordersByCustomer' => $ordersByCustomer,
             'productOrderCounts' => $productOrderCounts,
+            'productOrderTotals' => $this->buildAllTimeOrderTotalsForProducts($products->getCollection()->pluck('id')->all()),
         ]);
     }
 
@@ -159,6 +169,7 @@ class ProductController extends Controller
     {
         $orders = Order::query()
             ->where('user_id', $userId)
+            ->where('status', '!=', Order::STATUS_TRASHED)
             ->with(['items.product'])
             ->latest()
             ->take(80)
@@ -393,8 +404,23 @@ class ProductController extends Controller
     {
         $data = $request->validated();
         $user = $request->user();
+        $productLimit = $user->productLimit();
+        $currentProductCount = $user->products()
+            ->where('status', '!=', Product::STATUS_TRASHED)
+            ->count();
 
         if (isset($data['products']) && is_array($data['products'])) {
+            if ($productLimit !== null) {
+                $incomingCount = count($data['products']);
+                if (($currentProductCount + $incomingCount) > $productLimit) {
+                    return back()
+                        ->withErrors([
+                            'products' => 'Plan limit reached. You can have up to '.$productLimit.' products on your current plan.',
+                        ])
+                        ->withInput();
+                }
+            }
+
             $createdProducts = collect();
             foreach ($data['products'] as $index => $item) {
                 $productData = [
@@ -436,6 +462,14 @@ class ProductController extends Controller
             return redirect()->route('products.index')
                 ->with('status', 'products-created')
                 ->with('products_created_count', $createdProducts->count());
+        }
+
+        if ($productLimit !== null && $currentProductCount >= $productLimit) {
+            return back()
+                ->withErrors([
+                    'name' => 'Plan limit reached. You can have up to '.$productLimit.' products on your current plan.',
+                ])
+                ->withInput();
         }
 
         $data['user_id'] = $user->id;
@@ -521,17 +555,36 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('status', 'product-updated');
     }
 
-    public function destroy(Product $product)
+    public function destroy(Request $request, Product $product)
     {
         $this->authorizeProduct($product);
 
-        if ($product->image_path) {
-            Storage::disk('public')->delete($product->image_path);
+        if (! $request->boolean('confirm_trash')) {
+            return back()->withErrors([
+                'delete' => 'Please confirm before moving this product to trash.',
+            ]);
         }
 
-        $product->delete();
+        $orderIds = OrderItem::query()
+            ->where('product_id', $product->id)
+            ->pluck('order_id')
+            ->filter()
+            ->unique()
+            ->values();
 
-        return redirect()->route('products.index')->with('status', 'product-deleted');
+        if ($orderIds->isNotEmpty()) {
+            Order::query()
+                ->whereIn('id', $orderIds)
+                ->update(['status' => Order::STATUS_TRASHED]);
+        }
+
+        $product->update([
+            'is_active' => false,
+            'status' => Product::STATUS_TRASHED,
+            'stock_quantity' => 0,
+        ]);
+
+        return redirect()->route('products.index')->with('status', 'product-trashed');
     }
 
     private function authorizeProduct(Product $product): void
@@ -741,8 +794,26 @@ class ProductController extends Controller
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->where('orders.user_id', $userId)
             ->where('orders.payment_status', Payment::STATUS_SUCCESS)
+            ->where('orders.status', '!=', Order::STATUS_TRASHED)
             ->when($start && $end, function ($query) use ($start, $end) {
                 $query->whereBetween('orders.paid_at', [$start, $end]);
             });
+    }
+
+    private function buildAllTimeOrderTotalsForProducts(array $productIds): array
+    {
+        if (empty($productIds)) {
+            return [];
+        }
+
+        return OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->whereIn('order_items.product_id', $productIds)
+            ->where('orders.status', '!=', Order::STATUS_TRASHED)
+            ->selectRaw('order_items.product_id, sum(order_items.quantity) as total')
+            ->groupBy('order_items.product_id')
+            ->pluck('total', 'order_items.product_id')
+            ->map(fn ($value) => (int) $value)
+            ->all();
     }
 }

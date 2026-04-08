@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\PinSetupController;
 use App\Http\Controllers\Auth\PhonePinLoginController;
 use App\Http\Controllers\Auth\PhonePinResetController;
 use App\Http\Controllers\Auth\PhoneOtpController;
@@ -23,12 +24,12 @@ Route::middleware('guest')->group(function () {
 
     Route::post('register/phone/send', [PhoneSignupController::class, 'send'])
         ->middleware('phone_auth_enabled')
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:auth-phone-send')
         ->name('register.phone.send');
 
     Route::post('register/phone/complete', [PhoneSignupController::class, 'complete'])
         ->middleware('phone_auth_enabled')
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:auth-phone-verify')
         ->name('register.phone.complete');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
@@ -38,27 +39,27 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login/phone/pin', [PhonePinLoginController::class, 'store'])
         ->middleware('phone_auth_enabled')
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:auth-phone-verify')
         ->name('login.phone.pin');
 
     Route::post('login/phone/pin/reset/send', [PhonePinResetController::class, 'send'])
         ->middleware('phone_auth_enabled')
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:auth-phone-send')
         ->name('login.phone.pin.reset.send');
 
     Route::post('login/phone/pin/reset/complete', [PhonePinResetController::class, 'complete'])
         ->middleware('phone_auth_enabled')
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:auth-phone-verify')
         ->name('login.phone.pin.reset.complete');
 
     Route::post('login/phone/send', [PhoneOtpController::class, 'send'])
         ->middleware('phone_auth_enabled')
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:auth-phone-send')
         ->name('login.phone.send');
 
     Route::post('login/phone/verify', [PhoneOtpController::class, 'verify'])
         ->middleware('phone_auth_enabled')
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:auth-phone-verify')
         ->name('login.phone.verify');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
@@ -75,6 +76,13 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('pin/setup', [PinSetupController::class, 'show'])
+        ->name('pin.setup.show');
+
+    Route::post('pin/setup', [PinSetupController::class, 'store'])
+        ->middleware('throttle:auth-phone-verify')
+        ->name('pin.setup.store');
+
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 

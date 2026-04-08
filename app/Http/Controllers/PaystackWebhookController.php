@@ -18,14 +18,17 @@ class PaystackWebhookController extends Controller
         $eventHash = hash('sha256', $payload);
         $eventName = (string) $request->input('event');
         $reference = data_get($request->input('data'), 'reference');
+        $providerEventId = (string) (data_get($request->input('data'), 'id') ?? $request->header('x-paystack-event-id') ?? '');
 
         $existingEvent = null;
         try {
-            $existingEvent = WebhookEvent::query()
-                ->where('provider', 'paystack')
-                ->where('event_hash', $eventHash)
-                ->latest('id')
-                ->first();
+            $query = WebhookEvent::query()->where('provider', 'paystack');
+            if ($providerEventId !== '') {
+                $query->where('provider_event_id', $providerEventId);
+            } else {
+                $query->where('event_hash', $eventHash);
+            }
+            $existingEvent = $query->latest('id')->first();
         } catch (\Throwable $exception) {
             Log::warning('Webhook duplicate lookup failed', [
                 'message' => $exception->getMessage(),
@@ -44,6 +47,7 @@ class PaystackWebhookController extends Controller
                 try {
                     $event = WebhookEvent::create([
                         'provider' => 'paystack',
+                        'provider_event_id' => $providerEventId !== '' ? $providerEventId : null,
                         'event' => $eventName,
                         'event_hash' => $eventHash,
                         'reference' => $reference,
@@ -58,7 +62,13 @@ class PaystackWebhookController extends Controller
 
                     $event = WebhookEvent::query()
                         ->where('provider', 'paystack')
-                        ->where('event_hash', $eventHash)
+                        ->where(function ($query) use ($providerEventId, $eventHash) {
+                            if ($providerEventId !== '') {
+                                $query->where('provider_event_id', $providerEventId);
+                            } else {
+                                $query->where('event_hash', $eventHash);
+                            }
+                        })
                         ->latest('id')
                         ->first();
                 }
@@ -66,6 +76,7 @@ class PaystackWebhookController extends Controller
 
             if ($existingEvent) {
                 $existingEvent->update([
+                    'provider_event_id' => $providerEventId !== '' ? $providerEventId : $existingEvent->provider_event_id,
                     'event' => $eventName,
                     'reference' => $reference,
                     'status' => WebhookEvent::STATUS_RECEIVED,
@@ -221,6 +232,7 @@ class PaystackWebhookController extends Controller
         $message = strtolower($exception->getMessage());
 
         return str_contains($message, 'webhook_events_provider_event_hash_unique')
+            || str_contains($message, 'webhook_events_provider_event_id_unique')
             || str_contains($message, 'duplicate key value')
             || str_contains($message, 'unique constraint');
     }

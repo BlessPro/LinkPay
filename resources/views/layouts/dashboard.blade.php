@@ -160,6 +160,7 @@
             $canPromotion = $user->canUsePromotionFeatures();
             $canUsePayments = $user->canUsePaymentsFeature();
             $publicUrl = $profile?->public_slug ? route('public.listing', $profile->public_slug) : null;
+            $onboarding = app(\App\Services\OnboardingService::class)->forUser($user);
             $navClass = function (string $route) {
                 return request()->routeIs($route)
                     ? 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold bg-emerald-50 text-emerald-700'
@@ -180,15 +181,15 @@
                 </div>
 
                 <nav class="space-y-1 px-4">
-                    <a href="{{ route('dashboard') }}" class="{{ $navClass('dashboard') }}">Dashboard</a>
-                    <button type="button" class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 js-quick-actions-open">Quick Action</button>
+                    <a href="{{ route('dashboard') }}" class="{{ $navClass('dashboard') }} js-tour-dashboard-nav">Dashboard</a>
+                    <button type="button" class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 js-quick-actions-open js-tour-quick-action">Quick Action</button>
                     <a href="{{ route('profile.edit') }}" class="{{ $navClass('profile.*') }}">Profile</a>
-                    <a href="{{ route('products.index') }}" class="{{ $navClass('products.*') }}">Products</a>
+                    <a href="{{ route('products.index') }}" class="{{ $navClass('products.*') }} js-tour-products-nav">Products</a>
                     <a href="{{ route('coupons.index') }}" class="{{ $navClass('coupons.*') }}">Coupons</a>
                     <a href="{{ route('customers.index') }}" class="{{ $navClass('customers.*') }}">Customers</a>
                     @if($canUsePayments)
                         <a href="{{ route('invoices.index') }}" class="{{ $navClass('invoices.*') }}">Invoices</a>
-                        <a href="{{ route('payments.index') }}" class="{{ $navClass('payments.*') }}">Payments</a>
+                    <a href="{{ route('payments.index') }}" class="{{ $navClass('payments.*') }} js-tour-payments-nav">Payments</a>
                     @else
                         <a href="{{ route('billing.upgrade') }}" class="flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">
                             <span>Invoices</span>
@@ -208,6 +209,9 @@
                     @endif
                     @if($profile)
                         <a href="{{ route('public.preview') }}" class="{{ $navClass('public.preview') }}">Public page</a>
+                    @endif
+                    @if(! $onboarding['is_complete'])
+                        <a href="{{ route('onboarding.index') }}" class="{{ $navClass('onboarding.*') }}">Onboarding</a>
                     @endif
                 </nav>
 
@@ -299,7 +303,7 @@
                                         </a>
                                         <button
                                             type="button"
-                                            class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700 js-copy-public-link"
+                                            class="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700 js-copy-public-link js-tour-copy-public-link"
                                             data-copy-value="{{ $publicUrl }}"
                                         >
                                             Copy link
@@ -397,8 +401,88 @@
                 <a href="{{ $canPromotion ? route('coupons.index') : route('billing.upgrade') }}" class="rounded-xl border border-cyan-200 bg-cyan-50/70 px-4 py-3 text-sm font-medium text-slate-800">Coupons</a>
                 <a href="{{ $canPromotion ? route('products.index', ['stock' => \App\Models\Product::STATUS_LOW_STOCK]) : route('billing.upgrade') }}" class="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm font-medium text-slate-800">Review low stock</a>
                 <a href="{{ route('notifications.index') }}" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">Open notifications</a>
+                <button type="button" class="hidden rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-800 lg:block js-start-desktop-tour">Start tutorial</button>
             </div>
         </section>
+        @if(! $onboarding['is_complete'] && !request()->routeIs('onboarding.*'))
+            <aside class="js-onboarding-popup hidden lg:block fixed bottom-5 right-5 z-40 w-[360px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl" data-dismissed="{{ data_get($onboarding, 'state.desktop_popup_dismissed') ? '1' : '0' }}">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Onboarding</p>
+                        <h3 class="mt-1 text-sm font-semibold text-slate-900">{{ $onboarding['completed_count'] }}/{{ $onboarding['total_count'] }} complete</h3>
+                    </div>
+                    <button type="button" class="js-onboarding-close rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:border-slate-300">Close</button>
+                </div>
+                <div class="mt-3 h-2 rounded-full bg-slate-100">
+                    <div class="h-2 rounded-full bg-emerald-500" style="width: {{ $onboarding['percent'] }}%"></div>
+                </div>
+                <div class="mt-3 space-y-2">
+                    @foreach($onboarding['steps'] as $step)
+                        @php($isDone = (bool) ($step['effective_done'] ?? $step['completed']))
+                        @if($isDone)
+                            <div class="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2">
+                                <span class="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-[10px] text-white">
+                                    &check;
+                                </span>
+                                <div class="min-w-0">
+                                    <p class="text-xs font-semibold text-slate-900">{{ $step['title'] }}</p>
+                                    <p class="text-[11px] text-slate-500">
+                                        {{ $step['description'] }}
+                                        @if(!empty($step['skipped']))
+                                            <span class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Skipped</span>
+                                        @endif
+                                    </p>
+                                </div>
+                            </div>
+                        @else
+                            <a href="{{ $step['action_url'] }}" class="group flex items-start gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-emerald-200 hover:bg-emerald-50/50">
+                                <span class="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] text-slate-600 group-hover:bg-emerald-200 group-hover:text-emerald-800">
+                                    &bull;
+                                </span>
+                                <div class="min-w-0">
+                                    <p class="text-xs font-semibold text-slate-900">{{ $step['title'] }}</p>
+                                    <p class="text-[11px] text-slate-500">{{ $step['description'] }}</p>
+                                </div>
+                            </a>
+                        @endif
+                    @endforeach
+                </div>
+                @if($onboarding['next_step'])
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <a href="{{ $onboarding['next_step']['action_url'] }}" class="inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500">
+                            {{ $onboarding['next_step']['action_label'] }}
+                        </a>
+                        @if(($onboarding['next_step']['id'] ?? null) === 'share_store' && !empty($onboarding['next_step']['public_url']))
+                            <button type="button" class="js-onboarding-copy rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700" data-copy-value="{{ $onboarding['next_step']['public_url'] }}">
+                                Copy link
+                            </button>
+                        @endif
+                        <button type="button" class="js-start-desktop-tour inline-flex items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700">
+                            Start tutorial
+                        </button>
+                    </div>
+                @endif
+            </aside>
+            <a href="{{ route('onboarding.index') }}" class="fixed bottom-24 right-4 z-30 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 shadow-lg lg:hidden">
+                Resume onboarding
+            </a>
+        @endif
+        <div class="js-desktop-tour hidden lg:block">
+            <div class="pointer-events-none fixed inset-0 z-[70] bg-slate-900/45 js-desktop-tour-overlay"></div>
+            <div class="pointer-events-none fixed z-[71] rounded-xl border-2 border-emerald-300 shadow-[0_0_0_9999px_rgba(2,6,23,0.48)] transition-all duration-200 js-desktop-tour-highlight"></div>
+            <section class="fixed z-[72] w-[340px] max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl pointer-events-auto js-desktop-tour-card">
+                <p class="text-[11px] uppercase tracking-[0.25em] text-slate-400 js-desktop-tour-progress">Tutorial</p>
+                <h3 class="mt-2 text-sm font-semibold text-slate-900 js-desktop-tour-title">Welcome</h3>
+                <p class="mt-2 text-xs leading-5 text-slate-600 js-desktop-tour-description">Quick walkthrough to learn key actions.</p>
+                <div class="mt-4 flex items-center justify-between gap-2">
+                    <button type="button" class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 js-desktop-tour-prev">Previous</button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 js-desktop-tour-skip">Skip</button>
+                        <button type="button" class="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white js-desktop-tour-next">Next</button>
+                    </div>
+                </div>
+            </section>
+        </div>
         <script>
             document.addEventListener('DOMContentLoaded', () => {
                 const copyButton = document.querySelector('.js-copy-public-link');
@@ -437,6 +521,240 @@
                         document.body.removeChild(helper);
                         setLabel(ok ? 'Copied' : 'Copy failed');
                     });
+                }
+                const onboardingPopup = document.querySelector('.js-onboarding-popup');
+                const onboardingClose = document.querySelector('.js-onboarding-close');
+                const onboardingCopy = document.querySelector('.js-onboarding-copy');
+                const onboardingState = @json($onboarding['state'] ?? []);
+                const startDesktopTourButtons = document.querySelectorAll('.js-start-desktop-tour');
+
+                const postOnboardingState = (payload) => {
+                    return fetch('{{ route('onboarding.state') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || '',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    }).catch(() => {});
+                };
+
+                if (onboardingPopup) {
+                    const dismissed = onboardingPopup.dataset.dismissed === '1';
+                    if (!dismissed) {
+                        onboardingPopup.classList.remove('hidden');
+                    }
+
+                    if (onboardingClose) {
+                        onboardingClose.addEventListener('click', () => {
+                            onboardingPopup.classList.add('hidden');
+                            postOnboardingState({ desktop_popup_dismissed: true });
+                        });
+                    }
+
+                    if (onboardingCopy) {
+                        onboardingCopy.addEventListener('click', async () => {
+                            const value = onboardingCopy.dataset.copyValue || '';
+                            if (!value) {
+                                return;
+                            }
+                            try {
+                                await navigator.clipboard.writeText(value);
+                                onboardingCopy.textContent = 'Copied';
+                            } catch (_) {
+                                onboardingCopy.textContent = 'Copy failed';
+                            }
+                            setTimeout(() => {
+                                onboardingCopy.textContent = 'Copy link';
+                            }, 1200);
+                        });
+                    }
+                }
+
+                const desktopTourRoot = document.querySelector('.js-desktop-tour');
+                const desktopTourHighlight = document.querySelector('.js-desktop-tour-highlight');
+                const desktopTourCard = document.querySelector('.js-desktop-tour-card');
+                const desktopTourProgress = document.querySelector('.js-desktop-tour-progress');
+                const desktopTourTitle = document.querySelector('.js-desktop-tour-title');
+                const desktopTourDescription = document.querySelector('.js-desktop-tour-description');
+                const desktopTourPrev = document.querySelector('.js-desktop-tour-prev');
+                const desktopTourNext = document.querySelector('.js-desktop-tour-next');
+                const desktopTourSkip = document.querySelector('.js-desktop-tour-skip');
+                const desktopTourSteps = [
+                    {
+                        selector: '.js-tour-dashboard-nav',
+                        title: 'Dashboard',
+                        description: 'Use this to return to your main overview at any time.',
+                    },
+                    {
+                        selector: '.js-tour-products-nav',
+                        title: 'Products',
+                        description: 'Manage stock, pricing, and sharing actions for your products.',
+                    },
+                    {
+                        selector: '.js-tour-quick-action',
+                        title: 'Quick Action',
+                        description: 'Open fast actions for orders, invoices, coupons, and stock.',
+                    },
+                    {
+                        selector: '.js-tour-payments-nav',
+                        title: 'Payments',
+                        description: 'Track payouts and transactions from your payment dashboard.',
+                    },
+                    {
+                        selector: '.js-tour-copy-public-link',
+                        title: 'Share Public Link',
+                        description: 'Copy your store link and send it to customers instantly.',
+                    },
+                ].filter((step) => document.querySelector(step.selector));
+
+                let desktopTourIndex = Math.min(
+                    Math.max(0, Number(onboardingState.desktop_tour_step || 0)),
+                    Math.max(0, desktopTourSteps.length - 1)
+                );
+                let desktopTourOpen = false;
+
+                const setDesktopTourOpen = (open) => {
+                    if (!desktopTourRoot) {
+                        return;
+                    }
+                    desktopTourOpen = Boolean(open);
+                    desktopTourRoot.classList.toggle('hidden', !desktopTourOpen);
+                };
+
+                const positionDesktopTour = () => {
+                    if (!desktopTourOpen || !desktopTourSteps[desktopTourIndex] || !desktopTourHighlight || !desktopTourCard) {
+                        return;
+                    }
+
+                    const target = document.querySelector(desktopTourSteps[desktopTourIndex].selector);
+                    if (!target) {
+                        return;
+                    }
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                    const rect = target.getBoundingClientRect();
+                    const pad = 8;
+                    const highlightTop = Math.max(8, rect.top - pad);
+                    const highlightLeft = Math.max(8, rect.left - pad);
+                    const highlightWidth = Math.min(window.innerWidth - 16 - highlightLeft, rect.width + (pad * 2));
+                    const highlightHeight = Math.min(window.innerHeight - 16 - highlightTop, rect.height + (pad * 2));
+
+                    desktopTourHighlight.style.top = `${highlightTop}px`;
+                    desktopTourHighlight.style.left = `${highlightLeft}px`;
+                    desktopTourHighlight.style.width = `${highlightWidth}px`;
+                    desktopTourHighlight.style.height = `${highlightHeight}px`;
+
+                    const cardWidth = Math.min(340, window.innerWidth - 24);
+                    desktopTourCard.style.width = `${cardWidth}px`;
+                    const cardHeight = desktopTourCard.offsetHeight || 180;
+                    const preferBelow = highlightTop + highlightHeight + cardHeight + 16 < window.innerHeight;
+                    const top = preferBelow
+                        ? highlightTop + highlightHeight + 12
+                        : Math.max(12, highlightTop - cardHeight - 12);
+                    const left = Math.min(
+                        Math.max(12, highlightLeft),
+                        Math.max(12, window.innerWidth - cardWidth - 12)
+                    );
+                    desktopTourCard.style.top = `${top}px`;
+                    desktopTourCard.style.left = `${left}px`;
+                };
+
+                const renderDesktopTour = () => {
+                    if (!desktopTourSteps.length || !desktopTourTitle || !desktopTourDescription || !desktopTourProgress) {
+                        return;
+                    }
+                    const step = desktopTourSteps[desktopTourIndex];
+                    desktopTourProgress.textContent = `Tutorial ${desktopTourIndex + 1}/${desktopTourSteps.length}`;
+                    desktopTourTitle.textContent = step.title;
+                    desktopTourDescription.textContent = step.description;
+                    if (desktopTourPrev) {
+                        desktopTourPrev.disabled = desktopTourIndex === 0;
+                        desktopTourPrev.classList.toggle('opacity-40', desktopTourIndex === 0);
+                    }
+                    if (desktopTourNext) {
+                        desktopTourNext.textContent = desktopTourIndex === desktopTourSteps.length - 1 ? 'Finish' : 'Next';
+                    }
+                    window.requestAnimationFrame(positionDesktopTour);
+                };
+
+                const openDesktopTour = (reset = false) => {
+                    if (!desktopTourSteps.length || !desktopTourRoot) {
+                        return;
+                    }
+                    if (reset) {
+                        desktopTourIndex = 0;
+                    }
+                    setDesktopTourOpen(true);
+                    postOnboardingState({
+                        desktop_tour_dismissed: false,
+                        desktop_tour_completed: false,
+                        desktop_tour_step: desktopTourIndex,
+                    });
+                    renderDesktopTour();
+                };
+
+                const closeDesktopTour = (dismissed = true) => {
+                    setDesktopTourOpen(false);
+                    if (dismissed) {
+                        postOnboardingState({ desktop_tour_dismissed: true });
+                    }
+                };
+
+                const completeDesktopTour = () => {
+                    setDesktopTourOpen(false);
+                    postOnboardingState({
+                        desktop_tour_completed: true,
+                        desktop_tour_dismissed: true,
+                        desktop_tour_step: 0,
+                    });
+                };
+
+                startDesktopTourButtons.forEach((button) => {
+                    button.addEventListener('click', () => openDesktopTour(true));
+                });
+
+                if (desktopTourPrev) {
+                    desktopTourPrev.addEventListener('click', () => {
+                        if (desktopTourIndex <= 0) {
+                            return;
+                        }
+                        desktopTourIndex -= 1;
+                        postOnboardingState({ desktop_tour_step: desktopTourIndex });
+                        renderDesktopTour();
+                    });
+                }
+
+                if (desktopTourNext) {
+                    desktopTourNext.addEventListener('click', () => {
+                        if (desktopTourIndex >= desktopTourSteps.length - 1) {
+                            completeDesktopTour();
+                            return;
+                        }
+                        desktopTourIndex += 1;
+                        postOnboardingState({ desktop_tour_step: desktopTourIndex });
+                        renderDesktopTour();
+                    });
+                }
+
+                if (desktopTourSkip) {
+                    desktopTourSkip.addEventListener('click', () => closeDesktopTour(true));
+                }
+
+                window.addEventListener('resize', () => {
+                    if (desktopTourOpen) {
+                        positionDesktopTour();
+                    }
+                });
+
+                const shouldAutoStartDesktopTour = window.matchMedia('(min-width: 1024px)').matches
+                    && desktopTourSteps.length > 0
+                    && !onboardingState.desktop_tour_completed
+                    && !onboardingState.desktop_tour_dismissed
+                    && {{ $onboarding['is_complete'] ? 'false' : 'true' }};
+
+                if (shouldAutoStartDesktopTour) {
+                    openDesktopTour(false);
                 }
 
                 const panel = document.querySelector('.js-quick-actions-panel');
@@ -538,6 +856,9 @@
                     if (event.key === 'Escape') {
                         setQuickActions(false);
                         setMobileMenu(false);
+                        if (desktopTourOpen) {
+                            closeDesktopTour(true);
+                        }
                     }
                 });
 

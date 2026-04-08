@@ -64,11 +64,19 @@
                     </div>
                     <form method="POST" action="{{ route('public.products.pay', [$profile->public_slug, $product]) }}" class="mt-4 grid gap-3 sm:grid-cols-[1.2fr_1fr_1fr]">
                         @csrf
-                        <input name="name" placeholder="Customer name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-                        <input name="phone_number" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" data-strip-leading-zero="true" />
-                        <input name="location" placeholder="Location (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-                        <textarea name="note" rows="2" placeholder="Note (optional)" class="sm:col-span-3 w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500"></textarea>
+                        <input
+                            name="phone_number"
+                            value="{{ old('phone_number') }}"
+                            placeholder="Phone number"
+                            class="sm:col-span-3 w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('phone_number') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror"
+                            data-strip-leading-zero="true"
+                            inputmode="numeric"
+                            autocomplete="tel"
+                            required
+                        />
+                        @error('phone_number') <p class="sm:col-span-3 -mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                         <input type="hidden" name="phone_country" value="+233" />
+                        <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}" />
                         @php
                             $canPay = $product->isPayable();
                             $isAddedToCart = in_array((int) $product->id, $cartProductIds, true);
@@ -83,6 +91,7 @@
                             <button
                                 type="submit"
                                 formaction="{{ route('public.products.cart.add', [$profile->public_slug, $product]) }}"
+                                formnovalidate
                                 class="rounded-full border px-4 py-3 text-sm {{ $canPay ? ($isAddedToCart ? 'border-emerald-600 bg-emerald-50 font-bold text-emerald-700 hover:bg-emerald-100' : 'border-slate-200 font-semibold text-slate-700 hover:border-emerald-200 hover:text-emerald-700') : 'border-slate-200 font-semibold text-slate-400 cursor-not-allowed' }}"
                                 {{ $canPay ? '' : 'disabled' }}
                             >
@@ -282,31 +291,21 @@
 
             <form method="POST" action="{{ route('public.cart.checkout', $profile->public_slug) }}" class="mt-4 grid gap-3 sm:grid-cols-2">
                 @csrf
-                <div>
-                    <input name="name" value="{{ old('name') }}" placeholder="Customer name (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('name') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror" />
-                    @error('name') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
-                </div>
-                <div>
-                    <input name="phone_number" value="{{ old('phone_number') }}" placeholder="WhatsApp / phone number" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('phone_number') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror" data-strip-leading-zero="true" />
+                <div class="sm:col-span-2">
+                    <input
+                        name="phone_number"
+                        value="{{ old('phone_number') }}"
+                        placeholder="Phone number"
+                        class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('phone_number') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror"
+                        data-strip-leading-zero="true"
+                        inputmode="numeric"
+                        autocomplete="tel"
+                        required
+                    />
                     @error('phone_number') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>
-                <div class="sm:col-span-2">
-                    <input name="location" value="{{ old('location') }}" placeholder="Location (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('location') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror" />
-                    @error('location') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
-                </div>
-                <div class="sm:col-span-2">
-                    <input name="coupon_code" value="{{ old('coupon_code') }}" placeholder="Coupon code (optional)" class="w-full rounded-xl border-slate-200 text-sm uppercase focus:border-emerald-500 focus:ring-emerald-500 @error('coupon_code') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror" />
-                    @error('coupon_code') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
-                </div>
-                <label class="inline-flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
-                    <input type="checkbox" name="delivery_required" value="1" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" @checked(old('delivery_required'))>
-                    Delivery required
-                </label>
-                <div class="sm:col-span-2">
-                    <textarea name="delivery_note" rows="2" placeholder="Delivery note (optional)" class="w-full rounded-xl border-slate-200 text-sm focus:border-emerald-500 focus:ring-emerald-500 @error('delivery_note') border-rose-300 focus:border-rose-500 focus:ring-rose-500 @enderror">{{ old('delivery_note') }}</textarea>
-                    @error('delivery_note') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
-                </div>
                 <input type="hidden" name="phone_country" value="+233" />
+                <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}" />
                 <button type="submit" class="rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500 sm:col-span-2">
                     Pay total
                 </button>
@@ -506,18 +505,35 @@
                     return;
                 }
 
-                shop.querySelectorAll('form[action*="/products/"][action*="/cart"]').forEach(function (form) {
-                    if (form.closest('#cart-section') || form.dataset.boundAsync === '1') {
+                shop.querySelectorAll('form').forEach(function (form) {
+                    if (form.closest('#cart-section') || form.dataset.boundAsyncCart === '1') {
                         return;
                     }
-                    form.dataset.boundAsync = '1';
+                    form.dataset.boundAsyncCart = '1';
+
+                    // Fallback for browsers without event.submitter support.
+                    form.querySelectorAll('button[type="submit"]').forEach(function (button) {
+                        if (button.dataset.boundClickSubmitter === '1') {
+                            return;
+                        }
+                        button.dataset.boundClickSubmitter = '1';
+                        button.addEventListener('click', function () {
+                            form.__lastSubmitter = button;
+                        });
+                    });
 
                     form.addEventListener('submit', function (event) {
-                        event.preventDefault();
-                        var submitter = event.submitter || form.querySelector('button[type="submit"]');
+                        var submitter = event.submitter || form.__lastSubmitter || form.querySelector('button[type="submit"]');
                         if (!submitter) {
                             return;
                         }
+                        var targetUrl = submitter.getAttribute('formaction') || form.action || '';
+                        var isAddToCartAction = targetUrl.indexOf('/products/') !== -1 && targetUrl.indexOf('/cart') !== -1;
+                        if (!isAddToCartAction) {
+                            return;
+                        }
+
+                        event.preventDefault();
 
                         // Optimistic UI: make action feel instant.
                         submitter.disabled = true;
@@ -525,7 +541,7 @@
                         submitter.classList.add('border-emerald-600', 'bg-emerald-50', 'font-bold', 'text-emerald-700');
 
                         var payload = new FormData(form, submitter);
-                        asyncRequest(form.action, { method: 'POST', body: payload }, true, null, { action: 'add_to_cart' });
+                        asyncRequest(targetUrl, { method: 'POST', body: payload }, false, null, { action: 'add_to_cart' });
                     });
                 });
             }

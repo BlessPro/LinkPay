@@ -171,6 +171,25 @@ class PaymentService
                                 'delivery_note' => $order->delivery_note,
                             ]
                         );
+
+                        $sellerPhone = $user->sellerProfile?->phone ?? $user->phone;
+                        if ($sellerPhone) {
+                            $orderLink = route('products.orders', ['order' => $order->reference]);
+                            $sellerMessage = "New paid order {$order->reference}.\nAmount: ".Money::format((string) $order->total, config('services.paystack.currency', 'GHS'))."\nOpen: {$orderLink}";
+                            try {
+                                app(HubtelSmsService::class)->send($sellerPhone, $sellerMessage, [
+                                    'user_id' => $user->id,
+                                    'context_type' => 'seller_new_paid_order_sms',
+                                    'context_id' => $order->id,
+                                ]);
+                            } catch (\Throwable $smsException) {
+                                Log::warning('Seller SMS notify failed for new paid order', [
+                                    'order_id' => $order->id,
+                                    'seller_id' => $user->id,
+                                    'message' => $smsException->getMessage(),
+                                ]);
+                            }
+                        }
                     }
 
                     app(InventoryService::class)->decrementForOrder($order, $user);

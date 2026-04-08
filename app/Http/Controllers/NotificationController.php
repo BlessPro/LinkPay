@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\SellerNotification;
 use App\Services\HubtelSmsService;
+use App\Services\OrderFeedbackService;
 use App\Services\SellerNotifier;
 use App\Services\TwilioMessagingService;
 use Illuminate\Http\RedirectResponse;
@@ -83,9 +84,13 @@ class NotificationController extends Controller
             return;
         }
 
-        $message = $action === 'accepted'
-            ? 'Your order '.$order->reference.' has been accepted. The seller will contact you to finalize delivery.'
-            : 'Your order '.$order->reference.' could not be fulfilled. The seller will contact you with options.';
+        if ($action === 'accepted') {
+            $token = app(OrderFeedbackService::class)->createOneTimeToken($order, $phone);
+            $link = app(OrderFeedbackService::class)->feedbackUrl($token);
+            $message = 'Your order '.$order->reference.' has been accepted and will be shipped soon. Confirm delivery here: '.$link;
+        } else {
+            $message = 'Your order '.$order->reference.' could not be fulfilled. The seller will contact you with options.';
+        }
 
         try {
             app(HubtelSmsService::class)->send($phone, $message, [

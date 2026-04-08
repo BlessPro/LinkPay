@@ -12,6 +12,7 @@ use App\Support\Email;
 use App\Support\Money;
 use App\Support\Phone;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -68,8 +69,6 @@ class PublicInvoiceController extends Controller
     public function pay(Request $request, string $token, PaystackService $paystack, AnalyticsService $analytics)
     {
         $validated = $request->validate([
-            'name' => ['nullable', 'string', 'max:120'],
-            'location' => ['nullable', 'string', 'max:160'],
             'phone_number' => [
                 'required',
                 'string',
@@ -83,9 +82,9 @@ class PublicInvoiceController extends Controller
                 },
             ],
             'phone_country' => ['nullable', 'string', 'max:8'],
+            'idempotency_key' => ['required', 'string', 'min:16', 'max:120'],
         ], [
             'phone_number.required' => 'A phone number is required so the seller can reach you.',
-            'location.max' => 'Location must be 160 characters or less.',
         ]);
 
         $invoice = Invoice::where('token', $token)
@@ -123,10 +122,15 @@ class PublicInvoiceController extends Controller
         if (! $phone) {
             return back()->withErrors(['phone_number' => 'Please enter a valid phone number.'])->withInput();
         }
+        $idempotencyKey = (string) $validated['idempotency_key'];
+        $idempotencyScope = 'public_invoice_pay:'.$invoice->id;
+        if (! $this->acquireIdempotencyKey($request, $idempotencyScope, $idempotencyKey)) {
+            return back()->withErrors([
+                'paystack' => 'This payment request is already being processed. Please wait a moment.',
+            ])->withInput();
+        }
 
         $email = Email::placeholder($reference);
-        $location = trim((string) ($validated['location'] ?? ''));
-
         $analytics->trackEvent(
             $request,
             $invoice->user_id,
@@ -143,10 +147,8 @@ class PublicInvoiceController extends Controller
             'status' => Payment::STATUS_PENDING,
             'raw_payload' => [
                 'customer' => [
-                    'name' => $validated['name'] ?? null,
                     'email' => $email,
                     'phone' => $phone,
-                    'location' => $location,
                 ],
             ],
         ]);
@@ -164,16 +166,15 @@ class PublicInvoiceController extends Controller
                     'purpose' => 'invoice',
                     'platform_fee' => $platformFee,
                     'customer' => [
-                        'name' => $validated['name'] ?? null,
                         'email' => $email,
                         'phone' => $phone,
-                        'location' => $location,
                     ],
                 ],
                 $seller->paystack_subaccount_code,
                 $platformFee
             );
         } catch (RequestException $exception) {
+            $this->releaseIdempotencyKey($request, $idempotencyScope, $idempotencyKey);
             $payment->status = Payment::STATUS_FAILED;
             $payment->raw_payload = array_merge($payment->raw_payload ?? [], [
                 'initialize_error' => $exception->getMessage(),
@@ -245,5 +246,20 @@ class PublicInvoiceController extends Controller
             'currency' => config('services.paystack.currency', 'GHS'),
             'listingUrl' => $listingUrl,
         ]);
+    }
+
+    private function acquireIdempotencyKey(Request $request, string $scope, string $key): bool
+    {
+        return Cache::add($this->idempotencyCacheKey($request, $scope, $key), now()->toIso8601String(), now()->addMinutes(15));
+    }
+
+    private function releaseIdempotencyKey(Request $request, string $scope, string $key): void
+    {
+        Cache::forget($this->idempotencyCacheKey($request, $scope, $key));
+    }
+
+    private function idempotencyCacheKey(Request $request, string $scope, string $key): string
+    {
+        return 'idem:'.sha1($scope.'|'.$request->ip().'|'.$key);
     }
 }

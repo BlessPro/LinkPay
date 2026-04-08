@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Version
+    |--------------------------------------------------------------------------
+    |
+    | Canonical release version for this deployment. Uses APP_VERSION first,
+    | then falls back to the VERSION file at the repository root.
+    |
+    */
+    'version' => env('APP_VERSION', is_file(base_path('VERSION'))
+        ? trim((string) file_get_contents(base_path('VERSION')))
+        : '0.0.0'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

@@ -106,12 +106,9 @@ class PublicSavedCartPersistenceTest extends TestCase
 
         $this->withCookie('lp_cart_token', $token)
             ->post(route('public.cart.checkout', $profile->public_slug), [
-                'name' => 'Buyer',
                 'phone_number' => '0541900229',
                 'phone_country' => '+233',
-                'location' => 'Accra',
-                'delivery_required' => false,
-                'delivery_note' => '',
+                'idempotency_key' => (string) \Illuminate\Support\Str::uuid(),
             ])
             ->assertRedirect('https://paystack.test/checkout');
 

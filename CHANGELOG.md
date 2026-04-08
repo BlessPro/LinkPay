@@ -8,6 +8,12 @@ All notable changes to this project will be documented here.
 - Add new entries under `Unreleased` with clear impact-focused notes.
 - Move `Unreleased` items into a versioned section during release cut.
 
+### Versioning
+- Semantic versioning is now active (`MAJOR.MINOR.PATCH`).
+- Canonical version source is the repository root `VERSION` file.
+- `APP_VERSION` can override per environment/release deployment.
+- `/version.json` returns the active app version for runtime checks.
+
 ### In Progress (Phone-First OTP + PIN Auth) - 08/04/2026
 - Phase 0 complete:
 - Added roadmap: `docs/AUTH_PHONE_PIN_ROADMAP.md`.
@@ -77,6 +83,68 @@ All notable changes to this project will be documented here.
 - Add UX telemetry for mobile flow timings (open page -> first action -> completion).
 
 ### Added
+- Auth flow refinement:
+  - Signup is now phone-only (`phone number + OTP`) with no name/email/PIN fields at signup time.
+  - Login UI now has exactly two tabs: `Email` and `PIN`.
+  - OTP is now reserved for `Forgot PIN` reset flow.
+  - New phone signups create accounts with default seller name from phone suffix and require PIN setup via reset flow before PIN login.
+  - Added mandatory post-signup PIN setup screen:
+    - `register.phone.complete` now redirects to `pin.setup.show`.
+    - Access to app routes guarded by `active_access` now redirects users without a PIN to PIN setup first.
+- Onboarding phase foundation:
+  - Added `OnboardingService` to compute step-by-step onboarding progress from real user data.
+  - Added non-blocking desktop onboarding popup in dashboard layout (dismissible, progress bar, step checklist, next action CTA).
+  - Added one-click copy action in onboarding popup when the next step is sharing the store link.
+- Onboarding phase (mobile + desktop behavior split):
+  - Added authenticated onboarding screen route: `/onboarding`.
+  - Added `OnboardingController` and mobile-friendly onboarding checklist screen with step navigation.
+  - Updated onboarding middleware behavior:
+    - Mobile users with incomplete onboarding are redirected to onboarding screens.
+    - Desktop users are no longer hard-blocked and can continue using the app with onboarding popup guidance.
+  - Added sidebar onboarding entry when onboarding is incomplete.
+  - Added onboarding experience tests covering mobile redirect, desktop non-blocking access, and onboarding page rendering.
+- Onboarding mobile tutorial polish:
+  - Upgraded mobile onboarding page to swipeable card flow with progress dots and step-to-step navigation.
+  - Added sticky mobile action bar with dynamic CTA per current step.
+  - Added mobile share-step copy-link support directly from onboarding flow.
+- Onboarding state persistence upgrade:
+  - Added `users.onboarding_state` JSON column for server-side onboarding UI state.
+  - Added `POST /onboarding/state` endpoint to persist desktop popup dismissal, mobile current step, and optional-step skip state.
+  - Desktop onboarding popup dismissal now persists per user account (not only local browser storage).
+  - Mobile onboarding resume now restores from server-side saved step index.
+  - Desktop onboarding popup checklist now uses effective completion state (`completed` or `skipped`) and renders pending steps as direct action links.
+  - Added onboarding feature tests for state persistence and optional-step skip enforcement.
+  - Added desktop guided spotlight tutorial with step-by-step hints for key dashboard actions.
+  - Added `Start tutorial` triggers (quick actions + onboarding popup) and persistent tutorial state (`desktop_tour_step`, `desktop_tour_completed`, `desktop_tour_dismissed`).
+- Product delete safety flow:
+  - Delete now moves products to trash (`status=trashed`) instead of hard-deleting rows/files.
+  - Delete confirmation now warns sellers when related orders exist and confirms those orders will be moved to trash.
+  - Related orders are marked as `TRASHED` to avoid broken product/order dashboards after delete.
+- Security hardening:
+  - Named rate limiters for critical public payment and phone-auth endpoints (`public-pay`, `public-checkout`, `auth-phone-send`, `auth-phone-verify`).
+  - Checkout idempotency keys on public pay/checkout/invoice flows to block duplicate submit replays.
+  - Webhook replay protection strengthened with provider event IDs (`provider_event_id`) and unique provider+event ID constraints.
+- Public checkout now supports phone-only input end-to-end on:
+  - product pay
+  - listing/service pay
+  - cart checkout
+  - public invoice pay
+- Backend checkout handlers now ignore legacy public fields (`name`, `location`, `delivery_*`, `coupon_code`) to match the phone-only UI.
+- Updated checkout regression tests to reflect phone-only behavior and keep flow coverage green.
+- One-time order feedback links for customers (`/order-feedback/{token}`) with single-use + expiry behavior.
+- Customer delivery confirmation workflow:
+  - `Yes, received` path with optional star rating and notes.
+  - `Report issue` path with notes and optional photo upload.
+- New dispute storage models/tables:
+  - `order_feedback_tokens`
+  - `order_feedbacks`
+- Admin `Order appeals` page with complaint review actions:
+  - approve refund (default 90%)
+  - ignore complaint (with admin note)
+- Paystack refund method support (`PaystackService::createRefund`).
+- New order dispute config options:
+  - `ORDER_DISPUTE_REFUND_PERCENT`
+  - `ORDER_SUPPORT_PHONE`
 - WhatsApp OTP login via Twilio Verify.
 - Seller and customer WhatsApp notifications via Twilio Messaging.
 - Product inventory statuses (in stock, low stock, pre-order, sold out, unavailable).
@@ -149,6 +217,20 @@ All notable changes to this project will be documented here.
 - Added idempotency test to verify stock and coupon side effects run once even if `markSuccess` is called twice.
 
 ### Changed
+- Seller/customer order SMS lifecycle expanded:
+- Sellers now receive SMS when a new paid order is created (with direct order link).
+- Customers now receive SMS on order acceptance with secure delivery confirmation link.
+- Order tracking timeline now includes:
+  - delivered confirmed
+  - issue under review
+  - refund approved
+  - complaint rejected
+- Payments page (mobile-first) redesigned:
+- Removed revenue graph block from payments screen.
+- Added top summary focus on `Revenue so far` and `Last 30 days`.
+- Added quick action buttons (`Refund`, `Export`, `New invoice`) above transactions.
+- Transactions section now supports arrow-trigger filter panel with `All`, `New`, `Successful`, `Pending`, `Failed`, and `Refund requested`.
+- Added seller-side refund request action on successful transactions (logs request and marks transaction as refund requested for filtering).
 - Phase 4 runtime health self-heal flow added:
 - Added runtime health watcher for repeated same-origin API/network failures, `window.error`, and `unhandledrejection` spikes.
 - App now shows a non-blocking `Refresh app` suggestion when health degradation is detected.

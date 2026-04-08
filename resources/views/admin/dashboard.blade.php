@@ -203,9 +203,9 @@
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 class="text-lg font-semibold text-slate-900">Plan mix</h2>
             <div class="mt-4 space-y-3 text-sm">
-                @foreach([App\Models\User::PLAN_FREE_TRIAL, App\Models\User::PLAN_PROMOTION, App\Models\User::PLAN_PAYMENTS, App\Models\User::PLAN_ENTERPRISE] as $plan)
+                @foreach([App\Models\User::PLAN_FREE_TRIAL, App\Models\User::PLAN_STARTER, App\Models\User::PLAN_GROWTH, App\Models\User::PLAN_ENTERPRISE] as $plan)
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-600">{{ str_replace('_', ' ', $plan) }}</span>
+                        <span class="text-slate-600">{{ ucwords(strtolower(str_replace('_', ' ', $plan))) }}</span>
                         <span class="font-semibold text-slate-900">{{ $planCounts[$plan] ?? 0 }}</span>
                     </div>
                 @endforeach
@@ -283,7 +283,7 @@
                                 <div>{{ $seller->email ?: '-' }}</div>
                                 <div class="text-xs text-slate-400">{{ $seller->sellerProfile?->phone ?? '-' }}</div>
                             </td>
-                            <td class="px-3 py-3 text-slate-600">{{ str_replace('_', ' ', $seller->plan_type ?? App\Models\User::PLAN_FREE_TRIAL) }}</td>
+                            <td class="px-3 py-3 text-slate-600">{{ $seller->planDisplayName() }}</td>
                             <td class="px-3 py-3 text-slate-600">{{ $seller->products_count }}</td>
                             <td class="px-3 py-3 text-slate-600">{{ $seller->invoices_count }}</td>
                             <td class="px-3 py-3 text-slate-600">{{ \App\Support\Money::format((string) ($seller->total_received ?? '0.00'), $currency) }}</td>

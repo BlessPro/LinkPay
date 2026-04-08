@@ -27,7 +27,7 @@
             <p class="mt-3 text-xl font-semibold text-slate-900">{{ $profile?->business_name ?? $seller->name }}</p>
             <p class="mt-1 text-sm text-slate-500">{{ $seller->email ?: '-' }} · {{ $profile?->phone ?? '-' }}</p>
             <div class="mt-4 flex flex-wrap gap-2 text-xs">
-                <span class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">{{ str_replace('_', ' ', $seller->plan_type ?? App\Models\User::PLAN_FREE_TRIAL) }}</span>
+                <span class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">{{ $seller->planDisplayName() }}</span>
                 @if($seller->suspended_at)
                     <span class="rounded-full bg-rose-50 px-3 py-1 font-semibold text-rose-700">Suspended</span>
                 @endif

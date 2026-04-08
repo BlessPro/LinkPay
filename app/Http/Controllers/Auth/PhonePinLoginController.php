@@ -50,7 +50,7 @@ class PhonePinLoginController extends Controller
         if (! $user->pin_hash) {
             $this->recordFailedAttempt($normalized, 'pin_not_set', $request);
             throw ValidationException::withMessages([
-                'pin' => 'PIN not set for this account. Use OTP sign in.',
+                'pin' => 'PIN not set for this account. Use Forgot PIN to set one.',
             ]);
         }
 

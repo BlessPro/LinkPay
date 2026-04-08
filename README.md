@@ -31,6 +31,11 @@
 4) Start the app:
    - `php artisan serve`
 
+## Versioning
+- The app now uses Semantic Versioning (`MAJOR.MINOR.PATCH`).
+- Canonical version is stored in [`VERSION`](./VERSION).
+- Release process is documented in [`docs/VERSIONING.md`](./docs/VERSIONING.md).
+
 ## Future projections
 - Multi-country phone login and verification.
 - Enhanced change log tracking for key platform actions.

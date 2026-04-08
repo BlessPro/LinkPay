@@ -9,14 +9,21 @@ use App\Support\Money;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
     public function index(Request $request, PaystackService $paystack, PaymentService $paymentsService)
     {
         $user = $request->user();
+        $allowedFilters = ['all', 'new', 'success', 'pending', 'failed', 'refund_requested'];
+        $filter = $request->query('filter', 'all');
+        if (! in_array($filter, $allowedFilters, true)) {
+            $filter = 'all';
+        }
 
         // Auto-verify pending payments so sellers never have to click "Verify".
         $pendingToVerify = $user->payments()
@@ -73,7 +80,17 @@ class PaymentController extends Controller
             ];
         }
 
-        $payments = $user->payments()->latest()->paginate(10);
+        $paymentsBase = $user->payments()->latest();
+        $payments = $this->applyTransactionFilter(clone $paymentsBase, $filter)->paginate(10)->withQueryString();
+
+        $transactionFilterCounts = [
+            'all' => (clone $paymentsBase)->count(),
+            'new' => (clone $paymentsBase)->where('created_at', '>=', Carbon::now()->subDay())->count(),
+            'success' => (clone $paymentsBase)->where('status', Payment::STATUS_SUCCESS)->count(),
+            'pending' => (clone $paymentsBase)->where('status', Payment::STATUS_PENDING)->count(),
+            'failed' => (clone $paymentsBase)->where('status', Payment::STATUS_FAILED)->count(),
+            'refund_requested' => (clone $paymentsBase)->whereJsonContains('raw_payload->refund_requested', true)->count(),
+        ];
 
         return view('dashboard.payments.index', [
             'payments' => $payments,
@@ -83,7 +100,43 @@ class PaymentController extends Controller
             'pendingCount' => $pendingCount,
             'last30DaysReceived' => $last30DaysReceived,
             'dailySeries' => $dailySeries,
+            'activeFilter' => $filter,
+            'transactionFilterCounts' => $transactionFilterCounts,
         ]);
+    }
+
+    public function requestRefund(Request $request, Payment $payment): RedirectResponse
+    {
+        abort_unless($payment->user_id === $request->user()->id, 403);
+
+        if ($payment->status !== Payment::STATUS_SUCCESS) {
+            return back()->withErrors([
+                'payment' => 'Refund request is only available for successful payments.',
+            ]);
+        }
+
+        $raw = is_array($payment->raw_payload) ? $payment->raw_payload : [];
+        if (($raw['refund_requested'] ?? false) === true) {
+            return back()->with('status', 'refund-requested');
+        }
+
+        $raw['refund_requested'] = true;
+        $raw['refund_requested_at'] = now()->toIso8601String();
+        $raw['refund_requested_by'] = $request->user()->id;
+        $raw['refund_request_ip'] = $request->ip();
+
+        $payment->raw_payload = $raw;
+        $payment->save();
+
+        Log::notice('Seller refund request submitted', [
+            'seller_id' => $request->user()->id,
+            'payment_id' => $payment->id,
+            'reference' => $payment->reference,
+            'amount' => (string) $payment->amount,
+            'ip' => $request->ip(),
+        ]);
+
+        return back()->with('status', 'refund-requested');
     }
 
     public function export(Request $request)
@@ -241,5 +294,17 @@ class PaymentController extends Controller
         ])->setPaper('a4', 'portrait');
 
         return $pdf->download('payment-report.pdf');
+    }
+
+    private function applyTransactionFilter($query, string $filter)
+    {
+        return match ($filter) {
+            'new' => $query->where('created_at', '>=', Carbon::now()->subDay()),
+            'success' => $query->where('status', Payment::STATUS_SUCCESS),
+            'pending' => $query->where('status', Payment::STATUS_PENDING),
+            'failed' => $query->where('status', Payment::STATUS_FAILED),
+            'refund_requested' => $query->whereJsonContains('raw_payload->refund_requested', true),
+            default => $query,
+        };
     }
 }

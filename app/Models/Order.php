@@ -15,6 +15,11 @@ class Order extends Model
     public const STATUS_PAID = 'PAID';
     public const STATUS_ACCEPTED = 'ACCEPTED';
     public const STATUS_CANNOT_FULFILL = 'CANNOT_FULFILL';
+    public const STATUS_COMPLETED = 'COMPLETED';
+    public const STATUS_DISPUTED_PENDING_ADMIN = 'DISPUTED_PENDING_ADMIN';
+    public const STATUS_REFUNDED = 'REFUNDED';
+    public const STATUS_COMPLAINT_REJECTED = 'COMPLAINT_REJECTED';
+    public const STATUS_TRASHED = 'TRASHED';
 
     public $incrementing = false;
     protected $keyType = 'string';
@@ -61,5 +66,15 @@ class Order extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function feedbackTokens()
+    {
+        return $this->hasMany(OrderFeedbackToken::class);
+    }
+
+    public function feedbacks()
+    {
+        return $this->hasMany(OrderFeedback::class);
     }
 }
